@@ -5,10 +5,26 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      target: 'node18',
+      rollupOptions: {
+        output: {
+          entryFileNames: '[name].js'
+        }
+      }
+    }
   },
   preload: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      target: 'node18',
+      rollupOptions: {
+        output: {
+          entryFileNames: '[name].mjs'
+        }
+      }
+    }
   },
   renderer: {
     resolve: {
@@ -16,6 +32,9 @@ export default defineConfig({
         '@renderer': resolve('src/renderer/src'),
         "@": resolve('src/renderer/src'),
       }
+    },
+    build: {
+      target: 'esnext'
     },
     plugins: [react(),tailwindcss()]
   },
