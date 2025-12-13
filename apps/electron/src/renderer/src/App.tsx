@@ -1,14 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import {
-  CalendarDays,
-  Clock4,
-  Pencil,
-  Trash2,
-  Plus,
-  Play,
-  Pause,
-  RotateCcw
-} from 'lucide-react'
+import { CalendarDays, Clock4, Pencil, Trash2, Plus, Play, Pause, RotateCcw } from 'lucide-react'
 
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card'
@@ -113,7 +104,7 @@ function App(): React.JSX.Element {
     description: '',
     dueDate: ''
   })
-  
+
   // Timer state
   const [activeTimer, setActiveTimer] = useState<ActiveTimer | null>(null)
   // @ts-ignore - taskTimers is used in setTaskTimers calls
@@ -160,7 +151,7 @@ function App(): React.JSX.Element {
 
   function handleDeleteTask(taskId: string): void {
     setTasks((prev) => prev.filter((task) => task.id !== taskId))
-    
+
     // Stop timer if this task was being timed
     if (activeTimer?.taskId === taskId) {
       handleStopTimer()
@@ -188,7 +179,7 @@ function App(): React.JSX.Element {
 
     const now = new Date().toISOString()
     const timerId = createId()
-    
+
     // Create a new timer record
     const newTimer: TaskTimer = {
       id: timerId,
@@ -198,7 +189,7 @@ function App(): React.JSX.Element {
       updatedAt: now
     }
 
-    setTaskTimers(prev => [...prev, newTimer])
+    setTaskTimers((prev) => [...prev, newTimer])
     setActiveTimer({
       taskId,
       timerId,
@@ -215,34 +206,40 @@ function App(): React.JSX.Element {
     if (!activeTimer) return
 
     const elapsed = currentTime - activeTimer.startTime + activeTimer.elapsedTime
-    setActiveTimer(prev => prev ? { 
-      ...prev, 
-      elapsedTime: elapsed,
-      isRunning: false 
-    } : null)
+    setActiveTimer((prev) =>
+      prev
+        ? {
+            ...prev,
+            elapsedTime: elapsed,
+            isRunning: false
+          }
+        : null
+    )
   }
 
   function handleResumeTimer(): void {
     if (!activeTimer) return
 
-    setActiveTimer(prev => prev ? {
-      ...prev,
-      startTime: Date.now() - prev.elapsedTime,
-      isRunning: true
-    } : null)
+    setActiveTimer((prev) =>
+      prev
+        ? {
+            ...prev,
+            startTime: Date.now() - prev.elapsedTime,
+            isRunning: true
+          }
+        : null
+    )
   }
 
   function handleStopTimer(): void {
     if (!activeTimer) return
 
     const now = new Date().toISOString()
-    
+
     // Update the timer record with end time
-    setTaskTimers(prev => 
-      prev.map(timer => 
-        timer.id === activeTimer.timerId 
-          ? { ...timer, endTime: now, updatedAt: now }
-          : timer
+    setTaskTimers((prev) =>
+      prev.map((timer) =>
+        timer.id === activeTimer.timerId ? { ...timer, endTime: now, updatedAt: now } : timer
       )
     )
 
@@ -253,16 +250,16 @@ function App(): React.JSX.Element {
     if (!activeTimer) return
 
     // Remove the current timer record
-    setTaskTimers(prev => prev.filter(timer => timer.id !== activeTimer.timerId))
+    setTaskTimers((prev) => prev.filter((timer) => timer.id !== activeTimer.timerId))
     setActiveTimer(null)
   }
 
   function getTimerDisplay(taskId: string): string {
     if (activeTimer?.taskId === taskId) {
-      const elapsed = activeTimer.isRunning 
+      const elapsed = activeTimer.isRunning
         ? currentTime - activeTimer.startTime + activeTimer.elapsedTime
         : activeTimer.elapsedTime
-      
+
       const minutes = Math.floor(elapsed / 60000)
       const seconds = Math.floor((elapsed % 60000) / 1000)
       return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
@@ -374,10 +371,7 @@ function App(): React.JSX.Element {
                       />
                     </TableCell>
                     <TableCell>
-                      <Select
-                        value="To Do"
-                        disabled
-                      >
+                      <Select value="To Do" disabled>
                         <SelectTrigger className="w-[130px]">
                           <SelectValue />
                         </SelectTrigger>
@@ -408,11 +402,7 @@ function App(): React.JSX.Element {
                         >
                           Save
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={handleCancelAdd}
-                        >
+                        <Button size="sm" variant="outline" onClick={handleCancelAdd}>
                           Cancel
                         </Button>
                       </div>
@@ -427,7 +417,7 @@ function App(): React.JSX.Element {
                   </TableRow>
                 ) : (
                   filteredTasks.map((task) => (
-                    <TableRow 
+                    <TableRow
                       key={task.id}
                       className={isTaskActive(task.id) ? 'border-primary/70 bg-primary/10' : ''}
                     >
@@ -480,9 +470,7 @@ function App(): React.JSX.Element {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{task.title}</TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {task.description || '-'}
-                      </TableCell>
+                      <TableCell className="max-w-xs truncate">{task.description || '-'}</TableCell>
                       <TableCell>
                         <Select
                           value={task.status}
@@ -510,11 +498,7 @@ function App(): React.JSX.Element {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => setEditingTask(task)}
-                          >
+                          <Button size="icon" variant="ghost" onClick={() => setEditingTask(task)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
