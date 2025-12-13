@@ -100,3 +100,4 @@ export type TaskListResponse = z.infer<typeof TaskListResponseModel>
 export type TaskResponse = z.infer<typeof TaskResponseModel>
 export type TaskQueryParams = z.infer<typeof TaskQueryParamsModel>
 export type TaskStatus = z.infer<typeof TaskStatusEnum>
+

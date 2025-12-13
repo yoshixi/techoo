@@ -1,9 +1,8 @@
 import { eq, and, desc, isNull } from 'drizzle-orm'
 
-import { taskTimersTable, tasksTable } from './schema/schema'
-import type { InsertTaskTimer, SelectTaskTimer } from './schema/schema'
+import { taskTimersTable, tasksTable, type InsertTaskTimer, type SelectTaskTimer } from './schema/schema'
 import type { TaskTimer, CreateTimer, UpdateTimer } from '../models/timers'
-import { createId, getDb } from './tasks'
+import { getDb, createId, type DB } from './common'
 
 // Convert database timer to API timer
 export function convertDbTimerToApi(dbTimer: SelectTaskTimer): TaskTimer {
@@ -18,7 +17,7 @@ export function convertDbTimerToApi(dbTimer: SelectTaskTimer): TaskTimer {
 }
 
 // Timer database functions
-export async function getAllTimers(db: ReturnType<typeof getDb>): Promise<TaskTimer[]> {
+export async function getAllTimers(db: DB): Promise<TaskTimer[]> {
   const dbTimers = await db
     .select()
     .from(taskTimersTable)
@@ -27,7 +26,7 @@ export async function getAllTimers(db: ReturnType<typeof getDb>): Promise<TaskTi
   return dbTimers.map(convertDbTimerToApi)
 }
 
-export async function getTimersByTaskId(db: ReturnType<typeof getDb>, userId: string, taskId: string): Promise<TaskTimer[] | null> {
+export async function getTimersByTaskId(db: DB, userId: string, taskId: string): Promise<TaskTimer[] | null> {
   // Check if task exists and belongs to user
   const [task] = await db
     .select()
@@ -47,7 +46,7 @@ export async function getTimersByTaskId(db: ReturnType<typeof getDb>, userId: st
   return dbTimers.map(convertDbTimerToApi)
 }
 
-export async function getTimerById(db: ReturnType<typeof getDb>, timerId: string): Promise<TaskTimer | null> {
+export async function getTimerById(db: DB, timerId: string): Promise<TaskTimer | null> {
   const [dbTimer] = await db
     .select()
     .from(taskTimersTable)
@@ -60,7 +59,7 @@ export async function getTimerById(db: ReturnType<typeof getDb>, timerId: string
   return convertDbTimerToApi(dbTimer)
 }
 
-export async function createTimer(db: ReturnType<typeof getDb>, userId: string, data: CreateTimer): Promise<TaskTimer | null> {
+export async function createTimer(db: DB, userId: string, data: CreateTimer): Promise<TaskTimer | null> {
   // Check if task exists and belongs to user
   const [task] = await db
     .select()
@@ -88,7 +87,7 @@ export async function createTimer(db: ReturnType<typeof getDb>, userId: string, 
   return convertDbTimerToApi(dbTimer)
 }
 
-export async function updateTimer(db: ReturnType<typeof getDb>, timerId: string, data: UpdateTimer): Promise<TaskTimer | null> {
+export async function updateTimer(db: DB, timerId: string, data: UpdateTimer): Promise<TaskTimer | null> {
   const [existingTimer] = await db
     .select()
     .from(taskTimersTable)
@@ -121,7 +120,7 @@ export async function updateTimer(db: ReturnType<typeof getDb>, timerId: string,
   return convertDbTimerToApi(updatedDbTimer)
 }
 
-export async function deleteTimer(db: ReturnType<typeof getDb>, timerId: string): Promise<TaskTimer | null> {
+export async function deleteTimer(db: DB, timerId: string): Promise<TaskTimer | null> {
   const [existingTimer] = await db
     .select()
     .from(taskTimersTable)

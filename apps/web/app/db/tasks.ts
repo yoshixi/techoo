@@ -1,26 +1,9 @@
-import { drizzle } from 'drizzle-orm/libsql'
 import { eq, and, desc, isNull } from 'drizzle-orm'
 import { v7 as uuidv7 } from 'uuid'
 
-import { tasksTable, taskTimersTable, usersTable } from './schema/schema'
-import type { InsertTask, SelectTask, InsertTaskTimer, SelectTaskTimer, SelectUser } from './schema/schema'
+import { tasksTable, taskTimersTable, usersTable, type InsertTask, type SelectTask, type InsertTaskTimer, type SelectTaskTimer, type SelectUser } from './schema/schema'
 import type { Task, CreateTask, UpdateTask, TaskStatus } from '../models/tasks'
-
-// Database connection
-export function getDb() {
-  return drizzle({
-    connection: {
-      url: process.env.TURSO_DATABASE_URL!,
-      authToken: process.env.TURSO_AUTH_TOKEN!
-    },
-    casing: 'snake_case'
-  })
-}
-
-// Helper function to create IDs
-export function createId(): string {
-  return uuidv7()
-}
+import { getDb, createId, type DB } from './common'
 
 // Convert database task to API task
 export function convertDbTaskToApi(dbTask: SelectTask): Task {
@@ -43,7 +26,7 @@ export function convertDbTaskToApi(dbTask: SelectTask): Task {
 }
 
 // Task database functions
-export async function ensureDefaultUser(db: ReturnType<typeof getDb>): Promise<SelectUser> {
+export async function ensureDefaultUser(db: DB): Promise<SelectUser> {
   const existingUsers = await db.select().from(usersTable).limit(1)
 
   if (existingUsers.length === 0) {
@@ -65,7 +48,7 @@ export async function ensureDefaultUser(db: ReturnType<typeof getDb>): Promise<S
   return user
 }
 
-export async function getAllTasks(db: ReturnType<typeof getDb>, userId: string, statusFilter?: string): Promise<Task[]> {
+export async function getAllTasks(db: DB, userId: string, statusFilter?: string): Promise<Task[]> {
   let dbTasks = await db
     .select()
     .from(tasksTable)
@@ -97,7 +80,7 @@ export async function getAllTasks(db: ReturnType<typeof getDb>, userId: string, 
   return tasks
 }
 
-export async function getTaskById(db: ReturnType<typeof getDb>, userId: string, taskId: string): Promise<Task | null> {
+export async function getTaskById(db: DB, userId: string, taskId: string): Promise<Task | null> {
   const [dbTask] = await db
     .select()
     .from(tasksTable)
@@ -121,7 +104,7 @@ export async function getTaskById(db: ReturnType<typeof getDb>, userId: string, 
   return task
 }
 
-export async function createTask(db: ReturnType<typeof getDb>, userId: string, data: CreateTask): Promise<Task> {
+export async function createTask(db: DB, userId: string, data: CreateTask): Promise<Task> {
   const now = Math.floor(Date.now() / 1000) // Unix timestamp in seconds
   const taskData: InsertTask = {
     id: createId(),
@@ -141,7 +124,7 @@ export async function createTask(db: ReturnType<typeof getDb>, userId: string, d
   return convertDbTaskToApi(dbTask)
 }
 
-export async function updateTask(db: ReturnType<typeof getDb>, userId: string, taskId: string, data: UpdateTask): Promise<Task | null> {
+export async function updateTask(db: DB, userId: string, taskId: string, data: UpdateTask): Promise<Task | null> {
   // Check if task exists
   const [existingTask] = await db
     .select()
@@ -198,7 +181,7 @@ export async function updateTask(db: ReturnType<typeof getDb>, userId: string, t
   return task
 }
 
-export async function deleteTask(db: ReturnType<typeof getDb>, userId: string, taskId: string): Promise<Task | null> {
+export async function deleteTask(db: DB, userId: string, taskId: string): Promise<Task | null> {
   const [existingTask] = await db
     .select()
     .from(tasksTable)
