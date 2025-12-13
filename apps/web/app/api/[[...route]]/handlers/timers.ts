@@ -1,4 +1,6 @@
-import { getDb, ensureDefaultUser, getAllTimers, getTimersByTaskId, getTimerById, createTimer, updateTimer, deleteTimer } from '../../../db'
+import { getDb } from '../../../core/common.db'
+import { ensureDefaultUser } from '../../../core/tasks.db'
+import { getAllTimers, getTimersByTaskId, getTimerById, createTimer, updateTimer, deleteTimer } from '../../../core/timers.db'
 
 // Timer handlers
 export const listTimersHandler = async (c: any) => {
@@ -8,7 +10,7 @@ export const listTimersHandler = async (c: any) => {
     const timers = await getAllTimers(db)
     
     return c.json({
-      data: timers,
+      timers: timers,
       total: timers.length
     })
   } catch (error) {
@@ -36,7 +38,7 @@ export const getTaskTimersHandler = async (c: any) => {
     }
     
     return c.json({
-      data: timers,
+      timers: timers,
       total: timers.length
     })
   } catch (error) {

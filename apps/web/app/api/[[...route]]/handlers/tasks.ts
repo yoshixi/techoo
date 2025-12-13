@@ -1,13 +1,5 @@
-import { getDb, ensureDefaultUser, getAllTasks, getTaskById, createTask, updateTask, deleteTask } from '../../../db'
-
-// Health check handler
-export const healthHandler = (c: any) => {
-  return c.json({
-    status: 'ok',
-    message: 'Shuchu API is running',
-    timestamp: new Date().toISOString()
-  })
-}
+import { getDb } from '../../../core/common.db'
+import { ensureDefaultUser, getAllTasks, getTaskById, createTask, updateTask, deleteTask } from '../../../core/tasks.db'
 
 // Task handlers
 export const listTasksHandler = async (c: any) => {
@@ -19,7 +11,7 @@ export const listTasksHandler = async (c: any) => {
     const tasks = await getAllTasks(db, defaultUser.id.toString(), status)
     
     return c.json({
-      data: tasks,
+      tasks: tasks,
       total: tasks.length
     })
   } catch (error) {

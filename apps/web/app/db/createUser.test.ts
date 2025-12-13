@@ -1,7 +1,8 @@
 import { beforeAll, afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 
-import { createUser, usersTable, type DB } from './index';
+import { createUser } from '../core/users.db';
+import { usersTable, type DB } from '../core/users.core';
 import { createSqliteLibsqlTestContext, type SqliteLibsqlTestContext } from './tests/sqliteLibsqlTestUtils';
 
 describe('createUser', () => {

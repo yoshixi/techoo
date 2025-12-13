@@ -1,5 +1,5 @@
 import { drizzle } from 'drizzle-orm/libsql';
-import * as schema from '../index';
+import * as schema from '../../core/users.core';
 
 import { pushSQLiteSchema } from 'drizzle-kit/api';
 import fs from "fs";
