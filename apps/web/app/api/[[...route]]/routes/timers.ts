@@ -1,13 +1,13 @@
 import { createRoute } from '@hono/zod-openapi'
 import {
   TimerListResponseModel,
-  ErrorResponseModel,
   TimerIdParamModel,
   TimerResponseModel,
   CreateTimerModel,
   UpdateTimerModel,
   TaskIdForTimersParamModel
-} from '../../../models'
+} from '../../../core/timers.core'
+import { ErrorResponseModel } from '../../../core/common.core'
 
 // GET /timers - List all timers
 export const listTimersRoute = createRoute({

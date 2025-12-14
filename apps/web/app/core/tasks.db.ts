@@ -1,5 +1,5 @@
 import { eq, and, desc, isNull } from 'drizzle-orm'
-import { tasksTable, taskTimersTable, usersTable, type InsertTask, type SelectTask, type InsertTaskTimer, type SelectTaskTimer, type SelectUser } from './users.core'
+import { tasksTable, taskTimersTable, usersTable, type InsertTask, type SelectTask, type InsertTaskTimer, type SelectTaskTimer, type SelectUser } from '../db/schema/schema'
 import { createId, type DB } from './common.db'
 import { formatTimestamp, parseISOToUnixTimestamp, getCurrentUnixTimestamp, validateRequiredString } from './common.core'
 
@@ -12,7 +12,7 @@ export interface Task {
   title: string
   description: string
   status: TaskStatus
-  dueDate?: string
+  dueDate: string | null
   createdAt: string
   updatedAt: string
 }
@@ -44,7 +44,7 @@ export function convertDbTaskToApi(dbTask: SelectTask): Task {
     title: dbTask.title,
     description: dbTask.description || '',
     status,
-    dueDate: dbTask.dueAt ? formatTimestamp(dbTask.dueAt) : undefined,
+    dueDate: dbTask.dueAt ? formatTimestamp(dbTask.dueAt) : null,
     createdAt: formatTimestamp(dbTask.createdAt),
     updatedAt: formatTimestamp(dbTask.updatedAt)
   }

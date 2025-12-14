@@ -29,10 +29,11 @@
   '';
 
   # https://devenv.sh/tasks/
-  # tasks = {
-  #   "myproj:setup".exec = "mytool build";
-  #   "devenv:enterShell".after = [ "myproj:setup" ];
-  # };
+  tasks = {
+     # devenv tasks run web:test
+    "web:test".exec = "pnpm --filter web run test:oneshot";
+     #"devenv:enterShell".after = [ "myproj:setup" ];
+  };
 
   # https://devenv.sh/tests/
   enterTest = ''

@@ -29,18 +29,18 @@ apps/web/app/
 ├── api/[[...route]]/
 │   ├── route.ts              # Main API router with OpenAPIHono
 │   ├── handlers/             # Request handlers (business logic)
-│   └── routes/              # Route definitions with OpenAPI schemas
-├── core/                    # Core business logic and database access
-│   ├── common.core.ts       # Shared utility functions
-│   ├── common.db.ts         # Database connection and helpers
-│   ├── users.core.ts        # Database schema definitions
-│   ├── tasks.db.ts          # Task database operations
-│   └── timers.db.ts         # Timer database operations
-└── models/                  # Zod schemas for API validation
-    ├── schemas.ts           # Base schemas (UUID, etc.)
-    ├── common.ts           # Common API models
-    ├── tasks.ts            # Task-related schemas
-    └── timers.ts           # Timer-related schemas
+│   │   ├── health.ts         # Health check handler
+│   │   ├── tasks.ts          # Task CRUD handlers
+│   │   └── timers.ts         # Timer CRUD handlers
+│   └── routes/               # Route definitions with OpenAPI schemas
+│       ├── health.ts         # Health route definitions
+│       ├── tasks.ts          # Task route definitions
+│       └── timers.ts         # Timer route definitions
+├── core/                     # Core business logic and database access
+│   ├── common.core.ts        # Shared utility functions
+│   ├── common.db.ts          # Database connection and helpers.
+│   ├── $resource.core.ts(such as users.core.ts)         #  Resource-related business logic and core models defined by Zod/openapi.
+│   ├── $resource.db.ts (such as users.db.ts)             # Resource database operations
 ```
 
 ## Data Models
@@ -526,23 +526,35 @@ This project uses [devenv](https://devenv.sh/) for development environment manag
    pnpm test --coverage
    ```
 
+### Current Test Status ✅
+
+**All 19 tests are currently passing**, covering:
+
+- **Health endpoint**: 5 tests
+- **Task management**: 5 tests (CRUD operations)
+- **Timer management**: 7 tests (including task association)
+- **Database operations**: 2 tests
+
 ### Test Structure
 
 The test suite includes:
 
 - **Unit Tests**: Core business logic and database operations
-- **Integration Tests**: API endpoint testing with Hono's testing utilities
+- **Integration Tests**: API endpoint testing with Hono's testing utilities  
 - **Handler Tests**: Complete request/response cycle testing
 
 **Test Files Location:**
 ```
 apps/web/app/
 ├── api/[[...route]]/handlers/
-│   ├── tasks.test.ts          # Task handler tests
-│   └── timers.test.ts         # Timer handler tests
+│   ├── health.test.ts           # Health endpoint tests (5 tests)
+│   ├── tasks-simple.test.ts     # Task handler tests (5 tests) 
+│   └── timers-simple.test.ts    # Timer handler tests (7 tests)
 ├── core/
-│   └── *.test.ts              # Database operation tests
-└── db/tests/                  # Database test utilities
+│   └── *.test.ts               # Database operation tests
+└── db/
+    ├── createUser.test.ts      # User creation tests (2 tests)
+    └── tests/                  # Database test utilities
 ```
 
 ### Test Environment

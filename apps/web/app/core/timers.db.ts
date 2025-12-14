@@ -1,5 +1,5 @@
 import { eq, and, desc, isNull } from 'drizzle-orm'
-import { taskTimersTable, tasksTable, type InsertTaskTimer, type SelectTaskTimer } from './users.core'
+import { taskTimersTable, tasksTable, type InsertTaskTimer, type SelectTaskTimer } from '../db/schema/schema'
 import { createId, type DB } from './common.db'
 import { formatTimestamp, parseISOToUnixTimestamp, getCurrentUnixTimestamp } from './common.core'
 
@@ -8,7 +8,7 @@ export interface TaskTimer {
   id: string
   taskId: string
   startTime: string
-  endTime?: string
+  endTime: string | null
   createdAt: string
   updatedAt: string
 }
@@ -28,7 +28,7 @@ export function convertDbTimerToApi(dbTimer: SelectTaskTimer): TaskTimer {
     id: dbTimer.id.toString(),
     taskId: dbTimer.taskId.toString(),
     startTime: formatTimestamp(dbTimer.startTime),
-    endTime: dbTimer.endTime ? formatTimestamp(dbTimer.endTime) : undefined,
+    endTime: dbTimer.endTime ? formatTimestamp(dbTimer.endTime) : null,
     createdAt: formatTimestamp(dbTimer.createdAt),
     updatedAt: formatTimestamp(dbTimer.updatedAt)
   }

@@ -1,5 +1,5 @@
 import { createRoute } from '@hono/zod-openapi'
-import { HealthResponseModel } from '../../../models'
+import { HealthResponseModel } from '../../../core/common.core'
 
 // GET /health - Health check endpoint
 export const healthRoute = createRoute({

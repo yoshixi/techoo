@@ -1,5 +1,13 @@
 import { z } from '@hono/zod-openapi'
-import { UUIDSchemaFinal } from './schemas'
+
+// UUID validation regex pattern
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+// Helper schema for UUID validation with better error handling
+export const UUIDSchema = z.string().uuid().openapi({
+  description: 'UUID format',
+  example: '01234567-89ab-cdef-0123-456789abcdef',
+})
 
 // Enum for task status
 export const TaskStatusEnum = z.enum(['To Do', 'In Progress', 'Done']).openapi({
@@ -9,7 +17,7 @@ export const TaskStatusEnum = z.enum(['To Do', 'In Progress', 'Done']).openapi({
 
 // Base task model
 export const TaskModel = z.object({
-  id: UUIDSchemaFinal.openapi({
+  id: UUIDSchema.openapi({
     description: 'Unique identifier for the task'
   }),
   title: z.string().min(1).max(200).openapi({
@@ -92,6 +100,17 @@ export const TaskQueryParamsModel = z.object({
   })
 }).openapi('TaskQueryParams')
 
+// Path parameter models
+export const TaskIdParamModel = z.object({
+  id: UUIDSchema.openapi({
+    description: 'Task ID',
+    param: {
+      name: 'id',
+      in: 'path'
+    }
+  })
+}).openapi('TaskIdParam')
+
 // Export types
 export type Task = z.infer<typeof TaskModel>
 export type CreateTask = z.infer<typeof CreateTaskModel>
@@ -100,4 +119,4 @@ export type TaskListResponse = z.infer<typeof TaskListResponseModel>
 export type TaskResponse = z.infer<typeof TaskResponseModel>
 export type TaskQueryParams = z.infer<typeof TaskQueryParamsModel>
 export type TaskStatus = z.infer<typeof TaskStatusEnum>
-
+export type TaskIdParam = z.infer<typeof TaskIdParamModel>

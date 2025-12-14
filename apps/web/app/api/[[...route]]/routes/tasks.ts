@@ -2,12 +2,12 @@ import { createRoute } from '@hono/zod-openapi'
 import {
   TaskQueryParamsModel,
   TaskListResponseModel,
-  ErrorResponseModel,
   TaskIdParamModel,
   TaskResponseModel,
   CreateTaskModel,
   UpdateTaskModel
-} from '../../../models'
+} from '../../../core/tasks.core'
+import { ErrorResponseModel } from '../../../core/common.core'
 
 // GET /tasks - List all tasks with optional filtering
 export const listTasksRoute = createRoute({

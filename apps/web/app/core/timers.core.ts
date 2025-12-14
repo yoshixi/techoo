@@ -1,12 +1,12 @@
 import { z } from '@hono/zod-openapi'
-import { UUIDSchemaFinal } from './schemas'
+import { UUIDSchema } from './tasks.core'
 
 // Base task timer model
 export const TaskTimerModel = z.object({
-  id: UUIDSchemaFinal.openapi({
+  id: UUIDSchema.openapi({
     description: 'Unique identifier for the timer'
   }),
-  taskId: UUIDSchemaFinal.openapi({
+  taskId: UUIDSchema.openapi({
     description: 'ID of the associated task'
   }),
   startTime: z.string().datetime().openapi({
@@ -29,7 +29,7 @@ export const TaskTimerModel = z.object({
 
 // Create timer input model
 export const CreateTimerModel = z.object({
-  taskId: UUIDSchemaFinal.openapi({
+  taskId: UUIDSchema.openapi({
     description: 'ID of the task to start timer for'
   }),
   startTime: z.string().datetime().openapi({
@@ -62,9 +62,32 @@ export const TimerResponseModel = z.object({
   timer: TaskTimerModel
 }).openapi('TimerResponse')
 
+// Path parameter models
+export const TimerIdParamModel = z.object({
+  id: UUIDSchema.openapi({
+    description: 'Timer ID',
+    param: {
+      name: 'id',
+      in: 'path'
+    }
+  })
+}).openapi('TimerIdParam')
+
+export const TaskIdForTimersParamModel = z.object({
+  taskId: UUIDSchema.openapi({
+    description: 'Task ID for timer operations',
+    param: {
+      name: 'taskId',
+      in: 'path'
+    }
+  })
+}).openapi('TaskIdForTimersParam')
+
 // Export types
 export type TaskTimer = z.infer<typeof TaskTimerModel>
 export type CreateTimer = z.infer<typeof CreateTimerModel>
 export type UpdateTimer = z.infer<typeof UpdateTimerModel>
 export type TimerListResponse = z.infer<typeof TimerListResponseModel>
 export type TimerResponse = z.infer<typeof TimerResponseModel>
+export type TimerIdParam = z.infer<typeof TimerIdParamModel>
+export type TaskIdForTimersParam = z.infer<typeof TaskIdForTimersParamModel>

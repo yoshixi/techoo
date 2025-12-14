@@ -1,7 +1,7 @@
 import { eq, and, desc, isNull } from 'drizzle-orm'
 
 import { taskTimersTable, tasksTable, type InsertTaskTimer, type SelectTaskTimer } from './schema/schema'
-import type { TaskTimer, CreateTimer, UpdateTimer } from '../models/timers'
+import type { TaskTimer, CreateTimer, UpdateTimer } from '../core/timers.core'
 import { getDb, createId, type DB } from './common'
 
 // Convert database timer to API timer

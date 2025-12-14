@@ -2,7 +2,7 @@ import { beforeAll, afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 
 import { createUser } from '../core/users.db';
-import { usersTable, type DB } from '../core/users.core';
+import { usersTable } from './schema/schema';
 import { createSqliteLibsqlTestContext, type SqliteLibsqlTestContext } from './tests/sqliteLibsqlTestUtils';
 
 describe('createUser', () => {
@@ -33,7 +33,7 @@ describe('createUser', () => {
 
     it('creates a user row in the local SQLite file', async () => {
         const context = getCtx();
-        const created = await createUser(context.db as DB, 'Alice');
+        const created = await createUser(context.db, 'Alice');
 
         expect(created).toMatchObject({
             name: 'Alice',
@@ -51,7 +51,7 @@ describe('createUser', () => {
 
     it('rejects blank names', async () => {
         const context = getCtx();
-        await expect(createUser(context.db as DB, '   ')).rejects.toThrow('Name is required');
+        await expect(createUser(context.db, '   ')).rejects.toThrow('Name is required');
     });
 });
 

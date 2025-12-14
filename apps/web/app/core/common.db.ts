@@ -5,7 +5,7 @@ import { v7 as uuidv7 } from "uuid"
 export function getDb() {
   return drizzle({
     connection: {
-      url: process.env.TURSO_DATABASE_URL!,
+      url: process.env.TURSO_CONNECTION_URL!,
       authToken: process.env.TURSO_AUTH_TOKEN!
     },
     casing: "snake_case"
