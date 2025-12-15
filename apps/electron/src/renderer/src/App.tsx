@@ -14,13 +14,6 @@ import {
 import { Input } from './components/ui/input'
 import { Label } from './components/ui/label'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from './components/ui/select'
-import {
   Table,
   TableBody,
   TableCell,
@@ -30,13 +23,10 @@ import {
 } from './components/ui/table'
 import { Textarea } from './components/ui/textarea'
 
-type TaskStatus = 'To Do' | 'In Progress' | 'Done'
-
 interface Task {
   id: string
   title: string
   description: string
-  status: TaskStatus
   dueDate?: string
   createdAt: string
   updatedAt: string
@@ -59,15 +49,12 @@ interface ActiveTimer {
   isRunning: boolean
 }
 
-const STATUS_OPTIONS: TaskStatus[] = ['To Do', 'In Progress', 'Done']
-
 const seedTasks: Task[] = [
   {
     id: createId(),
     title: 'Draft research outline',
     description:
       'Translate the research brief in Spec.md into a clear outline with milestones and blockers.',
-    status: 'In Progress',
     dueDate: upcomingDate(0),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -77,7 +64,6 @@ const seedTasks: Task[] = [
     title: 'Prototype focus timer',
     description:
       'Pair timer controls with the task list and wire up the highlighting interactions described in the spec.',
-    status: 'To Do',
     dueDate: upcomingDate(1),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -87,7 +73,6 @@ const seedTasks: Task[] = [
     title: 'Polish task details',
     description:
       'Tighten up the copy, task metadata, and shadcn components for consistent styling.',
-    status: 'Done',
     dueDate: upcomingDate(-1),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -97,7 +82,6 @@ const seedTasks: Task[] = [
 function App(): React.JSX.Element {
   const [tasks, setTasks] = useState<Task[]>(seedTasks)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
-  const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all')
   const [isAddingTask, setIsAddingTask] = useState(false)
   const [newTaskFields, setNewTaskFields] = useState({
     title: '',
@@ -120,11 +104,6 @@ function App(): React.JSX.Element {
     return () => clearInterval(interval)
   }, [])
 
-  const filteredTasks = tasks.filter((task) => {
-    if (statusFilter === 'all') return true
-    return task.status === statusFilter
-  })
-
   function handleCreateTask(): void {
     if (!newTaskFields.title.trim()) return
 
@@ -133,7 +112,6 @@ function App(): React.JSX.Element {
       id: createId(),
       title: newTaskFields.title.trim(),
       description: newTaskFields.description.trim(),
-      status: 'To Do',
       dueDate: newTaskFields.dueDate || undefined,
       createdAt: now,
       updatedAt: now
@@ -156,13 +134,6 @@ function App(): React.JSX.Element {
     if (activeTimer?.taskId === taskId) {
       handleStopTimer()
     }
-  }
-
-  function handleStatusChange(taskId: string, status: TaskStatus): void {
-    const now = new Date().toISOString()
-    setTasks((prev) =>
-      prev.map((task) => (task.id === taskId ? { ...task, status, updatedAt: now } : task))
-    )
   }
 
   function handleUpdateTask(updated: Task): void {
@@ -198,8 +169,7 @@ function App(): React.JSX.Element {
       isRunning: true
     })
 
-    // Update task status to "In Progress" if not already done
-    handleStatusChange(taskId, 'In Progress')
+    // Task timer started, no status change needed
   }
 
   function handlePauseTimer(): void {
@@ -295,22 +265,6 @@ function App(): React.JSX.Element {
               <CardDescription>Manage your task list</CardDescription>
             </div>
             <div className="flex items-center gap-4">
-              <Select
-                value={statusFilter}
-                onValueChange={(value: 'all' | TaskStatus) => setStatusFilter(value)}
-              >
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  {STATUS_OPTIONS.map((status) => (
-                    <SelectItem value={status} key={status}>
-                      {status}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               {!isAddingTask && (
                 <Button onClick={() => setIsAddingTask(true)}>
                   <Plus className="mr-2 h-4 w-4" />
@@ -326,7 +280,6 @@ function App(): React.JSX.Element {
                   <TableHead>Timer</TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead>Due Date</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -371,13 +324,6 @@ function App(): React.JSX.Element {
                       />
                     </TableCell>
                     <TableCell>
-                      <Select value="To Do" disabled>
-                        <SelectTrigger className="w-[130px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
                       <Input
                         type="date"
                         value={newTaskFields.dueDate}
@@ -409,14 +355,14 @@ function App(): React.JSX.Element {
                     </TableCell>
                   </TableRow>
                 )}
-                {filteredTasks.length === 0 ? (
+                {tasks.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
                       No tasks found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredTasks.map((task) => (
+                  tasks.map((task) => (
                     <TableRow
                       key={task.id}
                       className={isTaskActive(task.id) ? 'border-primary/70 bg-primary/10' : ''}
@@ -471,25 +417,6 @@ function App(): React.JSX.Element {
                       </TableCell>
                       <TableCell className="font-medium">{task.title}</TableCell>
                       <TableCell className="max-w-xs truncate">{task.description || '-'}</TableCell>
-                      <TableCell>
-                        <Select
-                          value={task.status}
-                          onValueChange={(status: TaskStatus) =>
-                            handleStatusChange(task.id, status)
-                          }
-                        >
-                          <SelectTrigger className="w-[130px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {STATUS_OPTIONS.map((status) => (
-                              <SelectItem key={status} value={status}>
-                                {status}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <CalendarDays className="h-4 w-4" />
@@ -576,34 +503,14 @@ function EditTaskDialog({
               onChange={(event) => setLocalTask({ ...localTask, description: event.target.value })}
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="edit-due">Due date</Label>
-              <Input
-                id="edit-due"
-                type="date"
-                value={localTask.dueDate ?? ''}
-                onChange={(event) => setLocalTask({ ...localTask, dueDate: event.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select
-                value={localTask.status}
-                onValueChange={(status: TaskStatus) => setLocalTask({ ...localTask, status })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-due">Due date</Label>
+            <Input
+              id="edit-due"
+              type="date"
+              value={localTask.dueDate ?? ''}
+              onChange={(event) => setLocalTask({ ...localTask, dueDate: event.target.value })}
+            />
           </div>
           <DialogFooter>
             <Button type="submit">Save changes</Button>
