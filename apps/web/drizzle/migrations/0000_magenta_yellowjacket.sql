@@ -3,8 +3,8 @@ CREATE TABLE `task_timers` (
 	`task_id` blob NOT NULL,
 	`start_time` integer NOT NULL,
 	`end_time` integer,
-	`created_at` integer DEFAULT unixepoch() NOT NULL,
-	`updated_at` integer DEFAULT unixepoch() NOT NULL,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
 	FOREIGN KEY (`task_id`) REFERENCES `tasks`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
@@ -15,18 +15,12 @@ CREATE TABLE `tasks` (
 	`description` text,
 	`due_at` integer,
 	`completed_at` integer,
-	`created_at` integer DEFAULT unixepoch() NOT NULL,
-	`updated_at` integer DEFAULT unixepoch() NOT NULL,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-PRAGMA foreign_keys=OFF;--> statement-breakpoint
-CREATE TABLE `__new_users` (
+CREATE TABLE `users` (
 	`id` blob PRIMARY KEY NOT NULL,
 	`name` text NOT NULL
 );
---> statement-breakpoint
-INSERT INTO `__new_users`("id", "name") SELECT "id", "name" FROM `users`;--> statement-breakpoint
-DROP TABLE `users`;--> statement-breakpoint
-ALTER TABLE `__new_users` RENAME TO `users`;--> statement-breakpoint
-PRAGMA foreign_keys=ON;

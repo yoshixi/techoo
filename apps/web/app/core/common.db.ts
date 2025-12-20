@@ -1,9 +1,40 @@
 import { drizzle } from "drizzle-orm/better-sqlite3"
 import { drizzle as drizzleLibsql } from "drizzle-orm/libsql"
+import { createClient } from "@libsql/client"
 import Database from "better-sqlite3"
 import { v7 as uuidv7 } from "uuid"
 import path from "path"
 import fs from "fs"
+
+const DRIZZLE_CONFIG = {
+  casing: "snake_case" as const
+}
+
+function getLocalDbPath() {
+  const tmpDir = path.join(process.cwd(), 'tmp')
+  fs.mkdirSync(tmpDir, { recursive: true })
+  return path.join(tmpDir, 'local.db')
+}
+
+function createBetterSqlite3Connection(dbPath: string) {
+  const sqlite = new Database(dbPath)
+  sqlite.pragma('foreign_keys = ON')
+  sqlite.pragma('journal_mode = WAL')
+  return drizzle(sqlite, DRIZZLE_CONFIG)
+}
+
+function createLibsqlClient(url: string) {
+  return createClient({
+    url
+  })
+}
+
+function createLibsqlDrizzle(url: string) {
+  return drizzleLibsql({
+    client: createLibsqlClient(url),
+    ...DRIZZLE_CONFIG
+  })
+}
 
 // Database connection - centralized for all database operations
 export function getDb() {
@@ -20,20 +51,23 @@ export function getDb() {
     })
   } else {
     // Development: Use local SQLite
-    console.log('💾 Using local SQLite database for development')
-    const tmpDir = path.join(process.cwd(), 'tmp')
-    fs.mkdirSync(tmpDir, { recursive: true })
-    const dbPath = path.join(tmpDir, 'local.db')
+      // console.log('💾 Using local SQLite database for development')
     
-    const sqlite = new Database(dbPath)
-    
-    // Enable foreign keys and other optimizations
-    sqlite.pragma('foreign_keys = ON')
-    sqlite.pragma('journal_mode = WAL')
-    
-    return drizzle(sqlite, {
-      casing: "snake_case"
-    })
+    // const dbPath = getLocalDbPath()
+    // return createBetterSqlite3Connection(dbPath)
+    // console.error('❌ Failed to initialize SQLite database:', error)
+    // console.log('🔄 Falling back to libsql client')
+
+    const dbPath = getLocalDbPath()
+    const fileUrl = `file:${dbPath}`
+
+    try {
+      return createLibsqlDrizzle(fileUrl)
+    } catch (fallbackError) {
+      console.error('❌ Failed to initialize libsql file database:', fallbackError)
+      console.log('🧪 Falling back to libsql in-memory database')
+      return createLibsqlDrizzle('file::memory:')
+    }
   }
 }
 
