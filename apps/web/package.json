@@ -1,5 +1,5 @@
 {
-  "name": "web",
+  "name": "@apps/web",
   "version": "0.1.0",
   "type": "module",
   "private": true,
@@ -18,8 +18,12 @@
     "test": "vitest",
     "test:oneshot": "vitest run"
   },
+  "exports": {
+    ".": "./app/api/[[...route]]/route.ts" 
+  },
+  "types": "./app/api/[[...route]]/route.ts",
   "dependencies": {
-    "@hono/zod-openapi": "^1.1.5",
+    "@hono/zod-openapi": "catalog:",
     "@libsql/client": "^0.15.15",
     "@repo/ui": "workspace:*",
     "better-sqlite3": "^11.7.0",

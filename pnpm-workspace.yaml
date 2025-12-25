@@ -1,3 +1,9 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "scripts/*"
+
+catalog:
+  "@hono/zod-openapi": "^1.1.5"
+  "@types/node": "^22.15.3"
+  
