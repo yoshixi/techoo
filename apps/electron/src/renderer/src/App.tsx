@@ -90,7 +90,7 @@ function App(): React.JSX.Element {
       await postApiTasks({
         title: newTaskFields.title.trim(),
         description: newTaskFields.description.trim(),
-        dueDate: newTaskFields.dueDate || undefined
+        dueDate: normalizeDueDate(newTaskFields.dueDate)
       })
       await mutateTasks()
       setNewTaskFields({ title: '', description: '', dueDate: '' })
@@ -128,7 +128,7 @@ function App(): React.JSX.Element {
       await putApiTasksId(updated.id, {
         title: updated.title,
         description: updated.description,
-        dueDate: updated.dueDate
+        dueDate: normalizeDueDate(updated.dueDate ?? '')
       })
       await mutateTasks()
       setEditingTask(null)
@@ -559,6 +559,19 @@ function getErrorMessage(error: unknown): string {
     if (message) return message
   }
   return 'Please try again.'
+}
+
+function normalizeDueDate(value: string): string | undefined {
+  if (!value) return undefined
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return undefined
+  // Keep only the date portion and coerce to UTC midnight
+  const [year, month, day] = value.split('-')
+  if (year && month && day) {
+    const utcDate = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 0, 0, 0))
+    return utcDate.toISOString()
+  }
+  return date.toISOString()
 }
 
 function createId(): string {
