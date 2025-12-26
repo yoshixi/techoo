@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import type { JSX } from 'react';
 import Versions from './components/Versions';
 import HealthCheck from './components/HealthCheck';
 import TaskManager from './components/TaskManager';

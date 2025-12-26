@@ -27,7 +27,7 @@ export const getTestDB = (location: ":memory:" | (string & {}) = ":memory:") => 
 export type DB = ReturnType<typeof getDb>;
 
 export const migrateDB = async (db: ReturnType<typeof getTestDB>) => {
-  const { apply } = await pushSQLiteSchema(schema, db);
+  const { apply } = await pushSQLiteSchema(schema, db as any);
   await apply();
 };
 
@@ -57,4 +57,3 @@ export async function createSqliteLibsqlTestContext(): Promise<SqliteLibsqlTestC
     },
   };
 }
-

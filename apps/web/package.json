@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev --turbopack --port 3000",
     "build": "next build",
-    "start": "next start", 
+    "start": "next start",
     "lint": "next lint",
     "check-types": "tsc --noEmit",
     "drizzle:generate": "drizzle-kit generate --config ./drizzle.config.ts",
@@ -15,11 +15,11 @@
     "drizzle:pull": "drizzle-kit pull --config ./drizzle.config.ts",
     "drizzle:push:prod": "NODE_ENV=production drizzle-kit push --config ./drizzle.config.ts",
     "drizzle:generate:prod": "NODE_ENV=production drizzle-kit generate --config ./drizzle.config.ts",
-    "test": "vitest",
-    "test:oneshot": "vitest run"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "exports": {
-    ".": "./app/api/[[...route]]/route.ts" 
+    ".": "./app/api/[[...route]]/route.ts"
   },
   "types": "./app/api/[[...route]]/route.ts",
   "dependencies": {

@@ -50,10 +50,8 @@ export const TimerManager: React.FC<{ taskId?: string }> = ({ taskId }) => {
     setIsStarting(true);
     try {
       await createTimer({
-        data: {
-          taskId: forTaskId,
-          startTime: new Date().toISOString()
-        }
+        taskId: forTaskId,
+        startTime: new Date().toISOString()
       });
       mutateTimers(); // Refresh the timers list
     } catch (error) {
@@ -87,7 +85,7 @@ export const TimerManager: React.FC<{ taskId?: string }> = ({ taskId }) => {
       <div className="p-4 border rounded-lg bg-red-50 border-red-200">
         <h3 className="text-red-800 font-semibold mb-2">Failed to Load Timers</h3>
         <p className="text-red-600 text-sm">
-          {timersError.message}
+          {timersError.error || 'Unknown error'}
         </p>
       </div>
     );

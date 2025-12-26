@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import {
   useGetApiTasks,
   usePostApiTasks,
-  usePutApiTasksId,
-  useDeleteApiTasksId,
-  type Task,
-  type CreateTaskRequest
+  deleteApiTasksId,
+  putApiTasksId,
+  type Task
 } from '../gen/api';
 
 /**
@@ -13,11 +12,14 @@ import {
  * Demonstrates full CRUD operations with SWR hooks
  */
 export const TaskManager: React.FC = () => {
-  const [editingTask, setEditingTask] = useState<Partial<Task> | null>(null);
-  const [newTask, setNewTask] = useState<Partial<CreateTaskRequest>>({
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [newTask, setNewTask] = useState<{ title: string; description: string; dueDate: string }>({
     title: '',
     description: '',
+    dueDate: ''
   });
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
 
   // Fetch all tasks
   const {
@@ -32,23 +34,16 @@ export const TaskManager: React.FC = () => {
   // Create task mutation
   const { trigger: createTask, isMutating: isCreating } = usePostApiTasks();
 
-  // Update task mutation
-  const { trigger: updateTask, isMutating: isUpdating } = usePutApiTasksId();
-
-  // Delete task mutation
-  const { trigger: deleteTask, isMutating: isDeleting } = useDeleteApiTasksId();
-
   const handleCreateTask = async () => {
     if (!newTask.title?.trim()) return;
 
     try {
       await createTask({
-        data: {
-          title: newTask.title,
-          description: newTask.description || '',
-        }
+        title: newTask.title.trim(),
+        description: newTask.description?.trim() || undefined,
+        dueDate: normalizeDueDate(newTask.dueDate)
       });
-      setNewTask({ title: '', description: '' });
+      setNewTask({ title: '', description: '', dueDate: '' });
       mutateTasks(); // Refresh the tasks list
     } catch (error) {
       console.error('Failed to create task:', error);
@@ -58,31 +53,33 @@ export const TaskManager: React.FC = () => {
   const handleUpdateTask = async () => {
     if (!editingTask || !editingTask.id) return;
 
+    setIsUpdating(true);
     try {
-      await updateTask({
-        id: editingTask.id,
-        data: {
-          title: editingTask.title!,
-          description: editingTask.description || '',
-          status: editingTask.status!,
-          priority: editingTask.priority!
-        }
+      await putApiTasksId(editingTask.id, {
+        title: editingTask.title?.trim(),
+        description: editingTask.description?.trim(),
+        dueDate: normalizeDueDate(editingTask.dueDate ?? '')
       });
       setEditingTask(null);
       mutateTasks(); // Refresh the tasks list
     } catch (error) {
       console.error('Failed to update task:', error);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   const handleDeleteTask = async (taskId: string) => {
     if (!confirm('Are you sure you want to delete this task?')) return;
 
+    setDeletingTaskId(taskId);
     try {
-      await deleteTask({ id: taskId });
+      await deleteApiTasksId(taskId);
       mutateTasks(); // Refresh the tasks list
     } catch (error) {
       console.error('Failed to delete task:', error);
+    } finally {
+      setDeletingTaskId(null);
     }
   };
 
@@ -104,7 +101,7 @@ export const TaskManager: React.FC = () => {
       <div className="p-4 border rounded-lg bg-red-50 border-red-200">
         <h3 className="text-red-800 font-semibold mb-2">Failed to Load Tasks</h3>
         <p className="text-red-600 text-sm">
-          {tasksError.message}
+          {tasksError.error || 'Unknown error'}
         </p>
       </div>
     );
@@ -137,6 +134,12 @@ export const TaskManager: React.FC = () => {
             className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             rows={3}
           />
+          <input
+            type="date"
+            value={newTask.dueDate}
+            onChange={(e) => setNewTask(prev => ({ ...prev, dueDate: e.target.value }))}
+            className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
           <button
             onClick={handleCreateTask}
             disabled={!newTask.title?.trim() || isCreating}
@@ -157,35 +160,23 @@ export const TaskManager: React.FC = () => {
                 <input
                   type="text"
                   value={editingTask.title || ''}
-                  onChange={(e) => setEditingTask(prev => ({ ...prev, title: e.target.value }))}
+                  onChange={(e) => setEditingTask(prev => (prev ? { ...prev, title: e.target.value } : null))}
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-green-500"
                 />
                 <textarea
                   value={editingTask.description || ''}
-                  onChange={(e) => setEditingTask(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) => setEditingTask(prev => (prev ? { ...prev, description: e.target.value } : null))}
                   className="w-full p-2 border rounded focus:ring-2 focus:ring-green-500"
                   rows={2}
                 />
-                <div className="flex gap-2">
-                  <select
-                    value={editingTask.status || 'pending'}
-                    onChange={(e) => setEditingTask(prev => ({ ...prev, status: e.target.value as Task['status'] }))}
-                    className="p-2 border rounded focus:ring-2 focus:ring-green-500"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                  <select
-                    value={editingTask.priority || 'medium'}
-                    onChange={(e) => setEditingTask(prev => ({ ...prev, priority: e.target.value as Task['priority'] }))}
-                    className="p-2 border rounded focus:ring-2 focus:ring-green-500"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
+                <input
+                  type="date"
+                  value={formatDateInput(editingTask.dueDate)}
+                  onChange={(e) =>
+                    setEditingTask((prev) => (prev ? { ...prev, dueDate: e.target.value } : null))
+                  }
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-green-500"
+                />
                 <div className="flex gap-2">
                   <button
                     onClick={handleUpdateTask}
@@ -207,19 +198,10 @@ export const TaskManager: React.FC = () => {
               <div>
                 <div className="flex items-start justify-between mb-2">
                   <h4 className="font-semibold text-gray-900">{task.title}</h4>
-                  <div className="flex gap-2">
-                    <span className={`px-2 py-1 text-xs rounded-full ${task.status === 'completed' ? 'bg-green-100 text-green-800' :
-                      task.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                      {task.status?.replace('_', ' ')}
-                    </span>
-                    <span className={`px-2 py-1 text-xs rounded-full ${task.priority === 'high' ? 'bg-red-100 text-red-800' :
-                      task.priority === 'medium' ? 'bg-orange-100 text-orange-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
-                      {task.priority}
-                    </span>
+                  <div className="text-xs text-gray-500">
+                    {task.dueDate
+                      ? `Due ${new Date(task.dueDate).toLocaleDateString()}`
+                      : 'No due date'}
                   </div>
                 </div>
                 {task.description && (
@@ -241,7 +223,7 @@ export const TaskManager: React.FC = () => {
                     </button>
                     <button
                       onClick={() => handleDeleteTask(task.id)}
-                      disabled={isDeleting}
+                      disabled={deletingTaskId === task.id}
                       className="px-3 py-1 text-sm bg-red-100 text-red-800 rounded hover:bg-red-200 disabled:opacity-50"
                     >
                       Delete
@@ -262,5 +244,25 @@ export const TaskManager: React.FC = () => {
     </div>
   );
 };
+
+function formatDateInput(value?: string): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString().slice(0, 10);
+}
+
+function normalizeDueDate(value: string): string | undefined {
+  if (!value) return undefined;
+  const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+  if (isoDatePattern.test(value)) {
+    const [year, month, day] = value.split('-');
+    const utcDate = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+    return utcDate.toISOString();
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+  return parsed.toISOString();
+}
 
 export default TaskManager;

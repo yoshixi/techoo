@@ -10,16 +10,16 @@
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
-    "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
-    "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "check-types:node": "tsc --noEmit -p tsconfig.node.json --composite false",
+    "check-types:web": "tsc --noEmit -p tsconfig.web.json --composite false",
+    "check-types": "npm run check-types:node && npm run check-types:web",
     "start": "electron-vite preview",
     "start:direct": "mv out/main/index.js out/main/index.cjs && ./node_modules/.bin/electron .",
     "start:api": "cp .env.api .env && electron-vite preview",
     "dev": "electron-vite dev",
     "dev:api": "cp .env.api .env && electron-vite dev",
     "dev:build": "electron-vite build && npm run start:direct",
-    "build": "npm run typecheck && electron-vite build",
+    "build": "npm run check-types && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
@@ -28,7 +28,8 @@
     "orval:generate": "orval --config ./orval.config.js",
     "orval:watch": "orval --config ./orval.config.js --watch",
     "gen:openapi": "pnpm --filter @scripts/openapischema-generator generate --path apps/electron",
-    "api:generate": "pnpm run gen:openapi && pnpm run orval:generate"
+    "api:generate": "pnpm run gen:openapi && pnpm run orval:generate",
+    "test": "echo 'No tests for electron yet'"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",

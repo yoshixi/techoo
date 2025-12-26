@@ -20,6 +20,7 @@ export const HealthCheck: React.FC = () => {
   }
 
   if (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return (
       <div className="p-4 border rounded-lg bg-red-50 border-red-200">
         <h3 className="text-red-800 font-semibold mb-2">API Connection Failed</h3>
@@ -27,7 +28,7 @@ export const HealthCheck: React.FC = () => {
           Unable to connect to the API. Please make sure the server is running.
         </p>
         <p className="text-red-500 text-xs mt-1">
-          Error: {error.message}
+          Error: {errorMessage}
         </p>
         <div className="text-xs text-red-400 mt-2">
           💡 Using fetch API instead of axios for better Electron compatibility

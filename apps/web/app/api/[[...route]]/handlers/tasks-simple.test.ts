@@ -16,16 +16,16 @@ import {
 } from './tasks';
 import { createSqliteLibsqlTestContext, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
 
+type TestGlobal = typeof globalThis & { testDb?: SqliteLibsqlTestContext['db'] };
+
 // Mock the database connection
-vi.mock('../../../core/common.db', () => {
-  return {
-    getDb: () => global.testDb,
-    createId: () => {
-      const { v7: uuidv7 } = require('uuid');
-      return uuidv7();
-    }
-  };
-});
+vi.mock('../../../core/common.db', () => ({
+  getDb: () => (globalThis as TestGlobal).testDb!,
+  createId: () => {
+    const { v7: uuidv7 } = require('uuid');
+    return uuidv7();
+  }
+}));
 
 // Create a test app with task routes
 const createTestApp = () => {
@@ -61,7 +61,7 @@ describe('Task Handlers (Simplified)', () => {
   beforeAll(async () => {
     testContext = await createSqliteLibsqlTestContext();
     // Set the global test database for the mock to use
-    (global as any).testDb = testContext.db;
+    (globalThis as TestGlobal).testDb = testContext.db;
     app = createTestApp();
   });
 
