@@ -109,6 +109,15 @@ export default {
 - `clean: true` wipes the old generated files on every run, so never keep hand-written code inside `src/renderer/src/gen/api`.
 - The mutator lives outside the generated tree to avoid being deleted.
 
+## Development Environment
+
+This project requires [devenv](https://devenv.sh/) for a consistent development experience.
+
+- **Shell**: Always work within the `devenv shell`.
+- **Package Manager**: Use `pnpm` for all node-related tasks (install, run, build).
+
+Refer to the root [DEV_ENVIROMENT.md](../../../DEV_ENVIROMENT.md) for detailed instructions.
+
 ## Scripts & Tooling
 
 `apps/electron/package.json` exposes the relevant commands:

@@ -5,28 +5,10 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
-    build: {
-      target: 'node18',
-      rollupOptions: {
-        output: {
-          entryFileNames: '[name].mjs',
-          format: 'es' // 明示的に ESM 形式で出力するよう指定
-        }
-      }
-    }
+    plugins: [externalizeDepsPlugin()]
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
-    build: {
-      target: 'node18',
-      rollupOptions: {
-        output: {
-          // Preloadも合わせておくと安全です
-          entryFileNames: '[name].mjs'
-        }
-      }
-    }
+    plugins: [externalizeDepsPlugin()]
   },
   renderer: {
     resolve: {

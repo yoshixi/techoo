@@ -25,6 +25,9 @@ createRoot(document.getElementById('root')!).render(
 
 ## Setup Checklist
 
+> [!IMPORTANT]
+> This project uses **devenv**. Before starting, ensure you have entered the development environment by running `devenv shell` at the project root. All Node.js commands (like `pnpm`) should be executed within this shell. Refer to [DEV_ENVIROMENT.md](../../../DEV_ENVIROMENT.md) for more details.
+
 1. **Install dependencies**
    ```bash
    pnpm install
