@@ -527,7 +527,7 @@ function EditTaskDialog({
             <Input
               id="edit-due"
               type="date"
-              value={localTask.dueDate ?? ''}
+              value={formatDateInput(localTask.dueDate)}
               onChange={(event) => setLocalTask({ ...localTask, dueDate: event.target.value })}
             />
           </div>
@@ -559,6 +559,13 @@ function getErrorMessage(error: unknown): string {
     if (message) return message
   }
   return 'Please try again.'
+}
+
+function formatDateInput(value?: string): string {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toISOString().slice(0, 10)
 }
 
 function normalizeDueDate(value: string): string | undefined {
