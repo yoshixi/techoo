@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export interface CustomRequestConfig {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
@@ -15,7 +15,14 @@ export interface CustomRequestConfig {
  * This function will be used by the generated API client
  */
 export const customInstance = <T>(config: CustomRequestConfig): Promise<T> => {
-  const url = `${API_BASE_URL}${config.url}`;
+  const url = new URL(config.url, API_BASE_URL);
+  if (config.params) {
+    Object.entries(config.params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        url.searchParams.set(key, String(value));
+      }
+    });
+  }
 
   const requestConfig: RequestInit = {
     method: config.method || 'GET',
@@ -26,7 +33,7 @@ export const customInstance = <T>(config: CustomRequestConfig): Promise<T> => {
     body: config.data ? JSON.stringify(config.data) : undefined,
   };
 
-  return fetch(url, requestConfig).then(async (response) => {
+  return fetch(url.toString(), requestConfig).then(async (response) => {
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);

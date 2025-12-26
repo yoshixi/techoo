@@ -22,15 +22,13 @@ import {
   TableRow
 } from './components/ui/table'
 import { Textarea } from './components/ui/textarea'
-
-interface Task {
-  id: string
-  title: string
-  description: string
-  dueDate?: string
-  createdAt: string
-  updatedAt: string
-}
+import {
+  deleteApiTasksId,
+  postApiTasks,
+  putApiTasksId,
+  useGetApiTasks,
+  type Task
+} from './gen/api'
 
 interface TaskTimer {
   id: string
@@ -49,38 +47,14 @@ interface ActiveTimer {
   isRunning: boolean
 }
 
-const seedTasks: Task[] = [
-  {
-    id: createId(),
-    title: 'Draft research outline',
-    description:
-      'Translate the research brief in Spec.md into a clear outline with milestones and blockers.',
-    dueDate: upcomingDate(0),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: createId(),
-    title: 'Prototype focus timer',
-    description:
-      'Pair timer controls with the task list and wire up the highlighting interactions described in the spec.',
-    dueDate: upcomingDate(1),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: createId(),
-    title: 'Polish task details',
-    description:
-      'Tighten up the copy, task metadata, and shadcn components for consistent styling.',
-    dueDate: upcomingDate(-1),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-]
-
 function App(): React.JSX.Element {
-  const [tasks, setTasks] = useState<Task[]>(seedTasks)
+  const {
+    data: tasksResponse,
+    error: tasksError,
+    isLoading: tasksLoading,
+    mutate: mutateTasks
+  } = useGetApiTasks()
+  const tasks = tasksResponse?.tasks ?? []
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [isAddingTask, setIsAddingTask] = useState(false)
   const [newTaskFields, setNewTaskFields] = useState({
@@ -88,6 +62,10 @@ function App(): React.JSX.Element {
     description: '',
     dueDate: ''
   })
+  const [isCreating, setIsCreating] = useState(false)
+  const [savingTaskId, setSavingTaskId] = useState<string | null>(null)
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
+  const totalTasks = tasksResponse?.total ?? tasks.length
 
   // Timer state
   const [activeTimer, setActiveTimer] = useState<ActiveTimer | null>(null)
@@ -104,22 +82,24 @@ function App(): React.JSX.Element {
     return () => clearInterval(interval)
   }, [])
 
-  function handleCreateTask(): void {
+  async function handleCreateTask(): Promise<void> {
     if (!newTaskFields.title.trim()) return
 
-    const now = new Date().toISOString()
-    const task: Task = {
-      id: createId(),
-      title: newTaskFields.title.trim(),
-      description: newTaskFields.description.trim(),
-      dueDate: newTaskFields.dueDate || undefined,
-      createdAt: now,
-      updatedAt: now
+    setIsCreating(true)
+    try {
+      await postApiTasks({
+        title: newTaskFields.title.trim(),
+        description: newTaskFields.description.trim(),
+        dueDate: newTaskFields.dueDate || undefined
+      })
+      await mutateTasks()
+      setNewTaskFields({ title: '', description: '', dueDate: '' })
+      setIsAddingTask(false)
+    } catch (error) {
+      console.error('Failed to create task:', error)
+    } finally {
+      setIsCreating(false)
     }
-
-    setTasks((prev) => [task, ...prev])
-    setNewTaskFields({ title: '', description: '', dueDate: '' })
-    setIsAddingTask(false)
   }
 
   function handleCancelAdd(): void {
@@ -127,18 +107,36 @@ function App(): React.JSX.Element {
     setIsAddingTask(false)
   }
 
-  function handleDeleteTask(taskId: string): void {
-    setTasks((prev) => prev.filter((task) => task.id !== taskId))
-
-    // Stop timer if this task was being timed
-    if (activeTimer?.taskId === taskId) {
-      handleStopTimer()
+  async function handleDeleteTask(taskId: string): Promise<void> {
+    setDeletingTaskId(taskId)
+    try {
+      await deleteApiTasksId(taskId)
+      await mutateTasks()
+      if (activeTimer?.taskId === taskId) {
+        handleStopTimer()
+      }
+    } catch (error) {
+      console.error('Failed to delete task:', error)
+    } finally {
+      setDeletingTaskId(null)
     }
   }
 
-  function handleUpdateTask(updated: Task): void {
-    setTasks((prev) => prev.map((task) => (task.id === updated.id ? updated : task)))
-    setEditingTask(null)
+  async function handleUpdateTask(updated: Task): Promise<void> {
+    setSavingTaskId(updated.id)
+    try {
+      await putApiTasksId(updated.id, {
+        title: updated.title,
+        description: updated.description,
+        dueDate: updated.dueDate
+      })
+      await mutateTasks()
+      setEditingTask(null)
+    } catch (error) {
+      console.error('Failed to update task:', error)
+    } finally {
+      setSavingTaskId(null)
+    }
   }
 
   // Timer functions
@@ -262,7 +260,9 @@ function App(): React.JSX.Element {
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div>
               <CardTitle>Tasks</CardTitle>
-              <CardDescription>Manage your task list</CardDescription>
+              <CardDescription>
+                {tasksLoading ? 'Loading tasks...' : `${totalTasks} task${totalTasks === 1 ? '' : 's'}`}
+              </CardDescription>
             </div>
             <div className="flex items-center gap-4">
               {!isAddingTask && (
@@ -344,9 +344,9 @@ function App(): React.JSX.Element {
                         <Button
                           size="sm"
                           onClick={handleCreateTask}
-                          disabled={!newTaskFields.title.trim()}
+                          disabled={!newTaskFields.title.trim() || isCreating}
                         >
-                          Save
+                          {isCreating ? 'Saving...' : 'Save'}
                         </Button>
                         <Button size="sm" variant="outline" onClick={handleCancelAdd}>
                           Cancel
@@ -355,13 +355,29 @@ function App(): React.JSX.Element {
                     </TableCell>
                   </TableRow>
                 )}
-                {tasks.length === 0 ? (
+                {tasksLoading && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                      Loading tasks...
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!tasksLoading && tasksError && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-destructive">
+                      Failed to load tasks. {getErrorMessage(tasksError)}
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!tasksLoading && !tasksError && tasks.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-muted-foreground">
                       No tasks found
                     </TableCell>
                   </TableRow>
-                ) : (
+                )}
+                {!tasksLoading &&
+                  !tasksError &&
                   tasks.map((task) => (
                     <TableRow
                       key={task.id}
@@ -432,14 +448,14 @@ function App(): React.JSX.Element {
                             size="icon"
                             variant="ghost"
                             onClick={() => handleDeleteTask(task.id)}
+                            disabled={deletingTaskId === task.id}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
+                  ))}
               </TableBody>
             </Table>
           </CardContent>
@@ -450,6 +466,7 @@ function App(): React.JSX.Element {
         task={editingTask}
         onOpenChange={(open) => !open && setEditingTask(null)}
         onSubmit={handleUpdateTask}
+        isSubmitting={!!editingTask && savingTaskId === editingTask.id}
       />
     </div>
   )
@@ -458,11 +475,13 @@ function App(): React.JSX.Element {
 function EditTaskDialog({
   task,
   onOpenChange,
-  onSubmit
+  onSubmit,
+  isSubmitting
 }: {
   task: Task | null
   onOpenChange: (open: boolean) => void
-  onSubmit: (task: Task) => void
+  onSubmit: (task: Task) => Promise<void> | void
+  isSubmitting: boolean
 }): React.JSX.Element | null {
   const [localTask, setLocalTask] = useState<Task | null>(task)
 
@@ -472,10 +491,10 @@ function EditTaskDialog({
 
   if (!task || !localTask) return null
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     if (!localTask) return
-    onSubmit({ ...localTask, updatedAt: new Date().toISOString() })
+    await onSubmit({ ...localTask, updatedAt: new Date().toISOString() })
   }
 
   return (
@@ -513,7 +532,9 @@ function EditTaskDialog({
             />
           </div>
           <DialogFooter>
-            <Button type="submit">Save changes</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save changes'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -531,10 +552,13 @@ function formatDate(value: string): string {
   })
 }
 
-function upcomingDate(offset: number): string {
-  const date = new Date()
-  date.setDate(date.getDate() + offset)
-  return date.toISOString().slice(0, 10)
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (error && typeof error === 'object' && 'error' in error) {
+    const message = (error as { error?: string }).error
+    if (message) return message
+  }
+  return 'Please try again.'
 }
 
 function createId(): string {
