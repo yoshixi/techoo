@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { 
-  useGetApiTasks, 
-  usePostApiTasks, 
-  usePutApiTasksId, 
+import {
+  useGetApiTasks,
+  usePostApiTasks,
+  usePutApiTasksId,
   useDeleteApiTasksId,
   type Task,
   type CreateTaskRequest
@@ -13,7 +13,6 @@ import {
  * Demonstrates full CRUD operations with SWR hooks
  */
 export const TaskManager: React.FC = () => {
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Partial<Task> | null>(null);
   const [newTask, setNewTask] = useState<Partial<CreateTaskRequest>>({
     title: '',
@@ -21,12 +20,14 @@ export const TaskManager: React.FC = () => {
   });
 
   // Fetch all tasks
-  const { 
-    data: tasks, 
-    error: tasksError, 
+  const {
+    data: tasksResponse,
+    error: tasksError,
     isLoading: tasksLoading,
     mutate: mutateTasks
   } = useGetApiTasks();
+
+  const tasks = tasksResponse?.tasks ?? [];
 
   // Create task mutation
   const { trigger: createTask, isMutating: isCreating } = usePostApiTasks();
@@ -114,7 +115,7 @@ export const TaskManager: React.FC = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Task Management</h2>
         <div className="text-sm text-gray-500">
-          {tasks?.length || 0} task(s)
+          {tasks.length} task(s)
         </div>
       </div>
 
@@ -148,7 +149,7 @@ export const TaskManager: React.FC = () => {
 
       {/* Tasks List */}
       <div className="space-y-3">
-        {tasks?.map((task) => (
+        {tasks.map((task) => (
           <div key={task.id} className="p-4 border rounded-lg bg-white shadow-sm">
             {editingTask?.id === task.id ? (
               // Edit mode
@@ -207,18 +208,16 @@ export const TaskManager: React.FC = () => {
                 <div className="flex items-start justify-between mb-2">
                   <h4 className="font-semibold text-gray-900">{task.title}</h4>
                   <div className="flex gap-2">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      task.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    <span className={`px-2 py-1 text-xs rounded-full ${task.status === 'completed' ? 'bg-green-100 text-green-800' :
                       task.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
+                        'bg-gray-100 text-gray-800'
+                      }`}>
                       {task.status?.replace('_', ' ')}
                     </span>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      task.priority === 'high' ? 'bg-red-100 text-red-800' :
+                    <span className={`px-2 py-1 text-xs rounded-full ${task.priority === 'high' ? 'bg-red-100 text-red-800' :
                       task.priority === 'medium' ? 'bg-orange-100 text-orange-800' :
-                      'bg-blue-100 text-blue-800'
-                    }`}>
+                        'bg-blue-100 text-blue-800'
+                      }`}>
                       {task.priority}
                     </span>
                   </div>
@@ -254,7 +253,7 @@ export const TaskManager: React.FC = () => {
           </div>
         ))}
 
-        {tasks?.length === 0 && (
+        {tasks.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             <p>No tasks found. Create your first task above!</p>
           </div>

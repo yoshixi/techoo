@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
-import { 
-  useGetApiTimers, 
+import {
+  useGetApiTimers,
   usePostApiTimers,
-  useGetApiTasksTaskIdTimers,
-  type Timer,
-  type CreateTimerRequest
+  useGetApiTasksTaskIdTimers
 } from '../gen/api';
 
 /**
@@ -14,15 +12,34 @@ import {
 export const TimerManager: React.FC<{ taskId?: string }> = ({ taskId }) => {
   const [isStarting, setIsStarting] = useState(false);
 
-  // Fetch timers - either all timers or timers for a specific task
-  const { 
-    data: timers, 
-    error: timersError, 
-    isLoading: timersLoading,
-    mutate: mutateTimers
-  } = taskId 
-    ? useGetApiTasksTaskIdTimers({ taskId })
-    : useGetApiTimers();
+  // Fetch timers - call both hooks but enable only the relevant one
+  const {
+    data: allTimersData,
+    error: allTimersError,
+    isLoading: allTimersLoading,
+    mutate: mutateAllTimers
+  } = useGetApiTimers({
+    swr: {
+      enabled: !taskId
+    }
+  });
+
+  const {
+    data: taskTimersData,
+    error: taskTimersError,
+    isLoading: taskTimersLoading,
+    mutate: mutateTaskTimers
+  } = useGetApiTasksTaskIdTimers(taskId ?? '', {
+    swr: {
+      enabled: !!taskId
+    }
+  });
+
+  const timersData = taskId ? taskTimersData : allTimersData;
+  const timers = timersData?.timers ?? [];
+  const timersError = taskId ? taskTimersError : allTimersError;
+  const timersLoading = taskId ? taskTimersLoading : allTimersLoading;
+  const mutateTimers = taskId ? mutateTaskTimers : mutateAllTimers;
 
   // Start timer mutation
   const { trigger: createTimer, isMutating: isCreatingTimer } = usePostApiTimers();
@@ -83,7 +100,7 @@ export const TimerManager: React.FC<{ taskId?: string }> = ({ taskId }) => {
           {taskId ? 'Task Timers' : 'All Timers'}
         </h3>
         <div className="text-sm text-gray-500">
-          {timers?.length || 0} timer(s)
+          {timers.length} timer(s)
         </div>
       </div>
 
@@ -100,14 +117,13 @@ export const TimerManager: React.FC<{ taskId?: string }> = ({ taskId }) => {
 
       {/* Timers List */}
       <div className="space-y-3">
-        {timers?.map((timer) => (
+        {timers.map((timer) => (
           <div key={timer.id} className="p-4 border rounded-lg bg-white shadow-sm">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className={`w-3 h-3 rounded-full ${
-                    timer.endTime ? 'bg-gray-400' : 'bg-green-500 animate-pulse'
-                  }`}></span>
+                  <span className={`w-3 h-3 rounded-full ${timer.endTime ? 'bg-gray-400' : 'bg-green-500 animate-pulse'
+                    }`}></span>
                   <span className="font-medium">
                     {timer.endTime ? 'Completed' : 'Running'}
                   </span>
@@ -115,7 +131,7 @@ export const TimerManager: React.FC<{ taskId?: string }> = ({ taskId }) => {
                     Task ID: {timer.taskId}
                   </span>
                 </div>
-                
+
                 <div className="text-sm text-gray-600 space-y-1">
                   <p>
                     <strong>Started:</strong> {new Date(timer.startTime).toLocaleString()}
@@ -130,7 +146,7 @@ export const TimerManager: React.FC<{ taskId?: string }> = ({ taskId }) => {
                   </p>
                 </div>
               </div>
-              
+
               <div className="text-right">
                 <div className="text-lg font-bold text-gray-900">
                   {formatDuration(timer.startTime, timer.endTime)}
@@ -143,7 +159,7 @@ export const TimerManager: React.FC<{ taskId?: string }> = ({ taskId }) => {
           </div>
         ))}
 
-        {timers?.length === 0 && (
+        {timers.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             <p>No timers found.</p>
             {taskId && (
