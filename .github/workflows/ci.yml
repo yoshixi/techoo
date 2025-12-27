@@ -11,29 +11,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  setup:
+  ci:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-  quality-checks:
-    needs: setup
-    name: ${{ matrix.task }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        task: [check-types, test]
+      - name: Typecheck
+        run: pnpm run check-types
 
-    steps:
-      - name: Run ${{ matrix.task }}
-        run: pnpm run ${{ matrix.task }}
+      - name: Test
+        run: pnpm run test
