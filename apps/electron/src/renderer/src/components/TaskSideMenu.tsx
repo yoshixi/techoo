@@ -1,72 +1,97 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { X } from 'lucide-react';
 import { type Task } from '../gen/api';
+import { Button } from './ui/button';
 import { TimerManager } from './TimerManager';
 
 interface TaskSideMenuProps {
-    task: Task | null;
-    onClose: () => void;
+  task: Task | null;
+  onClose: () => void;
 }
 
 export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({ task, onClose }) => {
-    // If no task is selected, we render nothing (or could render a hidden container for animation)
-    if (!task) return null;
+  useEffect(() => {
+    if (!task) return undefined;
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [task, onClose]);
 
-    return (
-        <div className="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out border-l border-gray-200 flex flex-col z-50">
-            {/* Header */}
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
-                <h3 className="font-semibold text-gray-800 truncate pr-2" title={task.title}>
-                    {task.title}
-                </h3>
-                <button
-                    onClick={onClose}
-                    className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300"
-                    aria-label="Close details"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                </button>
+  if (!task) return null;
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-40 bg-foreground/20"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-md border-l border-border bg-card shadow-2xl">
+        <div className="flex h-full flex-col">
+          <header className="flex items-center justify-between border-b border-border bg-muted/30 px-6 py-4">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Task Details
+              </p>
+              <h3 className="truncate text-lg font-semibold text-foreground" title={task.title}>
+                {task.title}
+              </h3>
             </div>
+            <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close details">
+              <X className="h-4 w-4" />
+            </Button>
+          </header>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-6">
-                {/* Description Section */}
-                <div>
-                    <h4 className="text-xs uppercase tracking-wider text-gray-400 font-bold mb-2">Description</h4>
-                    {task.description ? (
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed bg-gray-50 p-3 rounded-md border border-gray-100">
-                            {task.description}
-                        </p>
-                    ) : (
-                        <p className="text-sm text-gray-400 italic">No description provided</p>
-                    )}
-                </div>
+          <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
+            <section>
+              <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Description
+              </h4>
+              {task.description ? (
+                <p className="mt-2 whitespace-pre-wrap rounded-lg border border-border bg-muted/40 p-3 text-sm text-foreground">
+                  {task.description}
+                </p>
+              ) : (
+                <p className="mt-2 text-sm italic text-muted-foreground">No description provided.</p>
+              )}
+            </section>
 
-                {/* Details Section */}
-                <div>
-                    <h4 className="text-xs uppercase tracking-wider text-gray-400 font-bold mb-2">Details</h4>
-                    <div className="grid grid-cols-2 gap-y-3 text-sm">
-                        <div className="text-gray-500">Status</div>
-                        <div className="text-gray-800 font-medium">To Do</div>
+            <section>
+              <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Details
+              </h4>
+              <dl className="mt-3 grid grid-cols-2 gap-y-3 text-sm">
+                <dt className="text-muted-foreground">Status</dt>
+                <dd className="font-medium text-foreground">To Do</dd>
 
-                        <div className="text-gray-500">Due Date</div>
-                        <div className="text-gray-800">
-                            {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'None'}
-                        </div>
+                <dt className="text-muted-foreground">Due Date</dt>
+                <dd className="text-foreground">
+                  {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'None'}
+                </dd>
 
-                        <div className="text-gray-500">Created</div>
-                        <div className="text-gray-800">{new Date(task.createdAt).toLocaleDateString()}</div>
-                    </div>
-                </div>
+                <dt className="text-muted-foreground">Created</dt>
+                <dd className="text-foreground">{new Date(task.createdAt).toLocaleDateString()}</dd>
 
-                {/* Timer/Activity Section */}
-                <div>
-                    {/* TimerManager already has its own structure, we modify it slightly via CSS if needed, 
-               but for now just embedding it. */}
-                    <TimerManager taskId={task.id} />
-                </div>
-            </div>
+                <dt className="text-muted-foreground">Updated</dt>
+                <dd className="text-foreground">{new Date(task.updatedAt).toLocaleDateString()}</dd>
+              </dl>
+            </section>
+
+            <section>
+              <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Timers
+              </h4>
+              <div className="mt-3 rounded-lg border border-border bg-muted/20 p-4">
+                <TimerManager taskId={task.id} />
+              </div>
+            </section>
+          </div>
         </div>
-    );
+      </aside>
+    </>
+  );
 };

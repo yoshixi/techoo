@@ -22,13 +22,7 @@ import {
   TableRow
 } from './components/ui/table'
 import { Textarea } from './components/ui/textarea'
-import {
-  deleteApiTasksId,
-  postApiTasks,
-  putApiTasksId,
-  useGetApiTasks,
-  type Task
-} from './gen/api'
+import { deleteApiTasksId, postApiTasks, putApiTasksId, useGetApiTasks, type Task } from './gen/api'
 import { TaskSideMenu } from './components/TaskSideMenu'
 
 interface TaskTimer {
