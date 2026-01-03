@@ -1,10 +1,5 @@
 import React, { useState } from 'react'
-import {
-  useGetApiTasks,
-  usePostApiTasks,
-  deleteApiTasksId,
-  type Task
-} from '../gen/api'
+import { useGetApiTasks, usePostApiTasks, deleteApiTasksId, type Task } from '../gen/api'
 import { TaskSideMenu } from './TaskSideMenu'
 
 const getErrorMessage = (error: unknown): string => {
@@ -18,13 +13,11 @@ const getErrorMessage = (error: unknown): string => {
  * Demonstrates full CRUD operations with SWR hooks
  */
 export const TaskManager: React.FC = () => {
-  const [newTask, setNewTask] = useState<{ title: string; description: string; dueDate: string }>(
-    {
+  const [newTask, setNewTask] = useState({
     title: '',
     description: '',
     dueDate: ''
-    }
-  )
+  })
 
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
@@ -98,9 +91,7 @@ export const TaskManager: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Task Management</h2>
-        <div className="text-sm text-gray-500">
-          {tasks.length} task(s)
-        </div>
+        <div className="text-sm text-gray-500">{tasks.length} task(s)</div>
       </div>
 
       {/* Create New Task */}

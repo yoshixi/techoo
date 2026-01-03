@@ -81,7 +81,7 @@ function createFloatingWindow(taskId: string): void {
     }
   })
 
-  floatingWindow.setAlwaysOnTop(true, 'screen-saver')
+  floatingWindow.setAlwaysOnTop(true, 'screen-saver') // configuration for floating window to always stay on top
   floatingWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
   floatingWindow.on('closed', () => {

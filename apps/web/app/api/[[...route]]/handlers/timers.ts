@@ -1,9 +1,10 @@
+import type { Context } from 'hono'
 import { getDb } from '../../../core/common.db'
 import { ensureDefaultUser } from '../../../core/tasks.db'
 import { getAllTimers, getTimersByTaskId, getTimerById, createTimer, updateTimer, deleteTimer } from '../../../core/timers.db'
 
 // Timer handlers
-export const listTimersHandler = async (c: any) => {
+export const listTimersHandler = async (c: Context) => {
   try {
     const db = getDb()
     
@@ -22,7 +23,7 @@ export const listTimersHandler = async (c: any) => {
   }
 }
 
-export const getTaskTimersHandler = async (c: any) => {
+export const getTaskTimersHandler = async (c: Context) => {
   try {
     const db = getDb()
     const defaultUser = await ensureDefaultUser(db)
@@ -50,7 +51,7 @@ export const getTaskTimersHandler = async (c: any) => {
   }
 }
 
-export const getTimerHandler = async (c: any) => {
+export const getTimerHandler = async (c: Context) => {
   try {
     const db = getDb()
     const { id } = c.req.valid('param')
@@ -74,7 +75,7 @@ export const getTimerHandler = async (c: any) => {
   }
 }
 
-export const createTimerHandler = async (c: any) => {
+export const createTimerHandler = async (c: Context) => {
   try {
     const db = getDb()
     const defaultUser = await ensureDefaultUser(db)
@@ -99,7 +100,7 @@ export const createTimerHandler = async (c: any) => {
   }
 }
 
-export const updateTimerHandler = async (c: any) => {
+export const updateTimerHandler = async (c: Context) => {
   try {
     const db = getDb()
     const { id } = c.req.valid('param')
@@ -124,7 +125,7 @@ export const updateTimerHandler = async (c: any) => {
   }
 }
 
-export const deleteTimerHandler = async (c: any) => {
+export const deleteTimerHandler = async (c: Context) => {
   try {
     const db = getDb()
     const { id } = c.req.valid('param')

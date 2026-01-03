@@ -38,7 +38,7 @@ export const getTestDB = (location: ":memory:" | `file:${string}` = ":memory:") 
 export type DB = ReturnType<typeof getDb>;
 
 export const migrateDB = async (db: ReturnType<typeof getTestDB>) => {
-  const { apply } = await pushSQLiteSchema(schema, db as any);
+  const { apply } = await pushSQLiteSchema(schema, db);
   await apply();
 };
 
@@ -52,7 +52,7 @@ export const setupDB = async (prefix: string) => {
 
 export async function createSqliteLibsqlTestContext(): Promise<SqliteLibsqlTestContext> {
   // Use in-memory database instead of file-based for tests
-  const db = getTestDB(":memory:") as any; // Type assertion for test compatibility
+  const db = getTestDB(":memory:");
   await migrateDB(db);
 
   const reset = async () => {

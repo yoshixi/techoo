@@ -1,4 +1,4 @@
-import { eq, and, desc, isNull } from 'drizzle-orm'
+import { eq, and, desc } from 'drizzle-orm'
 import { taskTimersTable, tasksTable, type InsertTaskTimer, type SelectTaskTimer } from '../db/schema/schema'
 import { createId, type DB } from './common.db'
 import { formatTimestamp, parseISOToUnixTimestamp, getCurrentUnixTimestamp } from './common.core'

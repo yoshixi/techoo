@@ -1,8 +1,9 @@
+import type { Context } from 'hono'
 import { getDb } from '../../../core/common.db'
 import { ensureDefaultUser, getAllTasks, getTaskById, createTask, updateTask, deleteTask } from '../../../core/tasks.db'
 
 // Task handlers
-export const listTasksHandler = async (c: any) => {
+export const listTasksHandler = async (c: Context) => {
   try {
     const db = getDb()
     const defaultUser = await ensureDefaultUser(db)
@@ -22,7 +23,7 @@ export const listTasksHandler = async (c: any) => {
   }
 }
 
-export const getTaskHandler = async (c: any) => {
+export const getTaskHandler = async (c: Context) => {
   try {
     const db = getDb()
     const defaultUser = await ensureDefaultUser(db)
@@ -47,7 +48,7 @@ export const getTaskHandler = async (c: any) => {
   }
 }
 
-export const createTaskHandler = async (c: any) => {
+export const createTaskHandler = async (c: Context) => {
   try {
     const db = getDb()
     const defaultUser = await ensureDefaultUser(db)
@@ -65,7 +66,7 @@ export const createTaskHandler = async (c: any) => {
   }
 }
 
-export const updateTaskHandler = async (c: any) => {
+export const updateTaskHandler = async (c: Context) => {
   try {
     const db = getDb()
     const defaultUser = await ensureDefaultUser(db)
@@ -91,7 +92,7 @@ export const updateTaskHandler = async (c: any) => {
   }
 }
 
-export const deleteTaskHandler = async (c: any) => {
+export const deleteTaskHandler = async (c: Context) => {
   try {
     const db = getDb()
     const defaultUser = await ensureDefaultUser(db)

@@ -1,6 +1,5 @@
 import { vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest';
 import fs from 'fs';
-import path from 'path';
 
 // Setup test environment
 beforeAll(() => {

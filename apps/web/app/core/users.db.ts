@@ -1,4 +1,4 @@
-import { usersTable, type SelectUser } from '../db/schema/schema';
+import { usersTable } from '../db/schema/schema';
 import { createId, type DB } from './common.db';
 import { validateRequiredString } from './common.core';
 

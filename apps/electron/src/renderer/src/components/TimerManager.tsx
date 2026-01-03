@@ -106,7 +106,9 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
     return (
       <div
         className={
-          isCompact ? 'h-16 animate-pulse rounded-md bg-muted' : 'h-20 animate-pulse rounded-md bg-gray-100'
+          isCompact
+            ? 'h-16 animate-pulse rounded-md bg-muted'
+            : 'h-20 animate-pulse rounded-md bg-gray-100'
         }
       ></div>
     )

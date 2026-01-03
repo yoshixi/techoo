@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach, beforeAll, afterAll, vi } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { 
-  listTasksRoute, 
-  getTaskRoute, 
-  createTaskRoute, 
-  updateTaskRoute, 
-  deleteTaskRoute 
+import { v7 as uuidv7 } from 'uuid';
+import {
+  listTasksRoute,
+  getTaskRoute,
+  createTaskRoute,
+  updateTaskRoute,
+  deleteTaskRoute
 } from '../routes/tasks';
 import {
   listTasksHandler,
@@ -22,7 +23,6 @@ type TestGlobal = typeof globalThis & { testDb?: SqliteLibsqlTestContext['db'] }
 vi.mock('../../../core/common.db', () => ({
   getDb: () => (globalThis as TestGlobal).testDb!,
   createId: () => {
-    const { v7: uuidv7 } = require('uuid');
     return uuidv7();
   }
 }));
