@@ -1,12 +1,29 @@
 import type { Context } from 'hono'
 import { getDb } from '../../../core/common.db'
 import { ensureDefaultUser } from '../../../core/tasks.db'
-import { getAllTimers, getTimersByTaskId, getTimerById, createTimer, updateTimer, deleteTimer } from '../../../core/timers.db'
+import {
+  getAllTimers,
+  getAllTimersByTaskIds,
+  getTimersByTaskId,
+  getTimerById,
+  createTimer,
+  updateTimer,
+  deleteTimer
+} from '../../../core/timers.db'
 
 // Timer handlers
 export const listTimersHandler = async (c: Context) => {
   try {
     const db = getDb()
+
+    const { taskIds } = c.req.valid('query')
+    if (taskIds) {
+      const timers = await getAllTimersByTaskIds(db, taskIds)
+      return c.json({
+        timers: timers,
+        total: timers.length
+      })
+    }
     
     const timers = await getAllTimers(db)
     

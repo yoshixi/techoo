@@ -27,6 +27,23 @@ export const TaskTimerModel = z.object({
   })
 }).openapi('TaskTimer')
 
+export const ListTimersQueryParamsModel = z
+  .object({
+    taskIds: z
+      .preprocess((value) => {
+        if (typeof value === 'string') {
+          return value.includes(',') ? value.split(',').map((item) => item.trim()) : [value]
+        }
+        return value
+      }, z.array(UUIDSchema))
+      .optional()
+      .openapi({
+        description: 'IDs of the tasks to get timers for',
+        example: ['01234567-89ab-cdef-0123-456789abcdef', '01234567-89ab-cdef-0123-456789abcdef']
+      })
+  })
+  .openapi('ListTimersQueryParams')
+
 // Create timer input model
 export const CreateTimerModel = z.object({
   taskId: UUIDSchema.openapi({
