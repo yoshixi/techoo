@@ -1,8 +1,5 @@
 import { z } from '@hono/zod-openapi'
 
-// UUID validation regex pattern
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-
 // Helper schema for UUID validation with better error handling
 export const UUIDSchema = z.string().uuid().openapi({
   description: 'UUID format',
@@ -22,7 +19,7 @@ export const TaskModel = z.object({
     description: 'Detailed description of the task',
     example: 'Write comprehensive documentation for the API endpoints'
   }),
-  dueDate: z.string().datetime().optional().openapi({
+  dueDate: z.string().datetime().optional().nullable().openapi({
     description: 'Due date for the task in ISO 8601 format',
     example: '2024-12-31T23:59:59.000Z'
   }),

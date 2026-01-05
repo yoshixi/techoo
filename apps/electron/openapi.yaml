@@ -396,6 +396,22 @@ paths:
     get:
       summary: Get all timers
       description: Retrieve all timers across all tasks
+      parameters:
+        - schema:
+            type: array
+            items:
+              type: string
+              format: uuid
+              description: UUID format
+              example: 01234567-89ab-cdef-0123-456789abcdef
+            description: IDs of the tasks to get timers for
+            example:
+              - 01234567-89ab-cdef-0123-456789abcdef
+              - 01234567-89ab-cdef-0123-456789abcdef
+          required: false
+          description: IDs of the tasks to get timers for
+          name: taskIds
+          in: query
       responses:
         "200":
           description: Timers retrieved successfully

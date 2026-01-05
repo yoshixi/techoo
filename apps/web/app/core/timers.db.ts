@@ -1,4 +1,4 @@
-import { eq, and, desc, isNull } from 'drizzle-orm'
+import { eq, and, desc, inArray } from 'drizzle-orm'
 import { taskTimersTable, tasksTable, type InsertTaskTimer, type SelectTaskTimer } from '../db/schema/schema'
 import { createId, type DB } from './common.db'
 import { formatTimestamp, parseISOToUnixTimestamp, getCurrentUnixTimestamp } from './common.core'
@@ -39,6 +39,19 @@ export async function getAllTimers(db: DB): Promise<TaskTimer[]> {
   const dbTimers = await db
     .select()
     .from(taskTimersTable)
+    .orderBy(desc(taskTimersTable.createdAt))
+
+  return dbTimers.map(convertDbTimerToApi)
+}
+
+export async function getAllTimersByTaskIds(db: DB, taskIds: string[]): Promise<TaskTimer[]> {
+  if (taskIds.length === 0) return []
+
+  const uniqueIds = Array.from(new Set(taskIds))
+  const dbTimers = await db
+    .select()
+    .from(taskTimersTable)
+    .where(inArray(taskTimersTable.taskId, uniqueIds))
     .orderBy(desc(taskTimersTable.createdAt))
 
   return dbTimers.map(convertDbTimerToApi)

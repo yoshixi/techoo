@@ -1,6 +1,5 @@
 import { createRoute } from '@hono/zod-openapi'
 import {
-  TaskQueryParamsModel,
   TaskListResponseModel,
   TaskIdParamModel,
   TaskResponseModel,

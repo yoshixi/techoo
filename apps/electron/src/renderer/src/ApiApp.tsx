@@ -1,18 +1,19 @@
-import { useState } from 'react';
-import type { JSX } from 'react';
-import Versions from './components/Versions';
-import HealthCheck from './components/HealthCheck';
-import TaskManager from './components/TaskManager';
-import TimerManager from './components/TimerManager';
+import { useState } from 'react'
+import type { JSX } from 'react'
+import Versions from './components/Versions'
+import HealthCheck from './components/HealthCheck'
+import TaskManager from './components/TaskManager'
+// import TimerManager from './components/TimerManager'
 
 function ApiIntegratedApp(): JSX.Element {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'timers'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'timers'>('dashboard')
 
   const tabs = [
     { id: 'dashboard' as const, label: 'Dashboard', icon: '🏠' },
-    { id: 'tasks' as const, label: 'Tasks', icon: '📋' },
-    { id: 'timers' as const, label: 'Timers', icon: '⏱️' }
-  ];
+    { id: 'dashboard' as const, label: 'Dashboard', icon: '🏠' },
+    { id: 'tasks' as const, label: 'Tasks', icon: '📋' }
+    // { id: 'timers' as const, label: 'Timers', icon: '⏱️' }
+  ]
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -21,13 +22,9 @@ function ApiIntegratedApp(): JSX.Element {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <h1 className="text-xl font-bold text-gray-900">
-                Shuchu - Task Management
-              </h1>
+              <h1 className="text-xl font-bold text-gray-900">Shuchu - Task Management</h1>
             </div>
-            <div className="text-sm text-gray-500">
-              Electron + Hono + SWR Integration
-            </div>
+            <div className="text-sm text-gray-500">Electron + Hono + SWR Integration</div>
           </div>
         </div>
       </header>
@@ -68,24 +65,20 @@ function ApiIntegratedApp(): JSX.Element {
                 </div>
               </div>
             </div>
-            
+
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Timers</h3>
-              <TimerManager />
+              {/* <TimerManager /> */}
             </div>
           </div>
         )}
 
-        {activeTab === 'tasks' && (
-          <TaskManager />
-        )}
+        {activeTab === 'tasks' && <TaskManager />}
 
-        {activeTab === 'timers' && (
-          <TimerManager />
-        )}
+        {activeTab === 'timers' && <div>Timer Manager</div>}
       </main>
     </div>
-  );
+  )
 }
 
-export default ApiIntegratedApp;
+export default ApiIntegratedApp

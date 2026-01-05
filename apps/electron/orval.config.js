@@ -10,11 +10,11 @@ export default {
       override: {
         mutator: {
           path: './src/renderer/src/lib/api/mutator.ts',
-          name: 'customInstance',
-        },
+          name: 'customInstance'
+        }
       },
       clean: true, // Don't clean to preserve mutator file
-      prettier: true,
-    },
-  },
-};
+      prettier: true
+    }
+  }
+}

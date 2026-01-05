@@ -3,6 +3,9 @@ import { ElectronAPI } from '@electron-toolkit/preload'
 declare global {
   interface Window {
     electron: ElectronAPI
-    api: unknown
+    api: {
+      openFloatingTaskWindow: (payload: { taskId: string }) => Promise<void>
+      closeFloatingTaskWindow: (taskId: string) => Promise<void>
+    }
   }
 }

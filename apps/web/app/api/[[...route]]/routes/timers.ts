@@ -5,7 +5,8 @@ import {
   TimerResponseModel,
   CreateTimerModel,
   UpdateTimerModel,
-  TaskIdForTimersParamModel
+  TaskIdForTimersParamModel,
+  ListTimersQueryParamsModel
 } from '../../../core/timers.core'
 import { ErrorResponseModel } from '../../../core/common.core'
 
@@ -15,6 +16,9 @@ export const listTimersRoute = createRoute({
   path: '/timers',
   summary: 'Get all timers',
   description: 'Retrieve all timers across all tasks',
+  request: {
+    query: ListTimersQueryParamsModel
+  },
   responses: {
     200: {
       content: {

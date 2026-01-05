@@ -1,10 +1,9 @@
-import { drizzle } from "drizzle-orm/better-sqlite3"
 import { drizzle as drizzleLibsql } from "drizzle-orm/libsql"
 import { createClient } from "@libsql/client"
-import Database from "better-sqlite3"
 import { v7 as uuidv7 } from "uuid"
 import path from "path"
 import fs from "fs"
+import * as schema from '../db/schema/schema';
 
 const DRIZZLE_CONFIG = {
   casing: "snake_case" as const
@@ -16,13 +15,6 @@ function getLocalDbPath() {
   return path.join(tmpDir, 'local.db')
 }
 
-function createBetterSqlite3Connection(dbPath: string) {
-  const sqlite = new Database(dbPath)
-  sqlite.pragma('foreign_keys = ON')
-  sqlite.pragma('journal_mode = WAL')
-  return drizzle(sqlite, DRIZZLE_CONFIG)
-}
-
 function createLibsqlClient(url: string) {
   return createClient({
     url
@@ -32,6 +24,7 @@ function createLibsqlClient(url: string) {
 function createLibsqlDrizzle(url: string) {
   return drizzleLibsql({
     client: createLibsqlClient(url),
+    schema,
     ...DRIZZLE_CONFIG
   })
 }
@@ -47,6 +40,7 @@ export function getDb() {
         url: process.env.TURSO_CONNECTION_URL,
         authToken: process.env.TURSO_AUTH_TOKEN
       },
+      schema,
       casing: "snake_case"
     })
   } else {

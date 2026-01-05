@@ -1,9 +1,8 @@
-import { eq, and, desc, isNull } from 'drizzle-orm'
-import { v7 as uuidv7 } from 'uuid'
+import { eq, and, desc } from 'drizzle-orm'
 
-import { tasksTable, taskTimersTable, usersTable, type InsertTask, type SelectTask, type InsertTaskTimer, type SelectTaskTimer, type SelectUser } from './schema/schema'
+import { tasksTable, usersTable, type InsertTask, type SelectTask, type SelectUser } from './schema/schema'
 import type { Task, CreateTask, UpdateTask } from '../core/tasks.core'
-import { getDb, createId, type DB } from './common'
+import { createId, type DB } from './common'
 
 // Convert database task to API task
 export function convertDbTaskToApi(dbTask: SelectTask): Task {

@@ -7,7 +7,7 @@
     "dev": "next dev --turbopack --port 3000",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
     "drizzle:generate": "drizzle-kit generate --config ./drizzle.config.ts",
     "drizzle:migrate": "drizzle-kit migrate --config ./drizzle.config.ts",

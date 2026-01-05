@@ -33,9 +33,90 @@ function resolvePreloadPath(): string {
   return join(__dirname, '../preload/index.js')
 }
 
+let mainWindow: BrowserWindow | null = null
+const floatingWindows = new Map<string, BrowserWindow>()
+
+function resolveRendererUrl(query?: Record<string, string>): string | null {
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    const url = new URL(process.env['ELECTRON_RENDERER_URL'])
+    if (query) {
+      Object.entries(query).forEach(([key, value]) => url.searchParams.set(key, value))
+    }
+    return url.toString()
+  }
+  return null
+}
+
+function createFloatingWindow(taskId: string): void {
+  const existing = floatingWindows.get(taskId)
+
+  if (existing && !existing.isDestroyed()) {
+    const url = resolveRendererUrl({ floating: '1', taskId })
+    if (url) {
+      existing.loadURL(url)
+    } else {
+      existing.loadFile(join(__dirname, '../renderer/index.html'), {
+        query: { floating: '1', taskId }
+      })
+    }
+    existing.show()
+    existing.focus()
+    return
+  }
+
+  const floatingWindow = new BrowserWindow({
+    width: 360,
+    height: 220,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    parent: mainWindow ?? undefined,
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: resolvePreloadPath(),
+      sandbox: false
+    }
+  })
+
+  floatingWindow.setAlwaysOnTop(true, 'screen-saver') // configuration for floating window to always stay on top
+  floatingWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+
+  floatingWindow.on('closed', () => {
+    floatingWindows.delete(taskId)
+  })
+
+  const url = resolveRendererUrl({ floating: '1', taskId })
+  if (url) {
+    floatingWindow.loadURL(url)
+  } else {
+    floatingWindow.loadFile(join(__dirname, '../renderer/index.html'), {
+      query: { floating: '1', taskId }
+    })
+  }
+
+  floatingWindows.set(taskId, floatingWindow)
+}
+
+function closeFloatingWindow(taskId?: string): void {
+  if (!taskId) {
+    floatingWindows.forEach((window) => {
+      if (!window.isDestroyed()) window.close()
+    })
+    floatingWindows.clear()
+    return
+  }
+  const window = floatingWindows.get(taskId)
+  if (window && !window.isDestroyed()) {
+    window.close()
+  }
+}
+
 function createWindow(): void {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1100,
     height: 670,
     show: false,
@@ -48,7 +129,11 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow?.show()
+  })
+  mainWindow.on('closed', () => {
+    mainWindow = null
+    closeFloatingWindow()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -81,6 +166,13 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+  ipcMain.handle('floating-task:open', (_event, payload: { taskId: string; title: string }) => {
+    if (!payload?.taskId) return
+    createFloatingWindow(payload.taskId)
+  })
+  ipcMain.handle('floating-task:close', (_event, taskId?: string) => {
+    closeFloatingWindow(taskId)
+  })
 
   createWindow()
 

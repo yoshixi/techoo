@@ -40,5 +40,11 @@
         "../../apps/web/app/api/**"
       ]
     }
-  }
+  },
+  "globalEnv": [
+    "NODE_ENV",
+    "TURSO_CONNECTION_URL",
+    "TURSO_AUTH_TOKEN",
+    "TURSO_DATABASE_URL"
+  ]
 }

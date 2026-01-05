@@ -9,6 +9,7 @@
 export * from './createTask'
 export * from './createTimer'
 export * from './errorResponse'
+export * from './getApiTimersParams'
 export * from './healthResponse'
 export * from './task'
 export * from './taskListResponse'

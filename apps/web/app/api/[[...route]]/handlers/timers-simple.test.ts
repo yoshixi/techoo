@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, beforeAll, afterAll, vi } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { 
+import { v7 as uuidv7 } from 'uuid';
+import {
   listTimersRoute,
   getTaskTimersRoute,
   getTimerRoute,
@@ -26,7 +27,6 @@ type TestGlobal = typeof globalThis & { testDb?: SqliteLibsqlTestContext['db'] }
 vi.mock('../../../core/common.db', () => ({
   getDb: () => (globalThis as TestGlobal).testDb!,
   createId: () => {
-    const { v7: uuidv7 } = require('uuid');
     return uuidv7();
   }
 }));
@@ -109,6 +109,96 @@ describe('Timer Handlers (Simplified)', () => {
         timers: [],
         total: 0
       });
+    });
+
+    it('should filter timers by taskIds query', async () => {
+      const secondTaskReq = new Request('http://localhost/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Second Task'
+        })
+      });
+      const secondTaskRes = await app.request(secondTaskReq);
+      const secondTaskData = await secondTaskRes.json();
+      const secondTaskId = secondTaskData.task.id;
+
+      const createTimerReqA = new Request('http://localhost/timers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId: sampleTaskId,
+          startTime: '2024-01-01T10:00:00.000Z'
+        })
+      });
+      const createTimerReqB = new Request('http://localhost/timers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId: secondTaskId,
+          startTime: '2024-01-01T11:00:00.000Z'
+        })
+      });
+
+      await app.request(createTimerReqA);
+      await app.request(createTimerReqB);
+
+      const query = new URLSearchParams([['taskIds', sampleTaskId]]);
+      const req = new Request(`http://localhost/timers?${query.toString()}`);
+      const res = await app.request(req);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.timers).toHaveLength(1);
+      expect(data.timers[0].taskId).toBe(sampleTaskId);
+    });
+
+    it('should return timers for multiple taskIds', async () => {
+      const secondTaskReq = new Request('http://localhost/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Second Task'
+        })
+      });
+      const secondTaskRes = await app.request(secondTaskReq);
+      const secondTaskData = await secondTaskRes.json();
+      const secondTaskId = secondTaskData.task.id;
+
+      await app.request(
+        new Request('http://localhost/timers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            taskId: sampleTaskId,
+            startTime: '2024-01-01T10:00:00.000Z'
+          })
+        })
+      );
+      await app.request(
+        new Request('http://localhost/timers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            taskId: secondTaskId,
+            startTime: '2024-01-01T11:00:00.000Z'
+          })
+        })
+      );
+
+      const query = new URLSearchParams([
+        ['taskIds', sampleTaskId],
+        ['taskIds', secondTaskId]
+      ]);
+      const req = new Request(`http://localhost/timers?${query.toString()}`);
+      const res = await app.request(req);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.timers).toHaveLength(2);
+      const taskIds = data.timers.map((timer: { taskId: string }) => timer.taskId);
+      expect(taskIds).toContain(sampleTaskId);
+      expect(taskIds).toContain(secondTaskId);
     });
   });
 

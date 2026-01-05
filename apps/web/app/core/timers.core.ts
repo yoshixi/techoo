@@ -13,7 +13,7 @@ export const TaskTimerModel = z.object({
     description: 'Timestamp when the timer was started',
     example: '2024-01-01T10:00:00.000Z'
   }),
-  endTime: z.string().datetime().optional().openapi({
+  endTime: z.string().datetime().optional().nullable().openapi({
     description: 'Timestamp when the timer was ended (null for active timers)',
     example: '2024-01-01T10:25:00.000Z'
   }),
@@ -26,6 +26,23 @@ export const TaskTimerModel = z.object({
     example: '2024-01-01T10:25:00.000Z'
   })
 }).openapi('TaskTimer')
+
+export const ListTimersQueryParamsModel = z
+  .object({
+    taskIds: z
+      .preprocess((value) => {
+        if (typeof value === 'string') {
+          return value.includes(',') ? value.split(',').map((item) => item.trim()) : [value]
+        }
+        return value
+      }, z.array(UUIDSchema))
+      .optional()
+      .openapi({
+        description: 'IDs of the tasks to get timers for',
+        example: ['01234567-89ab-cdef-0123-456789abcdef', '01234567-89ab-cdef-0123-456789abcdef']
+      })
+  })
+  .openapi('ListTimersQueryParams')
 
 // Create timer input model
 export const CreateTimerModel = z.object({
