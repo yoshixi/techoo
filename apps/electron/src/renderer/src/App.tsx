@@ -125,7 +125,7 @@ function App(): React.JSX.Element {
     try {
       const activeTimer = activeTimersByTaskId.get(taskId)
       if (activeTimer) {
-        await handleStopTimer(activeTimer.id)
+        await handleStopTimer(taskId, activeTimer.id)
       }
       await deleteApiTasksId(taskId)
       await mutateTasks()
@@ -160,17 +160,19 @@ function App(): React.JSX.Element {
         startTime: new Date().toISOString()
       })
       await mutateTimers()
+      window.api.openFloatingTaskWindow({ taskId })
     } catch (error) {
       console.error('Failed to start timer:', error)
     }
   }
 
-  async function handleStopTimer(timerId: string): Promise<void> {
+  async function handleStopTimer(taskId: string, timerId: string): Promise<void> {
     try {
       await putApiTimersId(timerId, {
         endTime: new Date().toISOString()
       })
       await mutateTimers()
+      window.api.closeFloatingTaskWindow(taskId)
     } catch (error) {
       console.error('Failed to stop timer:', error)
     }
@@ -357,7 +359,7 @@ function App(): React.JSX.Element {
                               onClick={() => {
                                 const activeTimer = activeTimersByTaskId.get(task.id)
                                 if (activeTimer) {
-                                  handleStopTimer(activeTimer.id)
+                                  handleStopTimer(task.id, activeTimer.id)
                                 }
                               }}
                               className="h-6 w-6"

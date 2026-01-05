@@ -2,11 +2,19 @@ import React from 'react'
 import { X } from 'lucide-react'
 import { Button } from './ui/button'
 import { TimerManager } from './TimerManager'
+import { useGetApiTasksId } from '../gen/api'
 
 export const FloatingTaskWindow: React.FC = () => {
   const params = new URLSearchParams(window.location.search)
   const taskId = params.get('taskId')
-  const title = params.get('title') ?? 'Task'
+
+  const { data: task } = useGetApiTasksId(taskId ?? '', {
+    swr: {
+      enabled: !!taskId
+    }
+  })
+  
+
 
   const handleClose = (): void => {
     if (window.api?.closeFloatingTaskWindow && taskId) {
@@ -34,7 +42,7 @@ export const FloatingTaskWindow: React.FC = () => {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Running Task
           </p>
-          <h1 className="truncate text-lg font-semibold">{title}</h1>
+          <h1 className="truncate text-lg font-semibold">{task?.task.title}</h1>
         </div>
         <Button size="icon" variant="ghost" onClick={handleClose} aria-label="Close window">
           <X className="h-4 w-4" />
