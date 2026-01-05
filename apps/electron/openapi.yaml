@@ -45,9 +45,16 @@ components:
           example: Write comprehensive documentation for the API endpoints
         dueDate:
           type: string
+          nullable: true
           format: date-time
           description: Due date for the task in ISO 8601 format
           example: 2024-12-31T23:59:59.000Z
+        completedAt:
+          type: string
+          nullable: true
+          format: date-time
+          description: Completion timestamp in ISO 8601 format
+          example: 2024-01-02T08:00:00.000Z
         createdAt:
           type: string
           format: date-time
@@ -119,6 +126,12 @@ components:
           format: date-time
           description: Due date for the task in ISO 8601 format
           example: 2024-12-31T23:59:59.000Z
+        completedAt:
+          type: string
+          nullable: true
+          format: date-time
+          description: Completion timestamp. Use null to mark the task as incomplete
+          example: 2024-01-02T08:00:00.000Z
       required:
         - title
     UpdateTask:
@@ -140,6 +153,12 @@ components:
           format: date-time
           description: Due date for the task in ISO 8601 format. Use null to remove due date
           example: 2024-12-31T23:59:59.000Z
+        completedAt:
+          type: string
+          nullable: true
+          format: date-time
+          description: Completion timestamp. Use null to mark the task as incomplete
+          example: 2024-01-02T08:00:00.000Z
     TaskTimer:
       type: object
       properties:
@@ -160,6 +179,7 @@ components:
           example: 2024-01-01T10:00:00.000Z
         endTime:
           type: string
+          nullable: true
           format: date-time
           description: Timestamp when the timer was ended (null for active timers)
           example: 2024-01-01T10:25:00.000Z

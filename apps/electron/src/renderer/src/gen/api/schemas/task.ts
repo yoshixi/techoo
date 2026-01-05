@@ -17,8 +17,16 @@ export interface Task {
   title: string
   /** Detailed description of the task */
   description: string
-  /** Due date for the task in ISO 8601 format */
-  dueDate?: string
+  /**
+   * Due date for the task in ISO 8601 format
+   * @nullable
+   */
+  dueDate?: string | null
+  /**
+   * Completion timestamp in ISO 8601 format
+   * @nullable
+   */
+  completedAt?: string | null
   /** Timestamp when the task was created */
   createdAt: string
   /** Timestamp when the task was last updated */

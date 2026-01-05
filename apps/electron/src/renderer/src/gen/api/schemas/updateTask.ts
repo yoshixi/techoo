@@ -20,4 +20,9 @@ export interface UpdateTask {
    * @nullable
    */
   dueDate?: string | null
+  /**
+   * Completion timestamp. Use null to mark the task as incomplete
+   * @nullable
+   */
+  completedAt?: string | null
 }

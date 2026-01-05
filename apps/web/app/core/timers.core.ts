@@ -9,19 +9,19 @@ export const TaskTimerModel = z.object({
   taskId: UUIDSchema.openapi({
     description: 'ID of the associated task'
   }),
-  startTime: z.string().datetime().openapi({
+  startTime: z.iso.datetime().openapi({
     description: 'Timestamp when the timer was started',
     example: '2024-01-01T10:00:00.000Z'
   }),
-  endTime: z.string().datetime().optional().nullable().openapi({
+  endTime: z.iso.datetime().optional().nullable().openapi({
     description: 'Timestamp when the timer was ended (null for active timers)',
     example: '2024-01-01T10:25:00.000Z'
   }),
-  createdAt: z.string().datetime().openapi({
+  createdAt: z.iso.datetime().openapi({
     description: 'Timestamp when the timer was created',
     example: '2024-01-01T10:00:00.000Z'
   }),
-  updatedAt: z.string().datetime().openapi({
+  updatedAt: z.iso.datetime().openapi({
     description: 'Timestamp when the timer was last updated',
     example: '2024-01-01T10:25:00.000Z'
   })
@@ -49,7 +49,7 @@ export const CreateTimerModel = z.object({
   taskId: UUIDSchema.openapi({
     description: 'ID of the task to start timer for'
   }),
-  startTime: z.string().datetime().openapi({
+  startTime: z.iso.datetime().openapi({
     description: 'Timestamp when the timer should start',
     example: '2024-01-01T10:00:00.000Z'
   })
@@ -57,7 +57,7 @@ export const CreateTimerModel = z.object({
 
 // Update timer input model
 export const UpdateTimerModel = z.object({
-  endTime: z.string().datetime().optional().nullable().openapi({
+  endTime: z.iso.datetime().optional().nullable().openapi({
     description: 'Timestamp when the timer ended. Use null to remove end time',
     example: '2024-01-01T10:25:00.000Z'
   })

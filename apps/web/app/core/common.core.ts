@@ -44,7 +44,7 @@ export const HealthResponseModel = z.object({
     description: 'Health status message',
     example: 'Shuchu API is running'
   }),
-  timestamp: z.string().datetime().openapi({
+  timestamp: z.iso.datetime().openapi({
     description: 'Current timestamp',
     example: '2024-01-01T10:00:00.000Z'
   })

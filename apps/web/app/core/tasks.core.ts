@@ -19,15 +19,19 @@ export const TaskModel = z.object({
     description: 'Detailed description of the task',
     example: 'Write comprehensive documentation for the API endpoints'
   }),
-  dueDate: z.string().datetime().optional().nullable().openapi({
+  dueDate: z.iso.datetime().optional().nullable().openapi({
     description: 'Due date for the task in ISO 8601 format',
     example: '2024-12-31T23:59:59.000Z'
   }),
-  createdAt: z.string().datetime().openapi({
+  completedAt: z.iso.datetime().optional().nullable().openapi({
+    description: 'Completion timestamp in ISO 8601 format',
+    example: '2024-01-02T08:00:00.000Z'
+  }),
+  createdAt: z.iso.datetime().openapi({
     description: 'Timestamp when the task was created',
     example: '2024-01-01T10:00:00.000Z'
   }),
-  updatedAt: z.string().datetime().openapi({
+  updatedAt: z.iso.datetime().openapi({
     description: 'Timestamp when the task was last updated',
     example: '2024-01-01T15:30:00.000Z'
   })
@@ -43,9 +47,13 @@ export const CreateTaskModel = z.object({
     description: 'Detailed description of the task',
     example: 'Write comprehensive documentation for the API endpoints'
   }),
-  dueDate: z.string().datetime().optional().openapi({
+  dueDate: z.iso.datetime().optional().openapi({
     description: 'Due date for the task in ISO 8601 format',
     example: '2024-12-31T23:59:59.000Z'
+  }),
+  completedAt: z.iso.datetime().optional().nullable().openapi({
+    description: 'Completion timestamp. Use null to mark the task as incomplete',
+    example: '2024-01-02T08:00:00.000Z'
   })
 }).openapi('CreateTask')
 
@@ -59,9 +67,13 @@ export const UpdateTaskModel = z.object({
     description: 'Detailed description of the task',
     example: 'Write comprehensive documentation for the API endpoints'
   }),
-  dueDate: z.string().datetime().optional().nullable().openapi({
+  dueDate: z.iso.datetime().optional().nullable().openapi({
     description: 'Due date for the task in ISO 8601 format. Use null to remove due date',
     example: '2024-12-31T23:59:59.000Z'
+  }),
+  completedAt: z.iso.datetime().optional().nullable().openapi({
+    description: 'Completion timestamp. Use null to mark the task as incomplete',
+    example: '2024-01-02T08:00:00.000Z'
   })
 }).openapi('UpdateTask')
 

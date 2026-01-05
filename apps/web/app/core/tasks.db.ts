@@ -9,6 +9,7 @@ export interface Task {
   title: string
   description: string
   dueDate: string | null
+  completedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -17,12 +18,14 @@ export interface CreateTask {
   title: string
   description?: string
   dueDate?: string
+  completedAt?: string | null
 }
 
 export interface UpdateTask {
   title?: string
   description?: string
   dueDate?: string | null
+  completedAt?: string | null
 }
 
 // Convert database task to API task
@@ -32,6 +35,7 @@ export function convertDbTaskToApi(dbTask: SelectTask): Task {
     title: dbTask.title,
     description: dbTask.description || '',
     dueDate: dbTask.dueAt ? formatTimestamp(dbTask.dueAt) : null,
+    completedAt: dbTask.completedAt ? formatTimestamp(dbTask.completedAt) : null,
     createdAt: formatTimestamp(dbTask.createdAt),
     updatedAt: formatTimestamp(dbTask.updatedAt)
   }
@@ -91,6 +95,7 @@ export async function createTask(db: DB, userId: string, data: CreateTask): Prom
     title: validateRequiredString(data.title, 'Title'),
     description: data.description?.trim() || null,
     dueAt: data.dueDate ? parseISOToUnixTimestamp(data.dueDate) : null,
+    completedAt: data.completedAt ? parseISOToUnixTimestamp(data.completedAt) : null,
     createdAt: now,
     updatedAt: now
   }
@@ -121,7 +126,12 @@ export async function updateTask(db: DB, userId: string, taskId: string, data: U
 
   if (data.title !== undefined) updateData.title = validateRequiredString(data.title, 'Title')
   if (data.description !== undefined) updateData.description = data.description.trim() || null
-  if (data.dueDate !== undefined) updateData.dueAt = data.dueDate ? parseISOToUnixTimestamp(data.dueDate) : null
+  if (data.dueDate !== undefined) {
+    updateData.dueAt = data.dueDate ? parseISOToUnixTimestamp(data.dueDate) : null
+  }
+  if (data.completedAt !== undefined) {
+    updateData.completedAt = data.completedAt ? parseISOToUnixTimestamp(data.completedAt) : null
+  }
 
   const result = await db
     .update(tasksTable)

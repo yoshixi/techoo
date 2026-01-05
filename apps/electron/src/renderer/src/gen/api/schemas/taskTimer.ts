@@ -13,8 +13,11 @@ export interface TaskTimer {
   taskId: string
   /** Timestamp when the timer was started */
   startTime: string
-  /** Timestamp when the timer was ended (null for active timers) */
-  endTime?: string
+  /**
+   * Timestamp when the timer was ended (null for active timers)
+   * @nullable
+   */
+  endTime?: string | null
   /** Timestamp when the timer was created */
   createdAt: string
   /** Timestamp when the timer was last updated */
