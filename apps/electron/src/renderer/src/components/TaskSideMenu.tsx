@@ -22,6 +22,10 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
 }) => {
   const [localTask, setLocalTask] = useState<Task | null>(task)
   const [isSaving, setIsSaving] = useState(false)
+  const [isCompleting, setIsCompleting] = useState(false)
+
+  const currentTask = localTask ?? task
+  const isCompleted = Boolean(currentTask?.completedAt)
 
   useEffect(() => {
     if (!task) return undefined
@@ -65,23 +69,56 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
     }
   }
 
+  const handleToggleCompletion = async (): Promise<void> => {
+    if (!currentTask) return
+    setIsCompleting(true)
+    try {
+      const response = await putApiTasksId(currentTask.id, {
+        completedAt: currentTask.completedAt ? null : new Date().toISOString()
+      })
+      setLocalTask(response.task)
+      onTaskUpdated?.(response.task)
+    } catch (error) {
+      console.error('Failed to update completion status:', error)
+    } finally {
+      setIsCompleting(false)
+    }
+  }
+
   return (
     <>
       <div className="fixed inset-0 z-40 bg-foreground/20" onClick={onClose} aria-hidden="true" />
       <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-md border-l border-border bg-card shadow-2xl">
         <div className="flex h-full flex-col">
-          <header className="flex items-center justify-between border-b border-border bg-muted/30 px-6 py-4">
+          <header className="flex items-center justify-between gap-4 border-b border-border bg-muted/30 px-6 py-4">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 Task Details
               </p>
-              <h3 className="truncate text-lg font-semibold text-foreground" title={task.title}>
-                {task.title}
+              <h3
+                className="truncate text-lg font-semibold text-foreground"
+                title={currentTask?.title}
+              >
+                {currentTask?.title}
               </h3>
             </div>
-            <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close details">
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant={isCompleted ? 'outline' : 'default'}
+                onClick={handleToggleCompletion}
+                disabled={isCompleting}
+              >
+                {isCompleting
+                  ? 'Updating...'
+                  : isCompleted
+                    ? 'Mark Incomplete'
+                    : 'Mark Complete'}
+              </Button>
+              <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close details">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </header>
 
           <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
@@ -133,9 +170,9 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
                     {isSaving ? 'Saving...' : 'Save changes'}
                   </Button>
                 </div>
-              ) : task.description ? (
+              ) : currentTask?.description ? (
                 <p className="mt-2 whitespace-pre-wrap rounded-lg border border-border bg-muted/40 p-3 text-sm text-foreground">
-                  {task.description}
+                  {currentTask.description}
                 </p>
               ) : (
                 <p className="mt-2 text-sm italic text-muted-foreground">
@@ -150,18 +187,35 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
               </h4>
               <dl className="mt-3 grid grid-cols-2 gap-y-3 text-sm">
                 <dt className="text-muted-foreground">Status</dt>
-                <dd className="font-medium text-foreground">To Do</dd>
+                <dd className="font-medium text-foreground">
+                  {isCompleted ? 'Completed' : 'To Do'}
+                </dd>
+
+                {isCompleted && (
+                  <>
+                    <dt className="text-muted-foreground">Completed</dt>
+                    <dd className="text-foreground">
+                      {currentTask?.completedAt
+                        ? new Date(currentTask.completedAt).toLocaleString()
+                        : '—'}
+                    </dd>
+                  </>
+                )}
 
                 <dt className="text-muted-foreground">Due Date</dt>
                 <dd className="text-foreground">
-                  {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'None'}
+                  {currentTask?.dueDate ? new Date(currentTask.dueDate).toLocaleDateString() : 'None'}
                 </dd>
 
                 <dt className="text-muted-foreground">Created</dt>
-                <dd className="text-foreground">{new Date(task.createdAt).toLocaleDateString()}</dd>
+                <dd className="text-foreground">
+                  {currentTask?.createdAt ? new Date(currentTask.createdAt).toLocaleDateString() : '—'}
+                </dd>
 
                 <dt className="text-muted-foreground">Updated</dt>
-                <dd className="text-foreground">{new Date(task.updatedAt).toLocaleDateString()}</dd>
+                <dd className="text-foreground">
+                  {currentTask?.updatedAt ? new Date(currentTask.updatedAt).toLocaleDateString() : '—'}
+                </dd>
               </dl>
             </section>
 

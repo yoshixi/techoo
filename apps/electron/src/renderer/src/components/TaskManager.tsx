@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
   deleteApiTasksId,
+  putApiTasksId,
   putApiTimersId,
   useGetApiTasks,
   useGetApiTimers,
@@ -30,6 +31,7 @@ export const TaskManager: React.FC = () => {
   })
 
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
+  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
 
   // Fetch all tasks
@@ -121,6 +123,21 @@ export const TaskManager: React.FC = () => {
       await mutateTimers()
     } catch (error) {
       console.error('Failed to start timer:', error)
+    }
+  }
+
+  const handleToggleTaskCompletion = async (task: Task): Promise<void> => {
+    setCompletingTaskId(task.id)
+    try {
+      const response = await putApiTasksId(task.id, {
+        completedAt: task.completedAt ? null : new Date().toISOString()
+      })
+      await mutateTasks()
+      setSelectedTask((prev) => (prev?.id === task.id ? response.task : prev))
+    } catch (error) {
+      console.error('Failed to update task completion:', error)
+    } finally {
+      setCompletingTaskId(null)
     }
   }
 
@@ -223,11 +240,20 @@ export const TaskManager: React.FC = () => {
           >
             <div>
               <div className="flex items-start justify-between mb-2">
-                <h4 className="font-semibold text-gray-900">{task.title}</h4>
-                <div className="text-xs text-gray-500">
+                <h4
+                  className={`font-semibold ${task.completedAt ? 'text-gray-500 line-through' : 'text-gray-900'}`}
+                >
+                  {task.title}
+                </h4>
+                <div className="flex items-center gap-2 text-xs text-gray-500">
                   {task.dueDate
                     ? `Due ${new Date(task.dueDate).toLocaleDateString()}`
                     : 'No due date'}
+                  {task.completedAt && (
+                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+                      Completed
+                    </span>
+                  )}
                 </div>
               </div>
               {task.description && (
@@ -238,6 +264,17 @@ export const TaskManager: React.FC = () => {
                   Created: {new Date(task.createdAt).toLocaleDateString()}
                 </div>
                 <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => handleToggleTaskCompletion(task)}
+                    disabled={completingTaskId === task.id}
+                    className={`px-3 py-1 text-sm rounded ${task.completedAt ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-green-100 text-green-800 hover:bg-green-200'} disabled:opacity-50`}
+                  >
+                    {completingTaskId === task.id
+                      ? 'Updating...'
+                      : task.completedAt
+                        ? 'Reopen'
+                        : 'Complete'}
+                  </button>
                   <button
                     onClick={() => handleDeleteTask(task.id)}
                     disabled={deletingTaskId === task.id}
