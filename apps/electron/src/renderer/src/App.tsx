@@ -22,6 +22,7 @@ import {
   TableRow
 } from './components/ui/table'
 import { Textarea } from './components/ui/textarea'
+import { Switch } from './components/ui/switch'
 import {
   deleteApiTasksId,
   postApiTasks,
@@ -35,12 +36,17 @@ import {
 } from './gen/api'
 import { TaskSideMenu } from './components/TaskSideMenu'
 function App(): React.JSX.Element {
+  const [showCompleted, setShowCompleted] = useState(false)
+  const taskQuery = useMemo(
+    () => (showCompleted ? undefined : { completed: false }),
+    [showCompleted]
+  )
   const {
     data: tasksResponse,
     error: tasksError,
     isLoading: tasksLoading,
     mutate: mutateTasks
-  } = useGetApiTasks()
+  } = useGetApiTasks(taskQuery)
   const tasks = tasksResponse?.tasks ?? []
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [isAddingTask, setIsAddingTask] = useState(false)
@@ -227,6 +233,10 @@ function App(): React.JSX.Element {
               </CardDescription>
             </div>
             <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Show completed</span>
+                <Switch checked={showCompleted} onCheckedChange={setShowCompleted} />
+              </div>
               {!isAddingTask && (
                 <Button onClick={() => setIsAddingTask(true)}>
                   <Plus className="mr-2 h-4 w-4" />
