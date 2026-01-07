@@ -38,7 +38,7 @@ import { TaskSideMenu } from './components/TaskSideMenu'
 function App(): React.JSX.Element {
   const [showCompleted, setShowCompleted] = useState(false)
   const taskQuery = useMemo(
-    () => (showCompleted ? undefined : { completed: false }),
+    () => (showCompleted ? undefined : { completed: 'false' as const }),
     [showCompleted]
   )
   const {
@@ -427,7 +427,15 @@ function App(): React.JSX.Element {
         isSubmitting={!!editingTask && savingTaskId === editingTask.id}
       />
 
-      <TaskSideMenu task={selectedTask} onClose={() => setSelectedTask(null)} />
+      <TaskSideMenu
+        task={selectedTask}
+        onClose={() => setSelectedTask(null)}
+        onTaskUpdated={async (updated) => {
+          // Update the currently selected task reference (to keep the side-menu UI in sync)
+          setSelectedTask(updated)
+          await mutateTasks()
+        }}
+      />
     </div>
   )
 }

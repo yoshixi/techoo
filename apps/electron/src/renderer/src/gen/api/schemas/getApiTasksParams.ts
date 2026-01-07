@@ -5,11 +5,11 @@
  * API for the Shuchu task management application with OpenAPI documentation
  * OpenAPI spec version: 1.0.0
  */
+import type { GetApiTasksCompleted } from './getApiTasksCompleted'
 
 export type GetApiTasksParams = {
   /**
    * Filter tasks by completion status
-   * @nullable
    */
-  completed?: boolean | null
+  completed?: GetApiTasksCompleted
 }

@@ -266,8 +266,10 @@ paths:
       description: Retrieve all tasks
       parameters:
         - schema:
-            type: boolean
-            nullable: true
+            type: string
+            enum:
+              - "true"
+              - "false"
             description: Filter tasks by completion status
             example: false
           required: false

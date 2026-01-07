@@ -94,8 +94,11 @@ export const TaskResponseModel = z.object({
 }).openapi('TaskResponse')
 
 // Task query parameters (removed status filter)
+// A boolean query param parser that correctly interprets the strings "true" and "false"
+const BooleanQueryParam = z.enum(['true', 'false']).transform(v => v === 'true')
+
 export const TaskQueryParamsModel = z.object({
-  completed: z.coerce.boolean().optional().openapi({
+  completed: BooleanQueryParam.optional().openapi({
     description: 'Filter tasks by completion status',
     example: false
   })
