@@ -66,7 +66,7 @@ function createFloatingWindow(taskId: string): void {
 
   const floatingWindow = new BrowserWindow({
     width: 360,
-    height: 220,
+    height: 120,
     resizable: false,
     minimizable: false,
     maximizable: false,
@@ -74,7 +74,8 @@ function createFloatingWindow(taskId: string): void {
     skipTaskbar: true,
     alwaysOnTop: true,
     parent: mainWindow ?? undefined,
-    autoHideMenuBar: true,
+    frame: false,
+    transparent: true,
     webPreferences: {
       preload: resolvePreloadPath(),
       sandbox: false

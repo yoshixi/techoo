@@ -52,32 +52,33 @@ export const FloatingTaskWindow: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background p-4 text-foreground">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+    <div className="flex bg-white/90 h-screen flex-col p-4" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
+      <div className="flex items-start justify-between mb-3" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Running Task
           </p>
-          <h1 className="truncate text-lg font-semibold">{task?.task.title}</h1>
+          <h1 className="truncate text-base font-semibold text-foreground">{task?.task.title}</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant={isCompleted ? 'outline' : 'default'}
-            onClick={handleToggleCompletion}
-            disabled={isCompleting || !task}
-          >
-            {isCompleting ? 'Updating...' : isCompleted ? 'Reopen' : 'Complete'}
-          </Button>
-          <Button size="icon" variant="ghost" onClick={handleClose} aria-label="Close window">
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={handleClose}
+          aria-label="Close window"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
+          <X className="h-4 w-4" />
+        </Button>
       </div>
 
-      <div className="mt-4 rounded-xl border border-border bg-card p-4">
-        <TimerManager taskId={taskId} mode="compact" onTimerStopped={handleClose} />
-      </div>
+      <TimerManager
+        taskId={taskId}
+        mode="compact"
+        onTimerStopped={handleClose}
+        isCompleted={isCompleted}
+        isCompleting={isCompleting}
+        onToggleCompletion={handleToggleCompletion}
+      />
     </div>
   )
 }

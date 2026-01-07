@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { Square, CheckCircle, Play } from 'lucide-react'
 import {
   useGetApiTasksTaskIdTimers,
   usePostApiTimers,
@@ -11,13 +12,19 @@ interface TimerManagerProps {
   mode?: 'full' | 'compact'
   onTimerStarted?: () => void
   onTimerStopped?: () => void
+  isCompleted?: boolean
+  isCompleting?: boolean
+  onToggleCompletion?: () => void
 }
 
 export const TimerManager: React.FC<TimerManagerProps> = ({
   taskId,
   mode = 'full',
   onTimerStarted,
-  onTimerStopped
+  onTimerStopped,
+  isCompleted,
+  isCompleting,
+  onToggleCompletion
 }) => {
   const {
     data: timersResponse,
@@ -124,32 +131,50 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
 
   if (isCompact) {
     return (
-      <div className="space-y-3">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <span
-            className={`h-2.5 w-2.5 rounded-full ${
+            className={`h-2 w-2 rounded-full ${
               activeTimer ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground/50'
             }`}
           ></span>
-          <span className="font-mono text-2xl font-semibold text-foreground">
+          <span className="font-mono text-base font-semibold text-foreground">
             {activeTimer ? formatDuration(elapsedTime) : '00:00:00'}
           </span>
         </div>
-        <div>
+        <div className="flex items-center gap-2">
           {activeTimer ? (
-            <button
-              onClick={handleStopTimer}
-              className="w-full rounded-md bg-destructive/15 px-3 py-2 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/25"
-            >
-              Stop Timer
-            </button>
+            <>
+              <button
+                onClick={handleStopTimer}
+                className="rounded-md bg-destructive/15 p-2 text-destructive transition-colors hover:bg-destructive/25"
+                aria-label="Stop Timer"
+              >
+                <Square className="h-4 w-4" />
+              </button>
+              {onToggleCompletion && (
+                <button
+                  onClick={onToggleCompletion}
+                  disabled={isCompleting}
+                  className={`rounded-md p-2 transition-colors ${
+                    isCompleted
+                      ? 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                      : 'bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25'
+                  } disabled:opacity-50`}
+                  aria-label={isCompleted ? 'Reopen' : 'Complete'}
+                >
+                  <CheckCircle className="h-4 w-4" />
+                </button>
+              )}
+            </>
           ) : (
             <button
               onClick={handleStartTimer}
               disabled={isCreating}
-              className="w-full rounded-md bg-primary/10 px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+              className="rounded-md bg-primary/10 p-2 text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+              aria-label="Start Timer"
             >
-              Start Timer
+              <Play className="h-4 w-4" />
             </button>
           )}
         </div>

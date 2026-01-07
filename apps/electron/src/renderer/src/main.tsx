@@ -10,6 +10,11 @@ const params = new URLSearchParams(window.location.search)
 const isFloating = params.get('floating') === '1'
 const useApi = import.meta.env.VITE_USE_API === 'true'
 
+// Make body transparent for floating window
+if (isFloating) {
+  document.body.classList.add('floating-window')
+}
+
 const root = createRoot(document.getElementById('root')!)
 root.render(
   <StrictMode>{isFloating ? <FloatingTaskWindow /> : useApi ? <ApiApp /> : <App />}</StrictMode>
