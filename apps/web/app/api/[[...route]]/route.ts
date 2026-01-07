@@ -84,3 +84,5 @@ export const POST = handle(app)
 export const PUT = handle(app)
 export const DELETE = handle(app)
 export const OPTIONS = handle(app)
+
+console.log("API running on port 3000")

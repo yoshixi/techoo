@@ -5,14 +5,17 @@ import { v7 as uuidv7 } from "uuid"
 import path from "path"
 import fs from "fs"
 
-// Database connection - centralized for all database operations  
+// Database connection - centralized for all database operations 
+// TODO: Remove this function and use the getDb function from the core/common.db.ts file
+// this function is used to make a type alias for the database instance to ensure consistency
 export function getDb() {
   // Use Turso for production, SQLite for development
-  if (process.env.NODE_ENV === 'production' && process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
+  console.warn("DEPRECATED: Use the getDb function from the core/common.db.ts file instead")
+  if (process.env.NODE_ENV === 'production' && process.env.TURSO_CONNECTION_URL && process.env.TURSO_AUTH_TOKEN) {
     // Production: Use Turso/libsql
     return drizzleLibsql({
       connection: {
-        url: process.env.TURSO_DATABASE_URL,
+        url: process.env.TURSO_CONNECTION_URL,
         authToken: process.env.TURSO_AUTH_TOKEN
       },
       casing: "snake_case"

@@ -32,7 +32,7 @@ function createLibsqlDrizzle(url: string) {
 // Database connection - centralized for all database operations
 export function getDb() {
   // Use Turso for production, SQLite for development
-  if (process.env.NODE_ENV === 'production' && process.env.TURSO_CONNECTION_URL && process.env.TURSO_AUTH_TOKEN) {
+  if (process.env.TURSO_CONNECTION_URL && process.env.TURSO_AUTH_TOKEN) {
     // Production: Use Turso/libsql
     console.log('🌐 Using Turso database for production')
     return drizzleLibsql({

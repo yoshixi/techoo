@@ -36,6 +36,10 @@
     },
     "generate": {
       "cache": false,
+      "env": [
+        "TURSO_CONNECTION_URL",
+        "TURSO_AUTH_TOKEN"
+      ],
       "inputs": [
         "../../apps/web/app/api/**"
       ]
