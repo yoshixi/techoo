@@ -17,6 +17,7 @@ import {
   deleteApiTasksId,
   postApiTasks,
   postApiTimers,
+  putApiTasksId,
   putApiTimersId,
   useGetApiTasks,
   useGetApiTimers,
@@ -46,6 +47,8 @@ function App(): React.JSX.Element {
   const [isCreating, setIsCreating] = useState(false)
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [editingCell, setEditingCell] = useState<{ taskId: string; field: 'title' | 'description' } | null>(null)
+  const [editingValue, setEditingValue] = useState('')
   const totalTasks = tasksResponse?.total ?? tasks.length
 
   const [currentTime, setCurrentTime] = useState(Date.now())
@@ -126,6 +129,34 @@ function App(): React.JSX.Element {
       console.error('Failed to delete task:', error)
     } finally {
       setDeletingTaskId(null)
+    }
+  }
+
+  function handleStartEditing(taskId: string, field: 'title' | 'description', currentValue: string): void {
+    setEditingCell({ taskId, field })
+    setEditingValue(currentValue || '')
+  }
+
+  function handleCancelEditing(): void {
+    setEditingCell(null)
+    setEditingValue('')
+  }
+
+  async function handleSaveEdit(): Promise<void> {
+    if (!editingCell) return
+
+    const task = tasks.find(t => t.id === editingCell.taskId)
+    if (!task) return
+
+    try {
+      await putApiTasksId(editingCell.taskId, {
+        [editingCell.field]: editingValue.trim()
+      })
+      await mutateTasks()
+      setEditingCell(null)
+      setEditingValue('')
+    } catch (error) {
+      console.error('Failed to update task:', error)
     }
   }
 
@@ -359,8 +390,58 @@ function App(): React.JSX.Element {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">{task.title}</TableCell>
-                      <TableCell className="max-w-xs truncate">{task.description || '-'}</TableCell>
+                      <TableCell
+                        className="font-medium"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleStartEditing(task.id, 'title', task.title)
+                        }}
+                      >
+                        {editingCell?.taskId === task.id && editingCell?.field === 'title' ? (
+                          <Input
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onBlur={handleSaveEdit}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleSaveEdit()
+                              } else if (e.key === 'Escape') {
+                                handleCancelEditing()
+                              }
+                            }}
+                            autoFocus
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="cursor-text hover:underline">{task.title}</span>
+                        )}
+                      </TableCell>
+                      <TableCell
+                        className="max-w-xs"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleStartEditing(task.id, 'description', task.description || '')
+                        }}
+                      >
+                        {editingCell?.taskId === task.id && editingCell?.field === 'description' ? (
+                          <Input
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onBlur={handleSaveEdit}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleSaveEdit()
+                              } else if (e.key === 'Escape') {
+                                handleCancelEditing()
+                              }
+                            }}
+                            autoFocus
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="cursor-text hover:underline truncate block">{task.description || '-'}</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <CalendarDays className="h-4 w-4" />
