@@ -339,7 +339,6 @@ export const TaskManager: React.FC = () => {
           setSelectedTask(updated)
           mutateTasks()
         }}
-        enableEditing
       />
     </div>
   )

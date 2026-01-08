@@ -11,14 +11,12 @@ interface TaskSideMenuProps {
   task: Task | null
   onClose: () => void
   onTaskUpdated?: (task: Task) => void
-  enableEditing?: boolean
 }
 
 export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
   task,
   onClose,
-  onTaskUpdated,
-  enableEditing = false
+  onTaskUpdated
 }) => {
   const [localTask, setLocalTask] = useState<Task | null>(task)
   const [isSaving, setIsSaving] = useState(false)
@@ -123,62 +121,52 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
 
           <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
             <section>
-              <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                Description
+              <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-3">
+                Edit Task
               </h4>
-              {enableEditing ? (
-                <div className="mt-3 space-y-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="task-title">Title</Label>
-                    <Input
-                      id="task-title"
-                      value={localTask?.title ?? ''}
-                      onChange={(event) =>
-                        setLocalTask((prev) =>
-                          prev ? { ...prev, title: event.target.value } : prev
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="task-description">Description</Label>
-                    <Textarea
-                      id="task-description"
-                      value={localTask?.description ?? ''}
-                      onChange={(event) =>
-                        setLocalTask((prev) =>
-                          prev ? { ...prev, description: event.target.value } : prev
-                        )
-                      }
-                      rows={4}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="task-due-date">Due date</Label>
-                    <Input
-                      id="task-due-date"
-                      type="date"
-                      value={formatDateInput(localTask?.dueDate)}
-                      onChange={(event) =>
-                        setLocalTask((prev) =>
-                          prev ? { ...prev, dueDate: event.target.value } : prev
-                        )
-                      }
-                    />
-                  </div>
-                  <Button onClick={handleSave} disabled={isSaving}>
-                    {isSaving ? 'Saving...' : 'Save changes'}
-                  </Button>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="task-title">Title</Label>
+                  <Input
+                    id="task-title"
+                    value={localTask?.title ?? ''}
+                    onChange={(event) =>
+                      setLocalTask((prev) =>
+                        prev ? { ...prev, title: event.target.value } : prev
+                      )
+                    }
+                  />
                 </div>
-              ) : currentTask?.description ? (
-                <p className="mt-2 whitespace-pre-wrap rounded-lg border border-border bg-muted/40 p-3 text-sm text-foreground">
-                  {currentTask.description}
-                </p>
-              ) : (
-                <p className="mt-2 text-sm italic text-muted-foreground">
-                  No description provided.
-                </p>
-              )}
+                <div className="space-y-2">
+                  <Label htmlFor="task-description">Description</Label>
+                  <Textarea
+                    id="task-description"
+                    value={localTask?.description ?? ''}
+                    onChange={(event) =>
+                      setLocalTask((prev) =>
+                        prev ? { ...prev, description: event.target.value } : prev
+                      )
+                    }
+                    rows={4}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="task-due-date">Due date</Label>
+                  <Input
+                    id="task-due-date"
+                    type="date"
+                    value={formatDateInput(localTask?.dueDate)}
+                    onChange={(event) =>
+                      setLocalTask((prev) =>
+                        prev ? { ...prev, dueDate: event.target.value } : prev
+                      )
+                    }
+                  />
+                </div>
+                <Button onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? 'Saving...' : 'Save changes'}
+                </Button>
+              </div>
             </section>
 
             <section>

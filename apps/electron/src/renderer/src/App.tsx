@@ -1,18 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { CalendarDays, Clock4, Pencil, Trash2, Plus, Play, Pause } from 'lucide-react'
+import { CalendarDays, Clock4, Trash2, Plus, Play, Pause } from 'lucide-react'
 
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from './components/ui/dialog'
 import { Input } from './components/ui/input'
-import { Label } from './components/ui/label'
 import {
   Table,
   TableBody,
@@ -21,13 +12,11 @@ import {
   TableHeader,
   TableRow
 } from './components/ui/table'
-import { Textarea } from './components/ui/textarea'
 import { Switch } from './components/ui/switch'
 import {
   deleteApiTasksId,
   postApiTasks,
   postApiTimers,
-  putApiTasksId,
   putApiTimersId,
   useGetApiTasks,
   useGetApiTimers,
@@ -48,7 +37,6 @@ function App(): React.JSX.Element {
     mutate: mutateTasks
   } = useGetApiTasks(taskQuery)
   const tasks = tasksResponse?.tasks ?? []
-  const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [isAddingTask, setIsAddingTask] = useState(false)
   const [newTaskFields, setNewTaskFields] = useState({
     title: '',
@@ -56,7 +44,6 @@ function App(): React.JSX.Element {
     dueDate: ''
   })
   const [isCreating, setIsCreating] = useState(false)
-  const [savingTaskId, setSavingTaskId] = useState<string | null>(null)
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const totalTasks = tasksResponse?.total ?? tasks.length
@@ -139,23 +126,6 @@ function App(): React.JSX.Element {
       console.error('Failed to delete task:', error)
     } finally {
       setDeletingTaskId(null)
-    }
-  }
-
-  async function handleUpdateTask(updated: Task): Promise<void> {
-    setSavingTaskId(updated.id)
-    try {
-      await putApiTasksId(updated.id, {
-        title: updated.title,
-        description: updated.description,
-        dueDate: normalizeDueDate(updated.dueDate ?? '')
-      })
-      await mutateTasks()
-      setEditingTask(null)
-    } catch (error) {
-      console.error('Failed to update task:', error)
-    } finally {
-      setSavingTaskId(null)
     }
   }
 
@@ -399,9 +369,6 @@ function App(): React.JSX.Element {
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-2">
-                          <Button size="icon" variant="ghost" onClick={() => setEditingTask(task)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
                           <Button
                             size="icon"
                             variant="ghost"
@@ -420,13 +387,6 @@ function App(): React.JSX.Element {
         </Card>
       </main>
 
-      <EditTaskDialog
-        task={editingTask}
-        onOpenChange={(open) => !open && setEditingTask(null)}
-        onSubmit={handleUpdateTask}
-        isSubmitting={!!editingTask && savingTaskId === editingTask.id}
-      />
-
       <TaskSideMenu
         task={selectedTask}
         onClose={() => setSelectedTask(null)}
@@ -437,76 +397,6 @@ function App(): React.JSX.Element {
         }}
       />
     </div>
-  )
-}
-
-function EditTaskDialog({
-  task,
-  onOpenChange,
-  onSubmit,
-  isSubmitting
-}: {
-  task: Task | null
-  onOpenChange: (open: boolean) => void
-  onSubmit: (task: Task) => Promise<void> | void
-  isSubmitting: boolean
-}): React.JSX.Element | null {
-  const [localTask, setLocalTask] = useState<Task | null>(task)
-
-  useEffect(() => {
-    setLocalTask(task)
-  }, [task])
-
-  if (!task || !localTask) return null
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault()
-    if (!localTask) return
-    await onSubmit({ ...localTask, updatedAt: new Date().toISOString() })
-  }
-
-  return (
-    <Dialog open={!!task} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Edit task</DialogTitle>
-          <DialogDescription>Update the metadata and save.</DialogDescription>
-        </DialogHeader>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="edit-title">Title</Label>
-            <Input
-              id="edit-title"
-              value={localTask.title}
-              onChange={(event) => setLocalTask({ ...localTask, title: event.target.value })}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-description">Description</Label>
-            <Textarea
-              id="edit-description"
-              value={localTask.description}
-              onChange={(event) => setLocalTask({ ...localTask, description: event.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-due">Due date</Label>
-            <Input
-              id="edit-due"
-              type="date"
-              value={formatDateInput(localTask.dueDate)}
-              onChange={(event) => setLocalTask({ ...localTask, dueDate: event.target.value })}
-            />
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : 'Save changes'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   )
 }
 
@@ -527,13 +417,6 @@ function getErrorMessage(error: unknown): string {
     if (message) return message
   }
   return 'Please try again.'
-}
-
-function formatDateInput(value?: string | null): string {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return date.toISOString().slice(0, 10)
 }
 
 function normalizeDueDate(value?: string | null): string | undefined {
