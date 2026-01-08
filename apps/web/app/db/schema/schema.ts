@@ -14,6 +14,7 @@ export const tasksTable = sqliteTable('tasks', {
   title: text('title').notNull(),
   description: text('description'),
   dueAt: integer('due_at', { mode: 'number' }), // Unix timestamp
+  startAt: integer('start_at', { mode: 'number' }), // Unix timestamp
   completedAt: integer('completed_at', { mode: 'number' }), // Unix timestamp
   createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
   updatedAt: integer('updated_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),

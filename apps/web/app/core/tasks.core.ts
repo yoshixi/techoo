@@ -23,6 +23,10 @@ export const TaskModel = z.object({
     description: 'Due date for the task in ISO 8601 format',
     example: '2024-12-31T23:59:59.000Z'
   }),
+  startAt: z.iso.datetime().optional().nullable().openapi({
+    description: 'Start date for the task in ISO 8601 format',
+    example: '2024-01-01T09:00:00.000Z'
+  }),
   completedAt: z.iso.datetime().optional().nullable().openapi({
     description: 'Completion timestamp in ISO 8601 format',
     example: '2024-01-02T08:00:00.000Z'
@@ -51,6 +55,10 @@ export const CreateTaskModel = z.object({
     description: 'Due date for the task in ISO 8601 format',
     example: '2024-12-31T23:59:59.000Z'
   }),
+  startAt: z.iso.datetime().optional().openapi({
+    description: 'Start date for the task in ISO 8601 format',
+    example: '2024-01-01T09:00:00.000Z'
+  }),
   completedAt: z.iso.datetime().optional().nullable().openapi({
     description: 'Completion timestamp. Use null to mark the task as incomplete',
     example: '2024-01-02T08:00:00.000Z'
@@ -70,6 +78,10 @@ export const UpdateTaskModel = z.object({
   dueDate: z.iso.datetime().optional().nullable().openapi({
     description: 'Due date for the task in ISO 8601 format. Use null to remove due date',
     example: '2024-12-31T23:59:59.000Z'
+  }),
+  startAt: z.iso.datetime().optional().nullable().openapi({
+    description: 'Start date for the task in ISO 8601 format. Use null to remove start date',
+    example: '2024-01-01T09:00:00.000Z'
   }),
   completedAt: z.iso.datetime().optional().nullable().openapi({
     description: 'Completion timestamp. Use null to mark the task as incomplete',
@@ -101,6 +113,10 @@ export const TaskQueryParamsModel = z.object({
   completed: BooleanQueryParam.optional().openapi({
     description: 'Filter tasks by completion status',
     example: false
+  }),
+  sortBy: z.enum(['createdAt', 'startAt', 'dueDate']).optional().openapi({
+    description: 'Sort tasks by field (createdAt, startAt, or dueDate)',
+    example: 'startAt'
   })
 }).openapi('TaskQueryParams')
 

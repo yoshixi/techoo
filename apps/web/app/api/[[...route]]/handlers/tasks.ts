@@ -15,10 +15,10 @@ export const listTasksHandler: RouteHandler<typeof listTasksRoute> = async (c) =
     const db = getDb()
     const defaultUser = await ensureDefaultUser(db)
     // Validate and extract query parameters using the TaskQueryParamsModel schema
-    const { completed } = c.req.valid('query')
+    const { completed, sortBy } = c.req.valid('query')
 
-    const tasks = await getAllTasks(db, defaultUser.id.toString(), { completed })
-    
+    const tasks = await getAllTasks(db, defaultUser.id.toString(), { completed, sortBy })
+
     return c.json(
       {
         tasks: tasks,
@@ -29,7 +29,7 @@ export const listTasksHandler: RouteHandler<typeof listTasksRoute> = async (c) =
   } catch (error) {
     console.error('Error fetching tasks:', error)
     return c.json(
-      { 
+      {
         error: 'Internal server error',
         message: 'Failed to fetch tasks'
       },
