@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { CalendarDays, Clock4, Trash2, Plus, Play, Pause } from 'lucide-react'
+import { CalendarDays, Clock4, Plus, Play, Square, CheckCircle, Maximize2 } from 'lucide-react'
 
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card'
@@ -14,7 +14,6 @@ import {
 } from './components/ui/table'
 import { Switch } from './components/ui/switch'
 import {
-  deleteApiTasksId,
   postApiTasks,
   postApiTimers,
   putApiTasksId,
@@ -45,10 +44,10 @@ function App(): React.JSX.Element {
     dueDate: ''
   })
   const [isCreating, setIsCreating] = useState(false)
-  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [editingCell, setEditingCell] = useState<{ taskId: string; field: 'title' | 'description' } | null>(null)
   const [editingValue, setEditingValue] = useState('')
+  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
   const totalTasks = tasksResponse?.total ?? tasks.length
 
   const [currentTime, setCurrentTime] = useState(Date.now())
@@ -82,11 +81,26 @@ function App(): React.JSX.Element {
     return map
   }, [timers])
 
-  // Update current time every second for timer display
+  const totalTimeByTaskId = useMemo(() => {
+    const map = new Map<string, number>()
+    timers.forEach((timer) => {
+      const startTime = new Date(timer.startTime).getTime()
+      const endTime = timer.endTime ? new Date(timer.endTime).getTime() : currentTime
+      const duration = endTime - startTime
+      const currentTotal = map.get(timer.taskId) || 0
+      map.set(timer.taskId, currentTotal + duration)
+    })
+    return map
+  }, [timers, currentTime])
+
+  // Update current time every minute for timer display
   useEffect(() => {
+    // Update immediately on mount
+    setCurrentTime(Date.now())
+
     const interval = setInterval(() => {
       setCurrentTime(Date.now())
-    }, 1000)
+    }, 60000)
 
     return () => clearInterval(interval)
   }, [])
@@ -116,20 +130,8 @@ function App(): React.JSX.Element {
     setIsAddingTask(false)
   }
 
-  async function handleDeleteTask(taskId: string): Promise<void> {
-    setDeletingTaskId(taskId)
-    try {
-      const activeTimer = activeTimersByTaskId.get(taskId)
-      if (activeTimer) {
-        await handleStopTimer(taskId, activeTimer.id)
-      }
-      await deleteApiTasksId(taskId)
-      await mutateTasks()
-    } catch (error) {
-      console.error('Failed to delete task:', error)
-    } finally {
-      setDeletingTaskId(null)
-    }
+  function handleOpenFloatingWindow(taskId: string): void {
+    window.api.openFloatingTaskWindow({ taskId })
   }
 
   function handleStartEditing(taskId: string, field: 'title' | 'description', currentValue: string): void {
@@ -167,6 +169,7 @@ function App(): React.JSX.Element {
         startTime: new Date().toISOString()
       })
       await mutateTimers()
+      setCurrentTime(Date.now()) // Update time display immediately
       window.api.openFloatingTaskWindow({ taskId })
     } catch (error) {
       console.error('Failed to start timer:', error)
@@ -179,25 +182,47 @@ function App(): React.JSX.Element {
         endTime: new Date().toISOString()
       })
       await mutateTimers()
+      setCurrentTime(Date.now()) // Update time display immediately
       window.api.closeFloatingTaskWindow(taskId)
     } catch (error) {
       console.error('Failed to stop timer:', error)
     }
   }
 
-  function getTimerDisplay(taskId: string): string {
-    const activeTimer = activeTimersByTaskId.get(taskId)
-    if (activeTimer) {
-      const elapsed = currentTime - new Date(activeTimer.startTime).getTime()
-      const minutes = Math.floor(elapsed / 60000)
-      const seconds = Math.floor((elapsed % 60000) / 1000)
-      return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+  function getTotalTimeDisplay(taskId: string): string {
+    const totalMs = totalTimeByTaskId.get(taskId) || 0
+    const hours = Math.floor(totalMs / 3600000)
+    const minutes = Math.floor((totalMs % 3600000) / 60000)
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`
     }
-    return '00:00'
+    if (minutes > 0) {
+      return `${minutes}m`
+    }
+    return '0m'
   }
 
   function isTaskActive(taskId: string): boolean {
     return activeTimersByTaskId.has(taskId)
+  }
+
+  function hasTimers(taskId: string): boolean {
+    return timers.some(timer => timer.taskId === taskId)
+  }
+
+  async function handleToggleTaskCompletion(task: Task): Promise<void> {
+    setCompletingTaskId(task.id)
+    try {
+      await putApiTasksId(task.id, {
+        completedAt: task.completedAt ? null : new Date().toISOString()
+      })
+      await mutateTasks()
+    } catch (error) {
+      console.error('Failed to update task completion:', error)
+    } finally {
+      setCompletingTaskId(null)
+    }
   }
 
   return (
@@ -250,7 +275,7 @@ function App(): React.JSX.Element {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Timer</TableHead>
+                  <TableHead>Time Tracked</TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Due Date</TableHead>
@@ -261,7 +286,7 @@ function App(): React.JSX.Element {
                 {isAddingTask && (
                   <TableRow className="border-primary/50 bg-primary/5">
                     <TableCell>
-                      <span className="text-muted-foreground text-sm">00:00</span>
+                      <span className="text-muted-foreground text-sm">0m</span>
                     </TableCell>
                     <TableCell>
                       <Input
@@ -360,8 +385,8 @@ function App(): React.JSX.Element {
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-2">
                           <Clock4 className="h-4 w-4" />
-                          <span className="font-mono text-sm min-w-[3rem]">
-                            {getTimerDisplay(task.id)}
+                          <span className="text-sm min-w-[3rem]">
+                            {getTotalTimeDisplay(task.id)}
                           </span>
                           {activeTimersByTaskId.has(task.id) ? (
                             <Button
@@ -373,19 +398,21 @@ function App(): React.JSX.Element {
                                   handleStopTimer(task.id, activeTimer.id)
                                 }
                               }}
-                              className="h-6 w-6"
+                              className="h-7 w-7 hover:bg-red-100"
+                              title="Stop timer"
                             >
-                              <Pause className="h-3 w-3" />
+                              <Square className="h-4 w-4 text-red-600 animate-pulse" />
                             </Button>
                           ) : (
                             <Button
                               size="icon"
                               variant="ghost"
                               onClick={() => handleStartTimer(task.id)}
-                              className="h-6 w-6"
+                              className="h-7 w-7 hover:bg-green-100"
                               disabled={timersLoading}
+                              title="Start timer"
                             >
-                              <Play className="h-3 w-3" />
+                              <Play className="h-4 w-4 text-green-600" />
                             </Button>
                           )}
                         </div>
@@ -450,13 +477,26 @@ function App(): React.JSX.Element {
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-2">
+                          {hasTimers(task.id) && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleToggleTaskCompletion(task)}
+                              disabled={completingTaskId === task.id}
+                              title={task.completedAt ? 'Mark incomplete' : 'Mark complete'}
+                              className={task.completedAt ? 'opacity-50' : 'hover:bg-green-100'}
+                            >
+                              <CheckCircle className={`h-4 w-4 ${task.completedAt ? 'text-gray-400' : 'text-green-600'}`} />
+                            </Button>
+                          )}
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => handleDeleteTask(task.id)}
-                            disabled={deletingTaskId === task.id}
+                            onClick={() => handleOpenFloatingWindow(task.id)}
+                            title="Open floating window"
+                            className="hover:bg-blue-100"
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Maximize2 className="h-4 w-4 text-blue-600" />
                           </Button>
                         </div>
                       </TableCell>
