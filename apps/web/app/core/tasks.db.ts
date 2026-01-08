@@ -1,4 +1,4 @@
-import { eq, and, desc } from 'drizzle-orm'
+import { eq, and, desc, asc } from 'drizzle-orm'
 import { tasksTable, usersTable, type InsertTask, type SelectTask, type SelectUser } from '../db/schema/schema'
 import { createId, type DB } from './common.db'
 import { formatTimestamp, parseISOToUnixTimestamp, getCurrentUnixTimestamp, validateRequiredString } from './common.core'
@@ -9,6 +9,7 @@ export interface Task {
   title: string
   description: string
   dueDate: string | null
+  startAt: string | null
   completedAt: string | null
   createdAt: string
   updatedAt: string
@@ -18,6 +19,7 @@ export interface CreateTask {
   title: string
   description?: string
   dueDate?: string
+  startAt?: string
   completedAt?: string | null
 }
 
@@ -25,6 +27,7 @@ export interface UpdateTask {
   title?: string
   description?: string
   dueDate?: string | null
+  startAt?: string | null
   completedAt?: string | null
 }
 
@@ -35,6 +38,7 @@ export function convertDbTaskToApi(dbTask: SelectTask): Task {
     title: dbTask.title,
     description: dbTask.description || '',
     dueDate: dbTask.dueAt ? formatTimestamp(dbTask.dueAt) : null,
+    startAt: dbTask.startAt ? formatTimestamp(dbTask.startAt) : null,
     completedAt: dbTask.completedAt ? formatTimestamp(dbTask.completedAt) : null,
     createdAt: formatTimestamp(dbTask.createdAt),
     updatedAt: formatTimestamp(dbTask.updatedAt)
@@ -66,14 +70,23 @@ export async function ensureDefaultUser(db: DB): Promise<SelectUser> {
 
 type TaskFilterOptions = {
   completed?: boolean
+  sortBy?: 'createdAt' | 'startAt' | 'dueDate'
 }
 
 export async function getAllTasks(db: DB, userId: string, filters?: TaskFilterOptions): Promise<Task[]> {
+  // Determine sort field
+  let orderByField = tasksTable.createdAt
+  if (filters?.sortBy === 'startAt') {
+    orderByField = tasksTable.startAt
+  } else if (filters?.sortBy === 'dueDate') {
+    orderByField = tasksTable.dueAt
+  }
+
   const dbTasks = await db
     .select()
     .from(tasksTable)
     .where(eq(tasksTable.userId, userId))
-    .orderBy(desc(tasksTable.createdAt))
+    .orderBy(desc(orderByField))
 
   const tasks = dbTasks.map(convertDbTaskToApi)
 
@@ -109,6 +122,7 @@ export async function createTask(db: DB, userId: string, data: CreateTask): Prom
     title: validateRequiredString(data.title, 'Title'),
     description: data.description?.trim() || null,
     dueAt: data.dueDate ? parseISOToUnixTimestamp(data.dueDate) : null,
+    startAt: data.startAt ? parseISOToUnixTimestamp(data.startAt) : null,
     completedAt: data.completedAt ? parseISOToUnixTimestamp(data.completedAt) : null,
     createdAt: now,
     updatedAt: now
@@ -142,6 +156,9 @@ export async function updateTask(db: DB, userId: string, taskId: string, data: U
   if (data.description !== undefined) updateData.description = data.description.trim() || null
   if (data.dueDate !== undefined) {
     updateData.dueAt = data.dueDate ? parseISOToUnixTimestamp(data.dueDate) : null
+  }
+  if (data.startAt !== undefined) {
+    updateData.startAt = data.startAt ? parseISOToUnixTimestamp(data.startAt) : null
   }
   if (data.completedAt !== undefined) {
     updateData.completedAt = data.completedAt ? parseISOToUnixTimestamp(data.completedAt) : null

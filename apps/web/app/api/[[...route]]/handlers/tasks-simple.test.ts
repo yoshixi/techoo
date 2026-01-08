@@ -287,4 +287,117 @@ describe('Task Handlers (Simplified)', () => {
       expect(reopenData.task.completedAt).toBeNull();
     });
   });
+
+  describe('Start Date Functionality', () => {
+    it('should create a task with startAt', async () => {
+      const startAt = '2024-01-15T09:00:00.000Z';
+      const taskData = {
+        title: 'Task with start date',
+        description: 'This task has a start date',
+        startAt: startAt
+      };
+
+      const req = new Request('http://localhost/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskData)
+      });
+
+      const res = await app.request(req);
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.task.startAt).toBe(startAt);
+      expect(data.task.title).toBe(taskData.title);
+    });
+
+    it('should update a task with startAt', async () => {
+      const createReq = new Request('http://localhost/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Update start date test' })
+      });
+      const createRes = await app.request(createReq);
+      expect(createRes.status).toBe(201);
+      const { task } = await createRes.json();
+      const taskId = task.id;
+      expect(task.startAt).toBeNull();
+
+      const startAt = '2024-02-01T10:00:00.000Z';
+      const updateReq = new Request(`http://localhost/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ startAt: startAt })
+      });
+      const updateRes = await app.request(updateReq);
+      expect(updateRes.status).toBe(200);
+      const updateData = await updateRes.json();
+      expect(updateData.task.startAt).toBe(startAt);
+    });
+
+    it('should clear startAt when set to null', async () => {
+      const startAt = '2024-03-01T08:00:00.000Z';
+      const createReq = new Request('http://localhost/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Clear start date test', startAt: startAt })
+      });
+      const createRes = await app.request(createReq);
+      expect(createRes.status).toBe(201);
+      const { task } = await createRes.json();
+      const taskId = task.id;
+      expect(task.startAt).toBe(startAt);
+
+      const clearReq = new Request(`http://localhost/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ startAt: null })
+      });
+      const clearRes = await app.request(clearReq);
+      expect(clearRes.status).toBe(200);
+      const clearData = await clearRes.json();
+      expect(clearData.task.startAt).toBeNull();
+    });
+
+    it('should sort tasks by startAt', async () => {
+      const task1Data = {
+        title: 'Task 1',
+        startAt: '2024-01-03T09:00:00.000Z'
+      };
+      const task2Data = {
+        title: 'Task 2',
+        startAt: '2024-01-01T09:00:00.000Z'
+      };
+      const task3Data = {
+        title: 'Task 3',
+        startAt: '2024-01-02T09:00:00.000Z'
+      };
+
+      await app.request(new Request('http://localhost/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(task1Data)
+      }));
+      await app.request(new Request('http://localhost/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(task2Data)
+      }));
+      await app.request(new Request('http://localhost/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(task3Data)
+      }));
+
+      const listReq = new Request('http://localhost/tasks?sortBy=startAt');
+      const listRes = await app.request(listReq);
+      expect(listRes.status).toBe(200);
+      const listData = await listRes.json();
+      expect(listData.tasks.length).toBeGreaterThanOrEqual(3);
+
+      const sortedTasks = listData.tasks.filter((t: { startAt: string | null }) => t.startAt !== null);
+      expect(sortedTasks[0].title).toBe('Task 1');
+      expect(sortedTasks[1].title).toBe('Task 3');
+      expect(sortedTasks[2].title).toBe('Task 2');
+    });
+  });
 });
