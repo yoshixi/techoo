@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(devenv shell -- pnpm:*)"
+      "Bash(devenv shell -- pnpm:*)",
+      "Bash(ls:*)"
     ]
   }
 }
