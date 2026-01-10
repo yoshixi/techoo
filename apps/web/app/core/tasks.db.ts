@@ -174,46 +174,14 @@ export async function getAllTasks(db: DB, userId: string, filters?: TaskFilterOp
 
   // If tag filtering is requested
   if (filters?.tags && filters.tags.length > 0) {
-    // First, try to find tags by ID (UUID format)
-    const possibleIds = filters.tags.filter(tag => {
+    // Validate that all provided values are valid UUIDs
+    const tagIds = filters.tags.filter(tag => {
       // Simple UUID format check
       return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tag)
     })
 
-    // Also find tags by name (non-UUID strings)
-    const possibleNames = filters.tags.filter(tag => !possibleIds.includes(tag))
-
-    // Get matching tag IDs
-    const matchingTagIds = new Set<string>()
-
-    if (possibleIds.length > 0) {
-      const tagsById = await db
-        .select()
-        .from(tagsTable)
-        .where(
-          and(
-            eq(tagsTable.userId, userId),
-            inArray(tagsTable.id, possibleIds)
-          )
-        )
-      tagsById.forEach(tag => matchingTagIds.add(tag.id.toString()))
-    }
-
-    if (possibleNames.length > 0) {
-      const tagsByName = await db
-        .select()
-        .from(tagsTable)
-        .where(
-          and(
-            eq(tagsTable.userId, userId),
-            inArray(tagsTable.name, possibleNames)
-          )
-        )
-      tagsByName.forEach(tag => matchingTagIds.add(tag.id.toString()))
-    }
-
-    if (matchingTagIds.size === 0) {
-      // No matching tags found, return empty array
+    if (tagIds.length === 0) {
+      // No valid tag IDs provided, return empty array
       return []
     }
 
@@ -221,7 +189,7 @@ export async function getAllTasks(db: DB, userId: string, filters?: TaskFilterOp
     const taskIdsWithTags = await db
       .selectDistinct({ taskId: taskTagsTable.taskId })
       .from(taskTagsTable)
-      .where(inArray(taskTagsTable.tagId, Array.from(matchingTagIds)))
+      .where(inArray(taskTagsTable.tagId, tagIds))
 
     const taskIds = taskIdsWithTags.map(row => row.taskId.toString())
 

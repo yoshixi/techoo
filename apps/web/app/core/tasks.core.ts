@@ -136,8 +136,8 @@ export const TaskQueryParamsModel = z.object({
     }
     return value
   }, z.array(z.string()).optional()).openapi({
-    description: 'Filter tasks by tag IDs or names (comma-separated). Returns tasks with ANY of the specified tags (OR logic)',
-    example: 'urgent,important'
+    description: 'Filter tasks by tag IDs (comma-separated). Returns tasks with ANY of the specified tags (OR logic)',
+    example: '01234567-89ab-cdef-0123-456789abcdef,98765432-10ab-cdef-0123-456789abcdef'
   })
 }).openapi('TaskQueryParams')
 

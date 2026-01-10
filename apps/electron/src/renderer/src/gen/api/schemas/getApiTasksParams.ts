@@ -6,20 +6,14 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { GetApiTasksCompleted } from './getApiTasksCompleted'
-<<<<<<< HEAD
 import type { GetApiTasksSortBy } from './getApiTasksSortBy'
 import type { GetApiTasksOrder } from './getApiTasksOrder'
-||||||| parent of 9c24427 (Add tag API)
-=======
-import type { GetApiTasksSortBy } from './getApiTasksSortBy'
->>>>>>> 9c24427 (Add tag API)
 
 export type GetApiTasksParams = {
   /**
    * Filter tasks by completion status
    */
   completed?: GetApiTasksCompleted
-<<<<<<< HEAD
   /**
    * Sort tasks by field (createdAt, startAt, or dueDate)
    */
@@ -28,15 +22,8 @@ export type GetApiTasksParams = {
    * Sort order: asc (ascending/oldest first) or desc (descending/newest first). Defaults to desc
    */
   order?: GetApiTasksOrder
-||||||| parent of 9c24427 (Add tag API)
-=======
-  /**
-   * Sort tasks by field (createdAt, startAt, or dueDate)
-   */
-  sortBy?: GetApiTasksSortBy
   /**
    * Filter tasks by tag IDs or names (comma-separated). Returns tasks with ANY of the specified tags (OR logic)
    */
   tags?: string[]
->>>>>>> 9c24427 (Add tag API)
 }

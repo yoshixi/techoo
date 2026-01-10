@@ -55,9 +55,12 @@ export async function createSqliteLibsqlTestContext(): Promise<SqliteLibsqlTestC
   await migrateDB(db);
 
   const reset = async () => {
-    await db.delete(schema.usersTable)
-    await db.delete(schema.tasksTable)
+    // Delete in order to respect foreign key constraints
+    await db.delete(schema.taskTagsTable)
     await db.delete(schema.taskTimersTable)
+    await db.delete(schema.tasksTable)
+    await db.delete(schema.tagsTable)
+    await db.delete(schema.usersTable)
   };
 
   return {

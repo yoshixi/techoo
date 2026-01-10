@@ -78,19 +78,29 @@ export const createTagHandler: RouteHandler<typeof createTagRoute> = async (c) =
 
     return c.json({ tag }, 201)
   } catch (error) {
-    console.error('Error creating tag:', error, 'Type:', typeof error, 'Error object:', JSON.stringify(error, null, 2))
-
     // Handle unique constraint violation (duplicate tag name)
-    const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase()
+    const errorMessage = error instanceof Error ? error.message : String(error)
     const errorCode = (error as any)?.code || ''
+    const errorName = (error as any)?.name || ''
 
-    if (errorMessage.includes('unique') ||
-        errorMessage.includes('constraint') ||
-        errorMessage.includes('sqlite_constraint') ||
-        errorCode.includes('UNIQUE') ||
-        errorCode === 'SQLITE_CONSTRAINT' ||
+    // Check the cause property for LibSQL errors (Drizzle wraps the actual SQLite error)
+    const cause = (error as any)?.cause
+    const causeCode = cause?.code || ''
+    const causeMessage = cause?.message || ''
+
+    // Check for UNIQUE constraint violation in multiple ways
+    // LibSQL/better-sqlite3 may throw different error formats
+    if (errorMessage.toLowerCase().includes('unique') ||
+        errorMessage.toLowerCase().includes('constraint') ||
+        errorMessage.includes('UNIQUE constraint failed') ||
         errorCode === 'SQLITE_CONSTRAINT_UNIQUE' ||
-        errorCode === 2067) {
+        errorCode === 'SQLITE_CONSTRAINT' ||
+        errorCode === '2067' ||
+        errorCode === 2067 ||
+        errorName === 'SqliteError' ||
+        causeCode === 'SQLITE_CONSTRAINT_UNIQUE' ||
+        causeCode === 'SQLITE_CONSTRAINT' ||
+        causeMessage.includes('UNIQUE constraint failed')) {
       return c.json(
         {
           error: 'Bad request',
@@ -100,6 +110,7 @@ export const createTagHandler: RouteHandler<typeof createTagRoute> = async (c) =
       )
     }
 
+    console.error('Error creating tag:', error)
     return c.json(
       {
         error: 'Internal server error',
@@ -131,19 +142,29 @@ export const updateTagHandler: RouteHandler<typeof updateTagRoute> = async (c) =
 
     return c.json({ tag }, 200)
   } catch (error) {
-    console.error('Error updating tag:', error, 'Type:', typeof error, 'Error object:', JSON.stringify(error, null, 2))
-
     // Handle unique constraint violation
-    const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase()
+    const errorMessage = error instanceof Error ? error.message : String(error)
     const errorCode = (error as any)?.code || ''
+    const errorName = (error as any)?.name || ''
 
-    if (errorMessage.includes('unique') ||
-        errorMessage.includes('constraint') ||
-        errorMessage.includes('sqlite_constraint') ||
-        errorCode.includes('UNIQUE') ||
-        errorCode === 'SQLITE_CONSTRAINT' ||
+    // Check the cause property for LibSQL errors (Drizzle wraps the actual SQLite error)
+    const cause = (error as any)?.cause
+    const causeCode = cause?.code || ''
+    const causeMessage = cause?.message || ''
+
+    // Check for UNIQUE constraint violation in multiple ways
+    // LibSQL/better-sqlite3 may throw different error formats
+    if (errorMessage.toLowerCase().includes('unique') ||
+        errorMessage.toLowerCase().includes('constraint') ||
+        errorMessage.includes('UNIQUE constraint failed') ||
         errorCode === 'SQLITE_CONSTRAINT_UNIQUE' ||
-        errorCode === 2067) {
+        errorCode === 'SQLITE_CONSTRAINT' ||
+        errorCode === '2067' ||
+        errorCode === 2067 ||
+        errorName === 'SqliteError' ||
+        causeCode === 'SQLITE_CONSTRAINT_UNIQUE' ||
+        causeCode === 'SQLITE_CONSTRAINT' ||
+        causeMessage.includes('UNIQUE constraint failed')) {
       return c.json(
         {
           error: 'Bad request',
@@ -153,6 +174,7 @@ export const updateTagHandler: RouteHandler<typeof updateTagRoute> = async (c) =
       )
     }
 
+    console.error('Error updating tag:', error)
     return c.json(
       {
         error: 'Internal server error',

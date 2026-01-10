@@ -422,7 +422,7 @@ describe('Tag Handlers', () => {
       expect(data.tasks.map((t: any) => t.title).sort()).toEqual(['Both tags', 'Urgent task']);
     });
 
-    it('should filter tasks by tag name', async () => {
+    it('should return empty array when filtering with non-UUID tag values', async () => {
       // Create tags
       const urgentRes = await app.request(new Request('http://localhost/tags', {
         method: 'POST',
@@ -444,13 +444,13 @@ describe('Tag Handlers', () => {
         body: JSON.stringify({ title: 'No tags' })
       }));
 
-      // Filter by tag name
+      // Filter by tag name (should return empty since we only accept UUIDs now)
       const res = await app.request(new Request('http://localhost/tasks?tags=urgent'));
       expect(res.status).toBe(200);
 
       const data = await res.json();
-      expect(data.total).toBe(1);
-      expect(data.tasks[0].title).toBe('Urgent task');
+      expect(data.total).toBe(0);
+      expect(data.tasks).toEqual([]);
     });
 
     it('should filter tasks by multiple tags (OR logic)', async () => {
@@ -488,8 +488,8 @@ describe('Tag Handlers', () => {
         body: JSON.stringify({ title: 'No tags' })
       }));
 
-      // Filter by multiple tags (comma-separated)
-      const res = await app.request(new Request('http://localhost/tasks?tags=urgent,work'));
+      // Filter by multiple tags (comma-separated IDs)
+      const res = await app.request(new Request(`http://localhost/tasks?tags=${urgentTag.id},${workTag.id}`));
       expect(res.status).toBe(200);
 
       const data = await res.json();

@@ -6,7 +6,9 @@
       "Bash(git log:*)",
       "Bash(pnpm --filter electron run api:generate:*)",
       "Bash(ls:*)",
-      "Bash(devenv shell)"
+      "Bash(devenv shell)",
+      "Bash(pnpm run check-types:*)",
+      "Bash(pnpm --filter electron run check-types:*)"
     ]
   }
 }

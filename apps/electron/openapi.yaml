@@ -392,7 +392,6 @@ paths:
           description: Filter tasks by completion status
           name: completed
           in: query
-<<<<<<< HEAD
         - schema:
             type: string
             enum:
@@ -418,20 +417,6 @@ paths:
             (descending/newest first). Defaults to desc"
           name: order
           in: query
-||||||| parent of 9c24427 (Add tag API)
-=======
-        - schema:
-            type: string
-            enum:
-              - createdAt
-              - startAt
-              - dueDate
-            description: Sort tasks by field (createdAt, startAt, or dueDate)
-            example: startAt
-          required: false
-          description: Sort tasks by field (createdAt, startAt, or dueDate)
-          name: sortBy
-          in: query
         - schema:
             type: array
             items:
@@ -444,7 +429,6 @@ paths:
             with ANY of the specified tags (OR logic)
           name: tags
           in: query
->>>>>>> 9c24427 (Add tag API)
       responses:
         "200":
           description: Tasks retrieved successfully
