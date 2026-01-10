@@ -24,8 +24,14 @@ Devenv provides:
 ### Building and Running
 
 ```sh
-# Start all apps in development mode
+# Start all apps in development mode (uses default database config)
 pnpm run dev
+
+# Start web app with local SQLite database
+pnpm --filter web run dev:local
+
+# Start web app with production Turso database (requires TURSO env vars)
+pnpm --filter web run dev:prod
 
 # Build all apps and packages
 pnpm run build
@@ -63,7 +69,20 @@ pnpm --filter electron add -D <package-name>
 
 ### Database Operations (Web App)
 
-The web app uses Drizzle ORM with different strategies for local and production environments:
+The web app uses Drizzle ORM with different strategies for local and production environments.
+
+**Running the API server:**
+```sh
+# Run with local SQLite database (default for dev)
+pnpm --filter web run dev:local
+
+# Run with production Turso database (requires TURSO_CONNECTION_URL and TURSO_AUTH_TOKEN)
+pnpm --filter web run dev:prod
+```
+
+The server automatically selects the database based on environment variables:
+- If `TURSO_CONNECTION_URL` and `TURSO_AUTH_TOKEN` are set → Uses Turso
+- Otherwise → Uses local SQLite at `./tmp/local.db`
 
 **Local Development (SQLite):**
 - Uses `drizzle:push:local` for fast iteration without migration history

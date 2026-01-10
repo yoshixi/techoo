@@ -5,6 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack --port 3000",
+    "dev:local": "unset TURSO_CONNECTION_URL TURSO_AUTH_TOKEN && next dev --turbopack --port 3000",
+    "dev:prod": "next dev --turbopack --port 3000",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings 0",
