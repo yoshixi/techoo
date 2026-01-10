@@ -6,6 +6,7 @@ import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { Textarea } from './ui/textarea'
 import { TimerManager } from './TimerManager'
+import { formatDateInput, formatDateTimeInput, normalizeDueDate, normalizeDateTime } from '../lib/time'
 
 interface TaskSideMenuProps {
   task: Task | null
@@ -57,7 +58,8 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
       await putApiTasksId(localTask.id, {
         title: localTask.title?.trim(),
         description: localTask.description?.trim(),
-        dueDate: normalizeDueDate(localTask.dueDate ?? '')
+        dueDate: normalizeDueDate(localTask.dueDate ?? ''),
+        startAt: normalizeDateTime(localTask.startAt ?? '')
       })
       onTaskUpdated?.({ ...localTask, updatedAt: new Date().toISOString() })
     } catch (error) {
@@ -163,6 +165,19 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
                     }
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="task-start-date">Start date & time</Label>
+                  <Input
+                    id="task-start-date"
+                    type="datetime-local"
+                    value={formatDateTimeInput(localTask?.startAt)}
+                    onChange={(event) =>
+                      setLocalTask((prev) =>
+                        prev ? { ...prev, startAt: event.target.value } : prev
+                      )
+                    }
+                  />
+                </div>
                 <Button onClick={handleSave} disabled={isSaving}>
                   {isSaving ? 'Saving...' : 'Save changes'}
                 </Button>
@@ -195,6 +210,11 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
                   {currentTask?.dueDate ? new Date(currentTask.dueDate).toLocaleDateString() : 'None'}
                 </dd>
 
+                <dt className="text-muted-foreground">Start Date & Time</dt>
+                <dd className="text-foreground">
+                  {currentTask?.startAt ? new Date(currentTask.startAt).toLocaleString() : 'None'}
+                </dd>
+
                 <dt className="text-muted-foreground">Created</dt>
                 <dd className="text-foreground">
                   {currentTask?.createdAt ? new Date(currentTask.createdAt).toLocaleDateString() : '—'}
@@ -224,24 +244,4 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
       </aside>
     </>
   )
-}
-
-function formatDateInput(value?: string | null): string {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return date.toISOString().slice(0, 10)
-}
-
-function normalizeDueDate(value?: string | null): string | undefined {
-  if (!value) return undefined
-  const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/
-  if (isoDatePattern.test(value)) {
-    const [year, month, day] = value.split('-')
-    const utcDate = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)))
-    return utcDate.toISOString()
-  }
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return undefined
-  return parsed.toISOString()
 }

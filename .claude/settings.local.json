@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(devenv shell -- pnpm:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git log:*)",
+      "Bash(pnpm --filter electron run api:generate:*)"
     ]
   }
 }

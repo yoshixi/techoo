@@ -23,6 +23,11 @@ export interface Task {
    */
   dueDate?: string | null
   /**
+   * Start date for the task in ISO 8601 format
+   * @nullable
+   */
+  startAt?: string | null
+  /**
    * Completion timestamp in ISO 8601 format
    * @nullable
    */

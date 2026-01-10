@@ -21,6 +21,11 @@ export interface UpdateTask {
    */
   dueDate?: string | null
   /**
+   * Start date for the task in ISO 8601 format. Use null to remove start date
+   * @nullable
+   */
+  startAt?: string | null
+  /**
    * Completion timestamp. Use null to mark the task as incomplete
    * @nullable
    */

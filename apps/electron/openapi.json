@@ -61,6 +61,13 @@
             "description": "Due date for the task in ISO 8601 format",
             "example": "2024-12-31T23:59:59.000Z"
           },
+          "startAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Start date for the task in ISO 8601 format",
+            "example": "2024-01-01T09:00:00.000Z"
+          },
           "completedAt": {
             "type": "string",
             "nullable": true,
@@ -162,6 +169,12 @@
             "description": "Due date for the task in ISO 8601 format",
             "example": "2024-12-31T23:59:59.000Z"
           },
+          "startAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Start date for the task in ISO 8601 format",
+            "example": "2024-01-01T09:00:00.000Z"
+          },
           "completedAt": {
             "type": "string",
             "nullable": true,
@@ -195,6 +208,13 @@
             "format": "date-time",
             "description": "Due date for the task in ISO 8601 format. Use null to remove due date",
             "example": "2024-12-31T23:59:59.000Z"
+          },
+          "startAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "Start date for the task in ISO 8601 format. Use null to remove start date",
+            "example": "2024-01-01T09:00:00.000Z"
           },
           "completedAt": {
             "type": "string",
@@ -360,6 +380,37 @@
             "required": false,
             "description": "Filter tasks by completion status",
             "name": "completed",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "startAt",
+                "dueDate"
+              ],
+              "description": "Sort tasks by field (createdAt, startAt, or dueDate)",
+              "example": "startAt"
+            },
+            "required": false,
+            "description": "Sort tasks by field (createdAt, startAt, or dueDate)",
+            "name": "sortBy",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "description": "Sort order: asc (ascending/oldest first) or desc (descending/newest first). Defaults to desc",
+              "example": "asc"
+            },
+            "required": false,
+            "description": "Sort order: asc (ascending/oldest first) or desc (descending/newest first). Defaults to desc",
+            "name": "order",
             "in": "query"
           }
         ],

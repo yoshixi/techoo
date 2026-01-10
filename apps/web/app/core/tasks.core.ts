@@ -117,6 +117,10 @@ export const TaskQueryParamsModel = z.object({
   sortBy: z.enum(['createdAt', 'startAt', 'dueDate']).optional().openapi({
     description: 'Sort tasks by field (createdAt, startAt, or dueDate)',
     example: 'startAt'
+  }),
+  order: z.enum(['asc', 'desc']).optional().openapi({
+    description: 'Sort order: asc (ascending/oldest first) or desc (descending/newest first). Defaults to desc',
+    example: 'asc'
   })
 }).openapi('TaskQueryParams')
 

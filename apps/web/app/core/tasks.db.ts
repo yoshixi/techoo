@@ -71,6 +71,7 @@ export async function ensureDefaultUser(db: DB): Promise<SelectUser> {
 type TaskFilterOptions = {
   completed?: boolean
   sortBy?: 'createdAt' | 'startAt' | 'dueDate'
+  order?: 'asc' | 'desc'
 }
 
 export async function getAllTasks(db: DB, userId: string, filters?: TaskFilterOptions): Promise<Task[]> {
@@ -82,11 +83,14 @@ export async function getAllTasks(db: DB, userId: string, filters?: TaskFilterOp
     orderByField = tasksTable.dueAt
   }
 
+  // Determine sort order (default to desc for backwards compatibility)
+  const sortOrder = filters?.order === 'asc' ? asc : desc
+
   const dbTasks = await db
     .select()
     .from(tasksTable)
     .where(eq(tasksTable.userId, userId))
-    .orderBy(desc(orderByField))
+    .orderBy(sortOrder(orderByField))
 
   const tasks = dbTasks.map(convertDbTaskToApi)
 

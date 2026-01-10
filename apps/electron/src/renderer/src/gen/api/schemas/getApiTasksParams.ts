@@ -6,10 +6,20 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { GetApiTasksCompleted } from './getApiTasksCompleted'
+import type { GetApiTasksSortBy } from './getApiTasksSortBy'
+import type { GetApiTasksOrder } from './getApiTasksOrder'
 
 export type GetApiTasksParams = {
   /**
    * Filter tasks by completion status
    */
   completed?: GetApiTasksCompleted
+  /**
+   * Sort tasks by field (createdAt, startAt, or dueDate)
+   */
+  sortBy?: GetApiTasksSortBy
+  /**
+   * Sort order: asc (ascending/oldest first) or desc (descending/newest first). Defaults to desc
+   */
+  order?: GetApiTasksOrder
 }
