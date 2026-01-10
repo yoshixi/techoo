@@ -85,6 +85,49 @@ pnpm --filter web run drizzle:generate:prod
 
 Database configuration automatically switches between local SQLite (`./tmp/local.db`) and Turso based on environment variables.
 
+### Changing Database Schema
+
+When making changes to the database schema, follow this workflow to ensure migrations are properly created and applied:
+
+1. **Modify the schema**
+   - Edit `apps/web/app/db/schema/schema.ts` to add/modify/remove columns or tables
+   - Example: Adding a new column to the `tasksTable`
+
+2. **Generate migration**
+   ```sh
+   # Enter devenv shell first
+   devenv shell
+
+   # Generate migration from schema changes
+   pnpm --filter web run drizzle:generate
+   ```
+
+   This creates a new migration file in `drizzle/migrations/` with SQL statements representing your schema changes.
+
+3. **Review the migration**
+   - Check the generated SQL file in `drizzle/migrations/` to ensure it matches your intended changes
+   - The migration file will have a name like `0001_<adjective>_<noun>.sql`
+
+4. **Apply migration to database**
+   ```sh
+   # Still in devenv shell
+   pnpm --filter web run drizzle:migrate
+   ```
+
+   This applies the migration to your configured database (local SQLite or Turso based on environment variables).
+
+5. **Verify the changes**
+   - Test your application to ensure the schema changes work as expected
+   - Check that API endpoints correctly handle the new/modified fields
+
+**Important notes:**
+- Always run these commands within `devenv shell` to ensure the correct environment
+- Use the npm scripts (`pnpm --filter web run drizzle:*`) rather than running `drizzle-kit` directly
+- Migration files are automatically created based on the difference between your schema and the database
+- For production databases, ensure `TURSO_CONNECTION_URL` and `TURSO_AUTH_TOKEN` are set before running migrations
+- Never manually edit migration files after they've been applied to a database
+- Keep migration files in version control to maintain schema history
+
 ### Electron App
 
 ```sh
