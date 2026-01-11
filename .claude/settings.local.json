@@ -4,7 +4,8 @@
       "Bash(devenv shell -- pnpm:*)",
       "Bash(ls:*)",
       "Bash(git log:*)",
-      "Bash(pnpm --filter electron run api:generate:*)"
+      "Bash(pnpm --filter electron run api:generate:*)",
+      "WebSearch"
     ]
   }
 }

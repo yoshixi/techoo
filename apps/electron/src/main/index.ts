@@ -1,8 +1,36 @@
-import { app, shell, BrowserWindow, ipcMain, screen } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, screen, session } from 'electron'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+
+function setupContentSecurityPolicy(): void {
+  const apiUrl = import.meta.env.MAIN_VITE_API_URL || 'http://localhost:3000'
+
+  // Build connect-src directive with configured API URL
+  const connectSrc = `'self' ${apiUrl}`
+
+  // In development, Vite's HMR requires unsafe-inline and unsafe-eval for scripts
+  // In production, we use strict CSP
+  const scriptSrc = is.dev ? "'self' 'unsafe-inline' 'unsafe-eval'" : "'self'"
+
+  const csp = [
+    "default-src 'self'",
+    `script-src ${scriptSrc}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data:",
+    `connect-src ${connectSrc}`
+  ].join('; ')
+
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [csp]
+      }
+    })
+  })
+}
 
 // Modified default preload logic
 //
@@ -181,7 +209,10 @@ function createWindow(): void {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('com.shuchu.app')
+
+  // Setup CSP based on environment configuration
+  setupContentSecurityPolicy()
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
