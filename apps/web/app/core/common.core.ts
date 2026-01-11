@@ -4,7 +4,6 @@ import { z } from '@hono/zod-openapi'
 // This file contains utility functions that don't require database access
 
 export function formatTimestamp(timestamp: number): string {
-  console.log(`formatTimestamp called with: ${timestamp} \n`)
   return new Date(timestamp * 1000).toISOString()
 }
 
