@@ -107,6 +107,20 @@ function App(): React.JSX.Element {
     return map
   }, [timers, currentTime])
 
+  // Split tasks into active (timer running) and inactive
+  const { activeTasks, inactiveTasks } = useMemo(() => {
+    const active: Task[] = []
+    const inactive: Task[] = []
+    tasks.forEach((task) => {
+      if (activeTimersByTaskId.has(task.id)) {
+        active.push(task)
+      } else {
+        inactive.push(task)
+      }
+    })
+    return { activeTasks: active, inactiveTasks: inactive }
+  }, [tasks, activeTimersByTaskId])
+
   // Update current time every minute for timer display
   useEffect(() => {
     // Update immediately on mount
@@ -240,6 +254,146 @@ function App(): React.JSX.Element {
     }
   }
 
+  function renderTaskRow(task: Task): React.JSX.Element {
+    return (
+      <TableRow
+        key={task.id}
+        className={`cursor-pointer hover:bg-muted/50 transition-colors ${isTaskActive(task.id) ? 'bg-primary/5' : ''}`}
+        onClick={() => setSelectedTask(task)}
+      >
+        <TableCell onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-2">
+            <Clock4 className="h-4 w-4" />
+            <span className="text-sm min-w-[3rem]">
+              {getTotalTimeDisplay(task.id)}
+            </span>
+            {activeTimersByTaskId.has(task.id) ? (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => {
+                  const activeTimer = activeTimersByTaskId.get(task.id)
+                  if (activeTimer) {
+                    handleStopTimer(task.id, activeTimer.id)
+                  }
+                }}
+                className="h-7 w-7 hover:bg-red-100"
+                title="Stop timer"
+              >
+                <Square className="h-4 w-4 text-red-600 animate-pulse" />
+              </Button>
+            ) : (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => handleStartTimer(task.id)}
+                className="h-7 w-7 hover:bg-green-100"
+                disabled={timersLoading}
+                title="Start timer"
+              >
+                <Play className="h-4 w-4 text-green-600" />
+              </Button>
+            )}
+          </div>
+        </TableCell>
+        <TableCell>
+          {task.startAt ? formatDateTime(task.startAt) : 'No start time'}
+        </TableCell>
+        <TableCell
+          className="font-medium"
+          onClick={(e) => {
+            e.stopPropagation()
+            handleStartEditing(task.id, 'title', task.title)
+          }}
+        >
+          {editingCell?.taskId === task.id && editingCell?.field === 'title' ? (
+            <Input
+              value={editingValue}
+              onChange={(e) => setEditingValue(e.target.value)}
+              onBlur={handleSaveEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSaveEdit()
+                } else if (e.key === 'Escape') {
+                  handleCancelEditing()
+                }
+              }}
+              autoFocus
+              className="h-8"
+            />
+          ) : (
+            <span className="cursor-text hover:underline">{task.title}</span>
+          )}
+        </TableCell>
+        <TableCell
+          className="max-w-xs"
+          onClick={(e) => {
+            e.stopPropagation()
+            handleStartEditing(task.id, 'description', task.description || '')
+          }}
+        >
+          {editingCell?.taskId === task.id && editingCell?.field === 'description' ? (
+            <Input
+              value={editingValue}
+              onChange={(e) => setEditingValue(e.target.value)}
+              onBlur={handleSaveEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSaveEdit()
+                } else if (e.key === 'Escape') {
+                  handleCancelEditing()
+                }
+              }}
+              autoFocus
+              className="h-8"
+            />
+          ) : (
+            <span className="cursor-text hover:underline truncate block">{task.description || '-'}</span>
+          )}
+        </TableCell>
+        <TableCell onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-2">
+            {hasTimers(task.id) && (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => handleToggleTaskCompletion(task)}
+                disabled={completingTaskId === task.id}
+                title={task.completedAt ? 'Mark incomplete' : 'Mark complete'}
+                className={task.completedAt ? 'opacity-50' : 'hover:bg-green-100'}
+              >
+                <CheckCircle className={`h-4 w-4 ${task.completedAt ? 'text-gray-400' : 'text-green-600'}`} />
+              </Button>
+            )}
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => handleOpenFloatingWindow(task.id)}
+              title="Open floating window"
+              className="hover:bg-blue-100"
+            >
+              <Maximize2 className="h-4 w-4 text-blue-600" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    )
+  }
+
+  function renderTableHeader(): React.JSX.Element {
+    return (
+      <TableHeader>
+        <TableRow>
+          <TableHead>Time Tracked</TableHead>
+          <TableHead>Start Date</TableHead>
+          <TableHead>Title</TableHead>
+          <TableHead>Description</TableHead>
+          <TableHead>Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+    )
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar currentView={currentView} onViewChange={setCurrentView} />
@@ -255,272 +409,180 @@ function App(): React.JSX.Element {
                 </div>
               )}
 
-              {/* Task Table */}
-              <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <div>
-              <CardTitle>Tasks</CardTitle>
-              <CardDescription>
-                {tasksLoading
-                  ? 'Loading tasks...'
-                  : `${totalTasks} task${totalTasks === 1 ? '' : 's'}`}
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Sort by:</span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'createdAt' | 'startAt')}
-                  className="border rounded px-2 py-1 text-sm"
-                >
-                  <option value="startAt">Start Date</option>
-                  <option value="createdAt">Created Date</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Show completed</span>
-                <Switch checked={showCompleted} onCheckedChange={setShowCompleted} />
-              </div>
-              {!isAddingTask && (
-                <Button onClick={() => setIsAddingTask(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Task
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Time Tracked</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isAddingTask && (
-                  <TableRow className="border-primary/50 bg-primary/5">
-                    <TableCell>
-                      <span className="text-muted-foreground text-sm">0m</span>
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="datetime-local"
-                        value={newTaskFields.startAt}
-                        onChange={(e) =>
-                          setNewTaskFields((prev) => ({ ...prev, startAt: e.target.value }))
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleCreateTask()
-                          } else if (e.key === 'Escape') {
-                            handleCancelAdd()
-                          }
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        placeholder="Enter task title"
-                        value={newTaskFields.title}
-                        onChange={(e) =>
-                          setNewTaskFields((prev) => ({ ...prev, title: e.target.value }))
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleCreateTask()
-                          } else if (e.key === 'Escape') {
-                            handleCancelAdd()
-                          }
-                        }}
-                        autoFocus
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        placeholder="Enter description"
-                        value={newTaskFields.description}
-                        onChange={(e) =>
-                          setNewTaskFields((prev) => ({ ...prev, description: e.target.value }))
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleCreateTask()
-                          } else if (e.key === 'Escape') {
-                            handleCancelAdd()
-                          }
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          onClick={handleCreateTask}
-                          disabled={!newTaskFields.title.trim() || isCreating}
-                        >
-                          {isCreating ? 'Saving...' : 'Save'}
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={handleCancelAdd}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-                {tasksLoading && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
-                      Loading tasks...
-                    </TableCell>
-                  </TableRow>
-                )}
-                {!tasksLoading && tasksError && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-destructive">
-                      Failed to load tasks. {getErrorMessage(tasksError)}
-                    </TableCell>
-                  </TableRow>
-                )}
-                {!tasksLoading && !tasksError && tasks.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
-                      No tasks found
-                    </TableCell>
-                  </TableRow>
-                )}
-                {!tasksLoading &&
-                  !tasksError &&
-                  tasks.map((task) => (
-                    <TableRow
-                      key={task.id}
-                      className={`cursor-pointer hover:bg-muted/50 transition-colors ${isTaskActive(task.id) ? 'border-primary/70 bg-primary/10' : ''}`}
-                      onClick={() => setSelectedTask(task)}
+              {/* Controls */}
+              <div className="mb-6 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Sort by:</span>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as 'createdAt' | 'startAt')}
+                      className="rounded px-2 py-1 text-sm bg-background"
                     >
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-2">
-                          <Clock4 className="h-4 w-4" />
-                          <span className="text-sm min-w-[3rem]">
-                            {getTotalTimeDisplay(task.id)}
-                          </span>
-                          {activeTimersByTaskId.has(task.id) ? (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => {
-                                const activeTimer = activeTimersByTaskId.get(task.id)
-                                if (activeTimer) {
-                                  handleStopTimer(task.id, activeTimer.id)
+                      <option value="startAt">Start Date</option>
+                      <option value="createdAt">Created Date</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Show completed</span>
+                    <Switch checked={showCompleted} onCheckedChange={setShowCompleted} />
+                  </div>
+                </div>
+                {!isAddingTask && (
+                  <Button onClick={() => setIsAddingTask(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Task
+                  </Button>
+                )}
+              </div>
+
+              {/* In Progress Section */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    In Progress
+                  </CardTitle>
+                  <CardDescription>
+                    {activeTasks.length} task{activeTasks.length === 1 ? '' : 's'} with timer running
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    {renderTableHeader()}
+                    <TableBody>
+                      {tasksLoading && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground">
+                            Loading tasks...
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {!tasksLoading && activeTasks.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground">
+                            No tasks in progress
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {!tasksLoading && activeTasks.map(renderTaskRow)}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Upcoming Tasks Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tasks</CardTitle>
+                  <CardDescription>
+                    {tasksLoading
+                      ? 'Loading tasks...'
+                      : `${inactiveTasks.length} task${inactiveTasks.length === 1 ? '' : 's'}`}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    {renderTableHeader()}
+                    <TableBody>
+                      {isAddingTask && (
+                        <TableRow className="bg-primary/5">
+                          <TableCell>
+                            <span className="text-muted-foreground text-sm">0m</span>
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="datetime-local"
+                              value={newTaskFields.startAt}
+                              onChange={(e) =>
+                                setNewTaskFields((prev) => ({ ...prev, startAt: e.target.value }))
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleCreateTask()
+                                } else if (e.key === 'Escape') {
+                                  handleCancelAdd()
                                 }
                               }}
-                              className="h-7 w-7 hover:bg-red-100"
-                              title="Stop timer"
-                            >
-                              <Square className="h-4 w-4 text-red-600 animate-pulse" />
-                            </Button>
-                          ) : (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleStartTimer(task.id)}
-                              className="h-7 w-7 hover:bg-green-100"
-                              disabled={timersLoading}
-                              title="Start timer"
-                            >
-                              <Play className="h-4 w-4 text-green-600" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {task.startAt ? formatDateTime(task.startAt) : 'No start time'}
-                      </TableCell>
-                      <TableCell
-                        className="font-medium"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleStartEditing(task.id, 'title', task.title)
-                        }}
-                      >
-                        {editingCell?.taskId === task.id && editingCell?.field === 'title' ? (
-                          <Input
-                            value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={handleSaveEdit}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                handleSaveEdit()
-                              } else if (e.key === 'Escape') {
-                                handleCancelEditing()
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              placeholder="Enter task title"
+                              value={newTaskFields.title}
+                              onChange={(e) =>
+                                setNewTaskFields((prev) => ({ ...prev, title: e.target.value }))
                               }
-                            }}
-                            autoFocus
-                            className="h-8"
-                          />
-                        ) : (
-                          <span className="cursor-text hover:underline">{task.title}</span>
-                        )}
-                      </TableCell>
-                      <TableCell
-                        className="max-w-xs"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleStartEditing(task.id, 'description', task.description || '')
-                        }}
-                      >
-                        {editingCell?.taskId === task.id && editingCell?.field === 'description' ? (
-                          <Input
-                            value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={handleSaveEdit}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                handleSaveEdit()
-                              } else if (e.key === 'Escape') {
-                                handleCancelEditing()
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleCreateTask()
+                                } else if (e.key === 'Escape') {
+                                  handleCancelAdd()
+                                }
+                              }}
+                              autoFocus
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              placeholder="Enter description"
+                              value={newTaskFields.description}
+                              onChange={(e) =>
+                                setNewTaskFields((prev) => ({ ...prev, description: e.target.value }))
                               }
-                            }}
-                            autoFocus
-                            className="h-8"
-                          />
-                        ) : (
-                          <span className="cursor-text hover:underline truncate block">{task.description || '-'}</span>
-                        )}
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-2">
-                          {hasTimers(task.id) && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleToggleTaskCompletion(task)}
-                              disabled={completingTaskId === task.id}
-                              title={task.completedAt ? 'Mark incomplete' : 'Mark complete'}
-                              className={task.completedAt ? 'opacity-50' : 'hover:bg-green-100'}
-                            >
-                              <CheckCircle className={`h-4 w-4 ${task.completedAt ? 'text-gray-400' : 'text-green-600'}`} />
-                            </Button>
-                          )}
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleOpenFloatingWindow(task.id)}
-                            title="Open floating window"
-                            className="hover:bg-blue-100"
-                          >
-                            <Maximize2 className="h-4 w-4 text-blue-600" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </CardContent>
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleCreateTask()
+                                } else if (e.key === 'Escape') {
+                                  handleCancelAdd()
+                                }
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                onClick={handleCreateTask}
+                                disabled={!newTaskFields.title.trim() || isCreating}
+                              >
+                                {isCreating ? 'Saving...' : 'Save'}
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={handleCancelAdd}>
+                                Cancel
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {tasksLoading && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground">
+                            Loading tasks...
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {!tasksLoading && tasksError && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-destructive">
+                            Failed to load tasks. {getErrorMessage(tasksError)}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {!tasksLoading && !tasksError && inactiveTasks.length === 0 && !isAddingTask && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground">
+                            No tasks found
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {!tasksLoading && !tasksError && inactiveTasks.map(renderTaskRow)}
+                    </TableBody>
+                  </Table>
+                </CardContent>
               </Card>
             </main>
           </div>
