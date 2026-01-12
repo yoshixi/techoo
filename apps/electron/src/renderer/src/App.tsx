@@ -583,7 +583,7 @@ function App(): React.JSX.Element {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <KeyboardShortcuts
         onNewTask={startAddingTask}
         onToggleTimer={handleKeyboardToggleTimer}
