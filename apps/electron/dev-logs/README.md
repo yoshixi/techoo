@@ -1,0 +1,2 @@
+
+- file format `YYYY-MM-DD-$BRANCH_NAME-$WORKTITLE`

@@ -280,6 +280,16 @@ The Electron app supports floating windows for individual tasks. The main proces
 
 Planning documents should be placed in the `ai-docs/` directory.
 
+## Development Logs
+
+At the end of each session, create a dev-log in `apps/electron/dev-logs/` documenting:
+- What was implemented
+- Commands executed (especially for manual procedures like icon generation)
+
+**File naming format:** `YYYY-MM-DD-$BRANCH_NAME-$WORKTITLE.md`
+
+Example: `2026-01-12-shuchu-desktop-app-build-electron-release-workflow.md`
+
 ## Environment Variables
 
 Required for production database operations:
