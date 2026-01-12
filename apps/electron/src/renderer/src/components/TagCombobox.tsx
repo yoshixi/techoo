@@ -103,7 +103,7 @@ export const TagCombobox: React.FC<TagComboboxProps> = ({
       {/* Trigger / Selected tags display */}
       <div
         className={cn(
-          'flex min-h-10 w-full flex-wrap items-center gap-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm cursor-pointer',
+          'flex min-h-10 w-full items-center gap-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm cursor-pointer',
           'focus-within:outline-none focus-within:ring-1 focus-within:ring-ring',
           isOpen && 'ring-1 ring-ring'
         )}
@@ -112,32 +112,34 @@ export const TagCombobox: React.FC<TagComboboxProps> = ({
           inputRef.current?.focus()
         }}
       >
-        {selectedTags.map((tag) => (
-          <Badge
-            key={tag.id}
-            variant="default"
-            className="gap-1 pr-1"
-          >
-            {tag.name}
-            <button
-              type="button"
-              onClick={(e) => handleRemoveTag(tag.id, e)}
-              className="rounded-full p-0.5 hover:bg-secondary-foreground/20"
+        <div className="flex flex-1 items-center gap-1 min-w-0 overflow-hidden">
+          {selectedTags.map((tag) => (
+            <Badge
+              key={tag.id}
+              variant="default"
+              className="gap-1 pr-1 shrink-0"
             >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        ))}
-        <input
-          ref={inputRef}
-          type="text"
-          value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
-          onFocus={() => setIsOpen(true)}
-          onKeyDown={handleKeyDown}
-          placeholder={selectedTags.length === 0 ? placeholder : ''}
-          className="flex-1 min-w-[80px] bg-transparent outline-none placeholder:text-muted-foreground"
-        />
+              {tag.name}
+              <button
+                type="button"
+                onClick={(e) => handleRemoveTag(tag.id, e)}
+                className="rounded-full p-0.5 hover:bg-secondary-foreground/20"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+          <input
+            ref={inputRef}
+            type="text"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            onFocus={() => setIsOpen(true)}
+            onKeyDown={handleKeyDown}
+            placeholder={selectedTags.length === 0 ? placeholder : ''}
+            className="flex-1 min-w-[60px] bg-transparent outline-none placeholder:text-muted-foreground"
+          />
+        </div>
         <ChevronDown className="h-4 w-4 opacity-60 shrink-0" />
       </div>
 
