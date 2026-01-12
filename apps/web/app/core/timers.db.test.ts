@@ -182,11 +182,15 @@ describe('timers.db', () => {
 
       // Task A's timer should be stopped
       const taskATimers = await getTimersByTaskId(db, user.id.toString(), taskA.id)
-      expect(taskATimers![0].endTime).not.toBeNull()
+      expect(taskATimers).not.toBeNull()
+      expect(taskATimers!.length).toBeGreaterThan(0)
+      expect(taskATimers![0]!.endTime).not.toBeNull()
 
       // Task B's timer should still be active
       const taskBTimers = await getTimersByTaskId(db, user.id.toString(), taskB.id)
-      expect(taskBTimers![0].endTime).toBeNull()
+      expect(taskBTimers).not.toBeNull()
+      expect(taskBTimers!.length).toBeGreaterThan(0)
+      expect(taskBTimers![0]!.endTime).toBeNull()
     })
   })
 })
