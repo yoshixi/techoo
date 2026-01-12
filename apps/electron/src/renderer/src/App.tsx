@@ -24,8 +24,15 @@ import {
   type TaskTimer
 } from './gen/api'
 import { TaskSideMenu } from './components/TaskSideMenu'
+import { AppSidebar } from './components/Sidebar'
+import { SettingsView } from './components/SettingsView'
+import { SidebarProvider, SidebarInset } from './components/ui/sidebar'
 import { formatDateTime, normalizeDueDate, normalizeDateTime } from './lib/time'
+
+type View = 'tasks' | 'settings'
+
 function App(): React.JSX.Element {
+  const [currentView, setCurrentView] = useState<View>('tasks')
   const [showCompleted, setShowCompleted] = useState(false)
   const [sortBy, setSortBy] = useState<'createdAt' | 'startAt'>('startAt')
   const taskQuery = useMemo(
@@ -234,29 +241,22 @@ function App(): React.JSX.Element {
   }
 
   return (
-    <div className="min-h-screen p-8">
-      <main className="mx-auto max-w-6xl">
-        <header className="mb-8 text-center">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
-            <Clock4 className="h-4 w-4 text-primary" />
-            Task Management
-          </div>
-          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Task List
-          </h1>
-          <p className="mx-auto mt-3 max-w-2xl text-base text-muted-foreground">
-            Manage your tasks in a simple table view
-          </p>
-        </header>
+    <SidebarProvider>
+      <AppSidebar currentView={currentView} onViewChange={setCurrentView} />
+      <SidebarInset>
+        {currentView === 'settings' ? (
+          <SettingsView />
+        ) : (
+          <div className="p-8">
+            <main className="mx-auto max-w-6xl">
+              {timersError && (
+                <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+                  Failed to load timers.
+                </div>
+              )}
 
-        {timersError && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-            Failed to load timers.
-          </div>
-        )}
-
-        {/* Task Table */}
-        <Card>
+              {/* Task Table */}
+              <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div>
               <CardTitle>Tasks</CardTitle>
@@ -521,19 +521,22 @@ function App(): React.JSX.Element {
               </TableBody>
             </Table>
           </CardContent>
-        </Card>
-      </main>
+              </Card>
+            </main>
+          </div>
+        )}
 
-      <TaskSideMenu
-        task={selectedTask}
-        onClose={() => setSelectedTask(null)}
-        onTaskUpdated={async (updated) => {
-          // Update the currently selected task reference (to keep the side-menu UI in sync)
-          setSelectedTask(updated)
-          await mutateTasks()
-        }}
-      />
-    </div>
+        <TaskSideMenu
+          task={selectedTask}
+          onClose={() => setSelectedTask(null)}
+          onTaskUpdated={async (updated) => {
+            // Update the currently selected task reference (to keep the side-menu UI in sync)
+            setSelectedTask(updated)
+            await mutateTasks()
+          }}
+        />
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
 
