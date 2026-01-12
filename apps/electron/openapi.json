@@ -513,6 +513,21 @@
             "schema": {
               "type": "string",
               "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Filter tasks by whether they have an active timer running",
+              "example": true
+            },
+            "required": false,
+            "description": "Filter tasks by whether they have an active timer running",
+            "name": "hasActiveTimer",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
                 "createdAt",
                 "startAt",
                 "dueDate"

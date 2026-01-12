@@ -122,6 +122,10 @@ export const TaskQueryParamsModel = z.object({
     description: 'Filter tasks by completion status',
     example: false
   }),
+  hasActiveTimer: BooleanQueryParam.optional().openapi({
+    description: 'Filter tasks by whether they have an active timer running',
+    example: true
+  }),
   sortBy: z.enum(['createdAt', 'startAt', 'dueDate']).optional().openapi({
     description: 'Sort tasks by field (createdAt, startAt, or dueDate)',
     example: 'startAt'

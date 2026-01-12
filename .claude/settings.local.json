@@ -13,7 +13,9 @@
       "WebFetch(domain:ui.shadcn.com)",
       "Bash(pnpm --filter web run test -- --reporter=verbose)",
       "Bash(pnpm --filter electron run typecheck:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)"
     ]
   }
 }

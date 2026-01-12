@@ -15,9 +15,9 @@ export const listTasksHandler: RouteHandler<typeof listTasksRoute> = async (c) =
     const db = getDb()
     const defaultUser = await ensureDefaultUser(db)
     // Validate and extract query parameters using the TaskQueryParamsModel schema
-    const { completed, sortBy, order, tags } = c.req.valid('query')
+    const { completed, hasActiveTimer, sortBy, order, tags } = c.req.valid('query')
 
-    const tasks = await getAllTasks(db, defaultUser.id.toString(), { completed, sortBy, order, tags })
+    const tasks = await getAllTasks(db, defaultUser.id.toString(), { completed, hasActiveTimer, sortBy, order, tags })
 
     return c.json(
       {

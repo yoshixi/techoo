@@ -1,5 +1,5 @@
-import { eq, and, desc, asc, inArray } from 'drizzle-orm'
-import { tasksTable, usersTable, taskTagsTable, tagsTable, type InsertTask, type SelectTask, type SelectUser, type InsertTaskTag } from '../db/schema/schema'
+import { eq, and, desc, asc, inArray, isNull, notInArray, exists, notExists, sql } from 'drizzle-orm'
+import { tasksTable, usersTable, taskTagsTable, tagsTable, taskTimersTable, type InsertTask, type SelectTask, type SelectUser, type InsertTaskTag } from '../db/schema/schema'
 import { createId, type DB } from './common.db'
 import { formatTimestamp, parseISOToUnixTimestamp, getCurrentUnixTimestamp, validateRequiredString } from './common.core'
 import { convertDbTagToApi, type Tag } from './tags.db'
@@ -154,6 +154,7 @@ export async function ensureDefaultUser(db: DB): Promise<SelectUser> {
 
 type TaskFilterOptions = {
   completed?: boolean
+  hasActiveTimer?: boolean
   sortBy?: 'createdAt' | 'startAt' | 'dueDate'
   order?: 'asc' | 'desc'
   tags?: string[]
@@ -172,6 +173,9 @@ export async function getAllTasks(db: DB, userId: string, filters?: TaskFilterOp
   const sortOrder = filters?.order === 'asc' ? asc : desc
 
   let dbTasks: SelectTask[]
+
+  // Build base conditions
+  const baseConditions: ReturnType<typeof eq>[] = [eq(tasksTable.userId, userId)]
 
   // If tag filtering is requested
   if (filters?.tags && filters.tags.length > 0) {
@@ -192,31 +196,44 @@ export async function getAllTasks(db: DB, userId: string, filters?: TaskFilterOp
       .from(taskTagsTable)
       .where(inArray(taskTagsTable.tagId, tagIds))
 
-    const taskIds = taskIdsWithTags.map(row => row.taskId.toString())
+    const tagTaskIds = taskIdsWithTags.map(row => row.taskId)
 
-    if (taskIds.length === 0) {
+    if (tagTaskIds.length === 0) {
       return []
     }
 
-    // Get the actual tasks
-    dbTasks = await db
-      .select()
-      .from(tasksTable)
+    baseConditions.push(inArray(tasksTable.id, tagTaskIds))
+  }
+
+  // Apply hasActiveTimer filter using EXISTS/NOT EXISTS subquery
+  // This lets the database handle the blob comparison correctly
+  if (filters?.hasActiveTimer !== undefined) {
+    // Create a subquery that checks if a timer with null endTime exists for the task
+    const activeTimerSubquery = db
+      .select({ one: sql`1` })
+      .from(taskTimersTable)
       .where(
         and(
-          eq(tasksTable.userId, userId),
-          inArray(tasksTable.id, taskIds)
+          eq(taskTimersTable.taskId, tasksTable.id),
+          isNull(taskTimersTable.endTime)
         )
       )
-      .orderBy(sortOrder(orderByField))
-  } else {
-    // No tag filtering
-    dbTasks = await db
-      .select()
-      .from(tasksTable)
-      .where(eq(tasksTable.userId, userId))
-      .orderBy(sortOrder(orderByField))
+
+    if (filters.hasActiveTimer === true) {
+      // Only include tasks that have an active timer
+      baseConditions.push(exists(activeTimerSubquery))
+    } else {
+      // Only include tasks that do NOT have an active timer
+      baseConditions.push(notExists(activeTimerSubquery))
+    }
   }
+
+  // Execute query with all conditions
+  dbTasks = await db
+    .select()
+    .from(tasksTable)
+    .where(and(...baseConditions))
+    .orderBy(sortOrder(orderByField))
 
   // Batch load tags for all tasks
   const taskIds = dbTasks.map(t => t.id.toString())

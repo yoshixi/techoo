@@ -130,21 +130,53 @@ function App(): React.JSX.Element {
   const [currentView, setCurrentView] = useState<View>('tasks')
   const [showCompleted, setShowCompleted] = useState(false)
   const [sortBy, setSortBy] = useState<'createdAt' | 'startAt'>('startAt')
-  const taskQuery = useMemo(
+
+  // Query for tasks with active timers (In Progress section)
+  const activeTaskQuery = useMemo(
     () => ({
       completed: showCompleted ? undefined : ('false' as const),
+      hasActiveTimer: 'true' as const,
       sortBy,
       order: 'asc' as const
     }),
     [showCompleted, sortBy]
   )
   const {
-    data: tasksResponse,
-    error: tasksError,
-    isLoading: tasksLoading,
-    mutate: mutateTasks
-  } = useGetApiTasks(taskQuery)
-  const tasks = tasksResponse?.tasks ?? []
+    data: activeTasksResponse,
+    error: activeTasksError,
+    isLoading: activeTasksLoading,
+    mutate: mutateActiveTasks
+  } = useGetApiTasks(activeTaskQuery)
+  const activeTasks = activeTasksResponse?.tasks ?? []
+
+  // Query for tasks without active timers (Tasks section)
+  const inactiveTaskQuery = useMemo(
+    () => ({
+      completed: showCompleted ? undefined : ('false' as const),
+      hasActiveTimer: 'false' as const,
+      sortBy,
+      order: 'asc' as const
+    }),
+    [showCompleted, sortBy]
+  )
+  const {
+    data: inactiveTasksResponse,
+    error: inactiveTasksError,
+    isLoading: inactiveTasksLoading,
+    mutate: mutateInactiveTasks
+  } = useGetApiTasks(inactiveTaskQuery)
+  const inactiveTasks = inactiveTasksResponse?.tasks ?? []
+
+  // Combined tasks for operations that need to find a task
+  const allTasks = useMemo(() => [...activeTasks, ...inactiveTasks], [activeTasks, inactiveTasks])
+  const tasksLoading = activeTasksLoading || inactiveTasksLoading
+  const tasksError = activeTasksError || inactiveTasksError
+
+  // Helper to mutate both task lists
+  const mutateBothTaskLists = useCallback(() => {
+    return Promise.all([mutateActiveTasks(), mutateInactiveTasks()])
+  }, [mutateActiveTasks, mutateInactiveTasks])
+
   const [isAddingTask, setIsAddingTask] = useState(false)
   const [newTaskFields, setNewTaskFields] = useState({
     title: '',
@@ -152,16 +184,13 @@ function App(): React.JSX.Element {
     dueDate: '',
     startAt: ''
   })
-  const [isCreating, setIsCreating] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [focusedTaskIndex, setFocusedTaskIndex] = useState<number>(-1)
   const [editingCell, setEditingCell] = useState<{ taskId: string; field: 'title' | 'description' | 'startAt' } | null>(null)
   const [editingValue, setEditingValue] = useState('')
-  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
-  const totalTasks = tasksResponse?.total ?? tasks.length
 
   const [currentTime, setCurrentTime] = useState(Date.now())
-  const taskIds = useMemo(() => tasks.map((task) => task.id), [tasks])
+  const taskIds = useMemo(() => allTasks.map((task) => task.id), [allTasks])
 
   const {
     data: timersResponse,
@@ -203,20 +232,6 @@ function App(): React.JSX.Element {
     return map
   }, [timers, currentTime])
 
-  // Split tasks into active (timer running) and inactive
-  const { activeTasks, inactiveTasks } = useMemo(() => {
-    const active: Task[] = []
-    const inactive: Task[] = []
-    tasks.forEach((task) => {
-      if (activeTimersByTaskId.has(task.id)) {
-        active.push(task)
-      } else {
-        inactive.push(task)
-      }
-    })
-    return { activeTasks: active, inactiveTasks: inactive }
-  }, [tasks, activeTimersByTaskId])
-
   // Combined list for keyboard navigation (active tasks first, then inactive)
   const allTasksForNavigation = useMemo(() => {
     return [...activeTasks, ...inactiveTasks]
@@ -253,35 +268,91 @@ function App(): React.JSX.Element {
   }, [])
 
   // Helper to toggle timer for a task
-  const toggleTaskTimer = useCallback(async (task: Task) => {
+  const toggleTaskTimer = useCallback((task: Task) => {
     const activeTimer = activeTimersByTaskId.get(task.id)
     if (activeTimer) {
-      // Stop the timer
-      try {
-        await putApiTimersId(activeTimer.id, {
-          endTime: new Date().toISOString()
+      // Stop the timer - move task from active to inactive list optimistically
+      setCurrentTime(Date.now())
+      window.api.closeFloatingTaskWindow(task.id)
+
+      // Optimistic update: move task from active to inactive list
+      mutateActiveTasks(
+        (currentData) => {
+          if (!currentData) return currentData
+          return {
+            ...currentData,
+            tasks: currentData.tasks.filter((t) => t.id !== task.id),
+            total: currentData.total - 1
+          }
+        },
+        { revalidate: false }
+      )
+      mutateInactiveTasks(
+        (currentData) => {
+          if (!currentData) return currentData
+          return {
+            ...currentData,
+            tasks: [task, ...currentData.tasks],
+            total: currentData.total + 1
+          }
+        },
+        { revalidate: false }
+      )
+
+      putApiTimersId(activeTimer.id, {
+        endTime: new Date().toISOString()
+      })
+        .then(() => {
+          mutateTimers()
+          mutateBothTaskLists()
         })
-        await mutateTimers()
-        setCurrentTime(Date.now())
-        window.api.closeFloatingTaskWindow(task.id)
-      } catch (error) {
-        console.error('Failed to stop timer:', error)
-      }
+        .catch((error) => {
+          console.error('Failed to stop timer:', error)
+          mutateBothTaskLists() // Revert on error
+        })
     } else {
-      // Start the timer
-      try {
-        await postApiTimers({
-          taskId: task.id,
-          startTime: new Date().toISOString()
+      // Start the timer - move task from inactive to active list optimistically
+      setCurrentTime(Date.now())
+      window.api.openFloatingTaskWindow({ taskId: task.id, title: task.title })
+
+      // Optimistic update: move task from inactive to active list
+      mutateInactiveTasks(
+        (currentData) => {
+          if (!currentData) return currentData
+          return {
+            ...currentData,
+            tasks: currentData.tasks.filter((t) => t.id !== task.id),
+            total: currentData.total - 1
+          }
+        },
+        { revalidate: false }
+      )
+      mutateActiveTasks(
+        (currentData) => {
+          if (!currentData) return currentData
+          return {
+            ...currentData,
+            tasks: [task, ...currentData.tasks],
+            total: currentData.total + 1
+          }
+        },
+        { revalidate: false }
+      )
+
+      postApiTimers({
+        taskId: task.id,
+        startTime: new Date().toISOString()
+      })
+        .then(() => {
+          mutateTimers()
+          mutateBothTaskLists()
         })
-        await mutateTimers()
-        setCurrentTime(Date.now())
-        window.api.openFloatingTaskWindow({ taskId: task.id, title: task.title })
-      } catch (error) {
-        console.error('Failed to start timer:', error)
-      }
+        .catch((error) => {
+          console.error('Failed to start timer:', error)
+          mutateBothTaskLists() // Revert on error
+        })
     }
-  }, [activeTimersByTaskId, mutateTimers])
+  }, [activeTimersByTaskId, mutateTimers, mutateActiveTasks, mutateInactiveTasks, mutateBothTaskLists])
 
   // Handle keyboard timer toggle
   const handleKeyboardToggleTimer = useCallback(() => {
@@ -315,25 +386,79 @@ function App(): React.JSX.Element {
     })
   }, [allTasksForNavigation.length])
 
-  async function handleCreateTask(): Promise<void> {
+  function handleCreateTask(): void {
     if (!newTaskFields.title.trim()) return
 
-    setIsCreating(true)
-    try {
-      await postApiTasks({
-        title: newTaskFields.title.trim(),
-        description: newTaskFields.description.trim(),
-        dueDate: normalizeDueDate(newTaskFields.dueDate),
-        startAt: normalizeDateTime(newTaskFields.startAt)
-      })
-      await mutateTasks()
-      setNewTaskFields({ title: '', description: '', dueDate: '', startAt: '' })
-      setIsAddingTask(false)
-    } catch (error) {
-      console.error('Failed to create task:', error)
-    } finally {
-      setIsCreating(false)
+    const now = new Date().toISOString()
+    const tempId = `temp-${Date.now()}`
+
+    // Create optimistic task object
+    const optimisticTask: Task = {
+      id: tempId,
+      title: newTaskFields.title.trim(),
+      description: newTaskFields.description.trim(),
+      dueDate: normalizeDueDate(newTaskFields.dueDate) ?? null,
+      startAt: normalizeDateTime(newTaskFields.startAt) ?? null,
+      completedAt: null,
+      tags: [],
+      createdAt: now,
+      updatedAt: now
     }
+
+    // Optimistic UI: insert task into inactive list (new tasks don't have active timers)
+    mutateInactiveTasks(
+      (currentData) => {
+        if (!currentData) return currentData
+        return {
+          ...currentData,
+          tasks: [optimisticTask, ...currentData.tasks],
+          total: currentData.total + 1
+        }
+      },
+      { revalidate: false }
+    )
+
+    // Close form immediately
+    setNewTaskFields({ title: '', description: '', dueDate: '', startAt: '' })
+    setIsAddingTask(false)
+
+    // API call in background
+    postApiTasks({
+      title: optimisticTask.title,
+      description: optimisticTask.description,
+      dueDate: normalizeDueDate(newTaskFields.dueDate),
+      startAt: normalizeDateTime(newTaskFields.startAt)
+    })
+      .then((response) => {
+        // Replace optimistic task with real task from server (no full revalidation)
+        mutateInactiveTasks(
+          (currentData) => {
+            if (!currentData) return currentData
+            return {
+              ...currentData,
+              tasks: currentData.tasks.map((t) =>
+                t.id === tempId ? response.task : t
+              )
+            }
+          },
+          { revalidate: false }
+        )
+      })
+      .catch((error) => {
+        console.error('Failed to create task:', error)
+        // Remove optimistic task on error (no full revalidation)
+        mutateInactiveTasks(
+          (currentData) => {
+            if (!currentData) return currentData
+            return {
+              ...currentData,
+              tasks: currentData.tasks.filter((t) => t.id !== tempId),
+              total: currentData.total - 1
+            }
+          },
+          { revalidate: false }
+        )
+      })
   }
 
   function handleCancelAdd(): void {
@@ -342,7 +467,7 @@ function App(): React.JSX.Element {
   }
 
   function handleOpenFloatingWindow(taskId: string): void {
-    const task = tasks.find(t => t.id === taskId)
+    const task = allTasks.find(t => t.id === taskId)
     window.api.openFloatingTaskWindow({ taskId, title: task?.title })
   }
 
@@ -356,57 +481,128 @@ function App(): React.JSX.Element {
     setEditingValue('')
   }
 
-  async function handleSaveEdit(): Promise<void> {
+  function handleSaveEdit(): void {
     if (!editingCell) return
 
-    const task = tasks.find(t => t.id === editingCell.taskId)
+    const task = allTasks.find(t => t.id === editingCell.taskId)
     if (!task) return
 
-    try {
-      let updateValue: string | null | undefined
-      if (editingCell.field === 'startAt') {
-        updateValue = normalizeDateTime(editingValue)
-      } else {
-        updateValue = editingValue.trim()
-      }
-
-      await putApiTasksId(editingCell.taskId, {
-        [editingCell.field]: updateValue
-      })
-      await mutateTasks()
-      setEditingCell(null)
-      setEditingValue('')
-    } catch (error) {
-      console.error('Failed to update task:', error)
+    let updateValue: string | null | undefined
+    if (editingCell.field === 'startAt') {
+      updateValue = normalizeDateTime(editingValue)
+    } else {
+      updateValue = editingValue.trim()
     }
+
+    const fieldToUpdate = editingCell.field
+    const taskIdToUpdate = editingCell.taskId
+
+    // Close edit mode immediately (optimistic UI)
+    setEditingCell(null)
+    setEditingValue('')
+
+    // Make API call in background
+    putApiTasksId(taskIdToUpdate, {
+      [fieldToUpdate]: updateValue
+    })
+      .then(() => mutateBothTaskLists())
+      .catch((error) => {
+        console.error('Failed to update task:', error)
+        // Could show a toast notification here to inform user of failure
+      })
   }
 
-  async function handleStartTimer(taskId: string): Promise<void> {
-    const task = tasks.find(t => t.id === taskId)
-    try {
-      await postApiTimers({
-        taskId,
-        startTime: new Date().toISOString()
+  function handleStartTimer(taskId: string): void {
+    const task = allTasks.find(t => t.id === taskId)
+    if (!task) return
+
+    // UI first (optimistic) - move task from inactive to active
+    setCurrentTime(Date.now())
+    window.api.openFloatingTaskWindow({ taskId, title: task?.title })
+
+    // Optimistic update: move task from inactive to active list
+    mutateInactiveTasks(
+      (currentData) => {
+        if (!currentData) return currentData
+        return {
+          ...currentData,
+          tasks: currentData.tasks.filter((t) => t.id !== taskId),
+          total: currentData.total - 1
+        }
+      },
+      { revalidate: false }
+    )
+    mutateActiveTasks(
+      (currentData) => {
+        if (!currentData) return currentData
+        return {
+          ...currentData,
+          tasks: [task, ...currentData.tasks],
+          total: currentData.total + 1
+        }
+      },
+      { revalidate: false }
+    )
+
+    // API call in background
+    postApiTimers({
+      taskId,
+      startTime: new Date().toISOString()
+    })
+      .then(() => {
+        mutateTimers()
+        mutateBothTaskLists()
       })
-      await mutateTimers()
-      setCurrentTime(Date.now()) // Update time display immediately
-      window.api.openFloatingTaskWindow({ taskId, title: task?.title })
-    } catch (error) {
-      console.error('Failed to start timer:', error)
-    }
+      .catch((error) => {
+        console.error('Failed to start timer:', error)
+        mutateBothTaskLists() // Revert on error
+      })
   }
 
-  async function handleStopTimer(taskId: string, timerId: string): Promise<void> {
-    try {
-      await putApiTimersId(timerId, {
-        endTime: new Date().toISOString()
+  function handleStopTimer(taskId: string, timerId: string): void {
+    const task = allTasks.find(t => t.id === taskId)
+    if (!task) return
+
+    // UI first (optimistic) - move task from active to inactive
+    setCurrentTime(Date.now())
+    window.api.closeFloatingTaskWindow(taskId)
+
+    // Optimistic update: move task from active to inactive list
+    mutateActiveTasks(
+      (currentData) => {
+        if (!currentData) return currentData
+        return {
+          ...currentData,
+          tasks: currentData.tasks.filter((t) => t.id !== taskId),
+          total: currentData.total - 1
+        }
+      },
+      { revalidate: false }
+    )
+    mutateInactiveTasks(
+      (currentData) => {
+        if (!currentData) return currentData
+        return {
+          ...currentData,
+          tasks: [task, ...currentData.tasks],
+          total: currentData.total + 1
+        }
+      },
+      { revalidate: false }
+    )
+
+    // API call in background
+    putApiTimersId(timerId, {
+      endTime: new Date().toISOString()
+    })
+      .then(() => {
+        mutateTimers()
+        mutateBothTaskLists()
       })
-      await mutateTimers()
-      setCurrentTime(Date.now()) // Update time display immediately
-      window.api.closeFloatingTaskWindow(taskId)
-    } catch (error) {
-      console.error('Failed to stop timer:', error)
-    }
+      .catch((error) => {
+        console.error('Failed to stop timer:', error)
+        mutateBothTaskLists() // Revert on error
+      })
   }
 
   function getTotalTimeDisplay(taskId: string): string {
@@ -431,18 +627,34 @@ function App(): React.JSX.Element {
     return timers.some(timer => timer.taskId === taskId)
   }
 
-  async function handleToggleTaskCompletion(task: Task): Promise<void> {
-    setCompletingTaskId(task.id)
-    try {
-      await putApiTasksId(task.id, {
-        completedAt: task.completedAt ? null : new Date().toISOString()
+  function handleToggleTaskCompletion(task: Task): void {
+    const newCompletedAt = task.completedAt ? null : new Date().toISOString()
+    const isInActiveList = activeTasks.some(t => t.id === task.id)
+
+    // Determine which mutator to use based on which list the task is in
+    const mutateTargetList = isInActiveList ? mutateActiveTasks : mutateInactiveTasks
+
+    // Optimistic UI: update local cache immediately
+    mutateTargetList(
+      (currentData) => {
+        if (!currentData) return currentData
+        return {
+          ...currentData,
+          tasks: currentData.tasks.map((t) =>
+            t.id === task.id ? { ...t, completedAt: newCompletedAt } : t
+          )
+        }
+      },
+      { revalidate: false } // Don't revalidate yet
+    )
+
+    // API call in background
+    putApiTasksId(task.id, { completedAt: newCompletedAt })
+      .then(() => mutateBothTaskLists()) // Revalidate after success
+      .catch((error) => {
+        console.error('Failed to update task completion:', error)
+        mutateBothTaskLists() // Revalidate to revert on error
       })
-      await mutateTasks()
-    } catch (error) {
-      console.error('Failed to update task completion:', error)
-    } finally {
-      setCompletingTaskId(null)
-    }
   }
 
   function renderTaskRow(task: Task): React.JSX.Element {
@@ -586,7 +798,6 @@ function App(): React.JSX.Element {
                 size="icon"
                 variant="ghost"
                 onClick={() => handleToggleTaskCompletion(task)}
-                disabled={completingTaskId === task.id}
                 title={task.completedAt ? 'Mark incomplete' : 'Mark complete'}
                 className={task.completedAt ? 'opacity-50' : 'hover:bg-green-100'}
               >
@@ -787,9 +998,9 @@ function App(): React.JSX.Element {
                               <Button
                                 size="sm"
                                 onClick={handleCreateTask}
-                                disabled={!newTaskFields.title.trim() || isCreating}
+                                disabled={!newTaskFields.title.trim()}
                               >
-                                {isCreating ? 'Saving...' : 'Save'}
+                                Save
                               </Button>
                               <Button size="sm" variant="outline" onClick={handleCancelAdd}>
                                 Cancel
@@ -834,7 +1045,7 @@ function App(): React.JSX.Element {
           onTaskUpdated={async (updated) => {
             // Update the currently selected task reference (to keep the side-menu UI in sync)
             setSelectedTask(updated)
-            await mutateTasks()
+            await mutateBothTaskLists()
           }}
         />
       </SidebarInset>

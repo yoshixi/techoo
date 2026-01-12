@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { GetApiTasksCompleted } from './getApiTasksCompleted'
+import type { GetApiTasksHasActiveTimer } from './getApiTasksHasActiveTimer'
 import type { GetApiTasksSortBy } from './getApiTasksSortBy'
 import type { GetApiTasksOrder } from './getApiTasksOrder'
 
@@ -14,6 +15,10 @@ export type GetApiTasksParams = {
    * Filter tasks by completion status
    */
   completed?: GetApiTasksCompleted
+  /**
+   * Filter tasks by whether they have an active timer running
+   */
+  hasActiveTimer?: GetApiTasksHasActiveTimer
   /**
    * Sort tasks by field (createdAt, startAt, or dueDate)
    */
