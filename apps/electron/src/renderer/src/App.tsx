@@ -821,6 +821,7 @@ function App(): React.JSX.Element {
             <TagCombobox
               selectedTagIds={task.tags?.map((t) => t.id) ?? []}
               onSelectionChange={(tagIds) => handleUpdateTaskTags(task.id, tagIds)}
+              onClose={() => setEditingTagsTaskId(null)}
               placeholder="Add tags..."
               className="min-w-[150px]"
             />

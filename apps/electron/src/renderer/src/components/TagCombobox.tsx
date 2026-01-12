@@ -7,6 +7,7 @@ import { cn } from '../lib/utils'
 interface TagComboboxProps {
   selectedTagIds: string[]
   onSelectionChange: (tagIds: string[]) => void
+  onClose?: () => void
   placeholder?: string
   className?: string
 }
@@ -14,6 +15,7 @@ interface TagComboboxProps {
 export const TagCombobox: React.FC<TagComboboxProps> = ({
   selectedTagIds,
   onSelectionChange,
+  onClose,
   placeholder = 'Select tags...',
   className
 }) => {
@@ -92,6 +94,7 @@ export const TagCombobox: React.FC<TagComboboxProps> = ({
     if (event.key === 'Escape') {
       setIsOpen(false)
       setSearchValue('')
+      onClose?.()
     } else if (event.key === 'Enter' && searchValue && !exactMatch) {
       event.preventDefault()
       handleCreateTag()
