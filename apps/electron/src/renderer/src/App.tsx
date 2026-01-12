@@ -270,9 +270,9 @@ function App(): React.JSX.Element {
     const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
       .toISOString()
       .slice(0, 16)
-    setNewTaskFields((prev) => ({ ...prev, startAt: localDateTime }))
+    setNewTaskFields((prev) => ({ ...prev, startAt: localDateTime, tagIds: filterTagIds }))
     setIsAddingTask(true)
-  }, [])
+  }, [filterTagIds])
 
   // Helper to toggle timer for a task
   const toggleTaskTimer = useCallback((task: Task) => {
