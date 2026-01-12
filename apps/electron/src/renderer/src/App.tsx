@@ -13,6 +13,8 @@ import {
   TableRow
 } from './components/ui/table'
 import { Switch } from './components/ui/switch'
+import { Badge } from './components/ui/badge'
+import { TagCombobox } from './components/TagCombobox'
 import {
   postApiTasks,
   postApiTimers,
@@ -129,6 +131,7 @@ function KeyboardShortcuts({
 function App(): React.JSX.Element {
   const [currentView, setCurrentView] = useState<View>('tasks')
   const [showCompleted, setShowCompleted] = useState(false)
+  const [filterTagIds, setFilterTagIds] = useState<string[]>([])
   const [sortBy, setSortBy] = useState<'createdAt' | 'startAt'>('startAt')
 
   // Query for tasks with active timers (In Progress section)
@@ -137,9 +140,10 @@ function App(): React.JSX.Element {
       completed: showCompleted ? undefined : ('false' as const),
       hasActiveTimer: 'true' as const,
       sortBy,
-      order: 'asc' as const
+      order: 'asc' as const,
+      tags: filterTagIds.length ? filterTagIds : undefined
     }),
-    [showCompleted, sortBy]
+    [showCompleted, sortBy, filterTagIds]
   )
   const {
     data: activeTasksResponse,
@@ -155,9 +159,10 @@ function App(): React.JSX.Element {
       completed: showCompleted ? undefined : ('false' as const),
       hasActiveTimer: 'false' as const,
       sortBy,
-      order: 'asc' as const
+      order: 'asc' as const,
+      tags: filterTagIds.length ? filterTagIds : undefined
     }),
-    [showCompleted, sortBy]
+    [showCompleted, sortBy, filterTagIds]
   )
   const {
     data: inactiveTasksResponse,
@@ -762,7 +767,18 @@ function App(): React.JSX.Element {
               className="h-8"
             />
           ) : (
-            <span className={`cursor-text hover:underline ${isCompleted ? 'line-through' : ''}`}>{task.title}</span>
+            <div className="flex items-center gap-2">
+              <span className={`cursor-text hover:underline ${isCompleted ? 'line-through' : ''}`}>{task.title}</span>
+              {task.tags && task.tags.length > 0 && (
+                <div className="flex gap-1">
+                  {task.tags.map((tag) => (
+                    <Badge key={tag.id} variant="outline" className="text-xs px-1.5 py-0">
+                      {tag.name}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </TableCell>
         <TableCell
@@ -877,6 +893,15 @@ function App(): React.JSX.Element {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <span>Show completed</span>
                     <Switch checked={showCompleted} onCheckedChange={setShowCompleted} />
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Tags:</span>
+                    <TagCombobox
+                      selectedTagIds={filterTagIds}
+                      onSelectionChange={setFilterTagIds}
+                      placeholder="All tags"
+                      className="w-48"
+                    />
                   </div>
                 </div>
                 {!isAddingTask && (

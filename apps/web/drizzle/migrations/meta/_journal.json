@@ -15,6 +15,13 @@
       "when": 1768004789468,
       "tag": "0001_cooing_valkyrie",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1768192379313,
+      "tag": "0002_strange_fallen_one",
+      "breakpoints": true
     }
   ]
 }
