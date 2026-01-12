@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi'
-import { UUIDSchema } from './tasks.core'
+import { UUIDSchema } from './common.core'
 
 // User model
 export const UserModel = z.object({

@@ -5,6 +5,7 @@
  * API for the Shuchu task management application with OpenAPI documentation
  * OpenAPI spec version: 1.0.0
  */
+import type { Tag } from './tag'
 
 export interface Task {
   /** Unique identifier for the task */
@@ -32,6 +33,8 @@ export interface Task {
    * @nullable
    */
   completedAt?: string | null
+  /** Tags associated with this task */
+  tags: Tag[]
   /** Timestamp when the task was created */
   createdAt: string
   /** Timestamp when the task was last updated */

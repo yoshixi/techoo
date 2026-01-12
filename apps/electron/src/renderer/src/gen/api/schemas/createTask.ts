@@ -24,4 +24,6 @@ export interface CreateTask {
    * @nullable
    */
   completedAt?: string | null
+  /** Array of tag IDs to associate with the task */
+  tagIds?: string[]
 }

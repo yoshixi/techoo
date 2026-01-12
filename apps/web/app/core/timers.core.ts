@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi'
-import { UUIDSchema } from './tasks.core'
+import { UUIDSchema } from './common.core'
 
 // Base task timer model
 export const TaskTimerModel = z.object({

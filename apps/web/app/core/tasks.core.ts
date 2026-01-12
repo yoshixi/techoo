@@ -1,10 +1,6 @@
 import { z } from '@hono/zod-openapi'
-
-// Helper schema for UUID validation with better error handling
-export const UUIDSchema = z.string().uuid().openapi({
-  description: 'UUID format',
-  example: '01234567-89ab-cdef-0123-456789abcdef',
-})
+import { UUIDSchema } from './common.core'
+import { TagModel } from './tags.core'
 
 // Base task model
 export const TaskModel = z.object({
@@ -30,6 +26,10 @@ export const TaskModel = z.object({
   completedAt: z.iso.datetime().optional().nullable().openapi({
     description: 'Completion timestamp in ISO 8601 format',
     example: '2024-01-02T08:00:00.000Z'
+  }),
+  tags: z.array(TagModel).openapi({
+    description: 'Tags associated with this task',
+    example: []
   }),
   createdAt: z.iso.datetime().openapi({
     description: 'Timestamp when the task was created',
@@ -62,6 +62,10 @@ export const CreateTaskModel = z.object({
   completedAt: z.iso.datetime().optional().nullable().openapi({
     description: 'Completion timestamp. Use null to mark the task as incomplete',
     example: '2024-01-02T08:00:00.000Z'
+  }),
+  tagIds: z.array(UUIDSchema).optional().openapi({
+    description: 'Array of tag IDs to associate with the task',
+    example: []
   })
 }).openapi('CreateTask')
 
@@ -86,6 +90,10 @@ export const UpdateTaskModel = z.object({
   completedAt: z.iso.datetime().optional().nullable().openapi({
     description: 'Completion timestamp. Use null to mark the task as incomplete',
     example: '2024-01-02T08:00:00.000Z'
+  }),
+  tagIds: z.array(UUIDSchema).optional().openapi({
+    description: 'Array of tag IDs to associate with the task. Replaces all existing tags',
+    example: []
   })
 }).openapi('UpdateTask')
 
@@ -121,6 +129,15 @@ export const TaskQueryParamsModel = z.object({
   order: z.enum(['asc', 'desc']).optional().openapi({
     description: 'Sort order: asc (ascending/oldest first) or desc (descending/newest first). Defaults to desc',
     example: 'asc'
+  }),
+  tags: z.preprocess((value) => {
+    if (typeof value === 'string') {
+      return value.includes(',') ? value.split(',').map((item) => item.trim()) : [value]
+    }
+    return value
+  }, z.array(z.string()).optional()).openapi({
+    description: 'Filter tasks by tag IDs (comma-separated). Returns tasks with ANY of the specified tags (OR logic)',
+    example: '01234567-89ab-cdef-0123-456789abcdef,98765432-10ab-cdef-0123-456789abcdef'
   })
 }).openapi('TaskQueryParams')
 

@@ -12,16 +12,20 @@ import useSWRMutation from 'swr/mutation'
 import type { SWRMutationConfiguration } from 'swr/mutation'
 
 import type {
+  CreateTag,
   CreateTask,
   CreateTimer,
   ErrorResponse,
   GetApiTasksParams,
   GetApiTimersParams,
   HealthResponse,
+  TagListResponse,
+  TagResponse,
   TaskListResponse,
   TaskResponse,
   TimerListResponse,
   TimerResponse,
+  UpdateTag,
   UpdateTask,
   UpdateTimer
 } from '../schemas'
@@ -550,6 +554,226 @@ export const useDeleteApiTimersId = <TError = ErrorResponse | ErrorResponse>(
 
   const swrKey = swrOptions?.swrKey ?? getDeleteApiTimersIdMutationKey(id)
   const swrFn = getDeleteApiTimersIdMutationFetcher(id)
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * Retrieve all tags for the current user
+ * @summary Get all tags
+ */
+export const getApiTags = () => {
+  return customInstance<TagListResponse>({ url: `/api/tags`, method: 'GET' })
+}
+
+export const getGetApiTagsKey = () => [`/api/tags`] as const
+
+export type GetApiTagsQueryResult = NonNullable<Awaited<ReturnType<typeof getApiTags>>>
+export type GetApiTagsQueryError = ErrorResponse
+
+/**
+ * @summary Get all tags
+ */
+export const useGetApiTags = <TError = ErrorResponse>(options?: {
+  swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiTags>>, TError> & {
+    swrKey?: Key
+    enabled?: boolean
+  }
+}) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const isEnabled = swrOptions?.enabled !== false
+  const swrKey = swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiTagsKey() : null))
+  const swrFn = () => getApiTags()
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * Create a new tag
+ * @summary Create a tag
+ */
+export const postApiTags = (createTag: CreateTag) => {
+  return customInstance<TagResponse>({
+    url: `/api/tags`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createTag
+  })
+}
+
+export const getPostApiTagsMutationFetcher = () => {
+  return (_: Key, { arg }: { arg: CreateTag }) => {
+    return postApiTags(arg)
+  }
+}
+export const getPostApiTagsMutationKey = () => [`/api/tags`] as const
+
+export type PostApiTagsMutationResult = NonNullable<Awaited<ReturnType<typeof postApiTags>>>
+export type PostApiTagsMutationError = ErrorResponse | ErrorResponse
+
+/**
+ * @summary Create a tag
+ */
+export const usePostApiTags = <TError = ErrorResponse | ErrorResponse>(options?: {
+  swr?: SWRMutationConfiguration<
+    Awaited<ReturnType<typeof postApiTags>>,
+    TError,
+    Key,
+    CreateTag,
+    Awaited<ReturnType<typeof postApiTags>>
+  > & { swrKey?: string }
+}) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getPostApiTagsMutationKey()
+  const swrFn = getPostApiTagsMutationFetcher()
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * Retrieve a specific tag by ID
+ * @summary Get a tag
+ */
+export const getApiTagsId = (id: string) => {
+  return customInstance<TagResponse>({ url: `/api/tags/${id}`, method: 'GET' })
+}
+
+export const getGetApiTagsIdKey = (id: string) => [`/api/tags/${id}`] as const
+
+export type GetApiTagsIdQueryResult = NonNullable<Awaited<ReturnType<typeof getApiTagsId>>>
+export type GetApiTagsIdQueryError = ErrorResponse | ErrorResponse
+
+/**
+ * @summary Get a tag
+ */
+export const useGetApiTagsId = <TError = ErrorResponse | ErrorResponse>(
+  id: string,
+  options?: {
+    swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiTagsId>>, TError> & {
+      swrKey?: Key
+      enabled?: boolean
+    }
+  }
+) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const isEnabled = swrOptions?.enabled !== false && !!id
+  const swrKey = swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiTagsIdKey(id) : null))
+  const swrFn = () => getApiTagsId(id)
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * Update an existing tag by ID
+ * @summary Update a tag
+ */
+export const putApiTagsId = (id: string, updateTag: UpdateTag) => {
+  return customInstance<TagResponse>({
+    url: `/api/tags/${id}`,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateTag
+  })
+}
+
+export const getPutApiTagsIdMutationFetcher = (id: string) => {
+  return (_: Key, { arg }: { arg: UpdateTag }) => {
+    return putApiTagsId(id, arg)
+  }
+}
+export const getPutApiTagsIdMutationKey = (id: string) => [`/api/tags/${id}`] as const
+
+export type PutApiTagsIdMutationResult = NonNullable<Awaited<ReturnType<typeof putApiTagsId>>>
+export type PutApiTagsIdMutationError = ErrorResponse | ErrorResponse | ErrorResponse
+
+/**
+ * @summary Update a tag
+ */
+export const usePutApiTagsId = <TError = ErrorResponse | ErrorResponse | ErrorResponse>(
+  id: string,
+  options?: {
+    swr?: SWRMutationConfiguration<
+      Awaited<ReturnType<typeof putApiTagsId>>,
+      TError,
+      Key,
+      UpdateTag,
+      Awaited<ReturnType<typeof putApiTagsId>>
+    > & { swrKey?: string }
+  }
+) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getPutApiTagsIdMutationKey(id)
+  const swrFn = getPutApiTagsIdMutationFetcher(id)
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * Delete a tag by ID. This will also remove the tag from all associated tasks.
+ * @summary Delete a tag
+ */
+export const deleteApiTagsId = (id: string) => {
+  return customInstance<TagResponse>({ url: `/api/tags/${id}`, method: 'DELETE' })
+}
+
+export const getDeleteApiTagsIdMutationFetcher = (id: string) => {
+  return (_: Key, __: { arg: Arguments }) => {
+    return deleteApiTagsId(id)
+  }
+}
+export const getDeleteApiTagsIdMutationKey = (id: string) => [`/api/tags/${id}`] as const
+
+export type DeleteApiTagsIdMutationResult = NonNullable<Awaited<ReturnType<typeof deleteApiTagsId>>>
+export type DeleteApiTagsIdMutationError = ErrorResponse | ErrorResponse
+
+/**
+ * @summary Delete a tag
+ */
+export const useDeleteApiTagsId = <TError = ErrorResponse | ErrorResponse>(
+  id: string,
+  options?: {
+    swr?: SWRMutationConfiguration<
+      Awaited<ReturnType<typeof deleteApiTagsId>>,
+      TError,
+      Key,
+      Arguments,
+      Awaited<ReturnType<typeof deleteApiTagsId>>
+    > & { swrKey?: string }
+  }
+) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getDeleteApiTagsIdMutationKey(id)
+  const swrFn = getDeleteApiTagsIdMutationFetcher(id)
 
   const query = useSWRMutation(swrKey, swrFn, swrOptions)
 

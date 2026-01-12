@@ -12,6 +12,9 @@ export function convertDbTaskToApi(dbTask: SelectTask): Task {
     title: dbTask.title,
     description: dbTask.description || '',
     dueDate: dbTask.dueAt ? new Date(dbTask.dueAt * 1000).toISOString() : undefined,
+    startAt: dbTask.startAt ? new Date(dbTask.startAt * 1000).toISOString() : undefined,
+    completedAt: dbTask.completedAt ? new Date(dbTask.completedAt * 1000).toISOString() : undefined,
+    tags: [], // This old implementation doesn't load tags - use app/core/tasks.db.ts for full functionality
     createdAt: new Date(dbTask.createdAt * 1000).toISOString(),
     updatedAt: new Date(dbTask.updatedAt * 1000).toISOString()
   }

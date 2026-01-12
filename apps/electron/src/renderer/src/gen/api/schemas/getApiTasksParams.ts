@@ -22,4 +22,8 @@ export type GetApiTasksParams = {
    * Sort order: asc (ascending/oldest first) or desc (descending/newest first). Defaults to desc
    */
   order?: GetApiTasksOrder
+  /**
+   * Filter tasks by tag IDs (comma-separated). Returns tasks with ANY of the specified tags (OR logic)
+   */
+  tags?: string[]
 }

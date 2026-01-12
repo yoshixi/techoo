@@ -2,3 +2,4 @@
 export * from './health'
 export * from './tasks'
 export * from './timers'
+export * from './tags'

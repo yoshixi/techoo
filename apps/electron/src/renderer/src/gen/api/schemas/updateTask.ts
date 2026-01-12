@@ -30,4 +30,6 @@ export interface UpdateTask {
    * @nullable
    */
   completedAt?: string | null
+  /** Array of tag IDs to associate with the task. Replaces all existing tags */
+  tagIds?: string[]
 }

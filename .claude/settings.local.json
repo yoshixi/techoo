@@ -5,8 +5,10 @@
       "Bash(ls:*)",
       "Bash(git log:*)",
       "Bash(pnpm --filter electron run api:generate:*)",
-      "WebSearch",
-      "Bash(git -C /Users/yoshiki/ghq/github.com/yoshixi/shuchu-desktop-app-build branch:*)"
+      "Bash(ls:*)",
+      "Bash(devenv shell)",
+      "Bash(pnpm run check-types:*)",
+      "Bash(pnpm --filter electron run check-types:*)"
     ]
   }
 }

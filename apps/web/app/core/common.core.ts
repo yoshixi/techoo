@@ -3,6 +3,12 @@ import { z } from '@hono/zod-openapi'
 // Shared function (no database access functions)
 // This file contains utility functions that don't require database access
 
+// Helper schema for UUID validation with better error handling
+export const UUIDSchema = z.string().uuid().openapi({
+  description: 'UUID format',
+  example: '01234567-89ab-cdef-0123-456789abcdef',
+})
+
 export function formatTimestamp(timestamp: number): string {
   return new Date(timestamp * 1000).toISOString()
 }

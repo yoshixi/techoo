@@ -33,6 +33,42 @@
           "timestamp"
         ]
       },
+      "Tag": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the tag",
+            "example": "01234567-89ab-cdef-0123-456789abcdef"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "description": "Name of the tag",
+            "example": "urgent"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the tag was created",
+            "example": "2024-01-01T10:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the tag was last updated",
+            "example": "2024-01-01T15:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
       "Task": {
         "type": "object",
         "properties": {
@@ -75,6 +111,14 @@
             "description": "Completion timestamp in ISO 8601 format",
             "example": "2024-01-02T08:00:00.000Z"
           },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            },
+            "description": "Tags associated with this task",
+            "example": []
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -92,6 +136,7 @@
           "id",
           "title",
           "description",
+          "tags",
           "createdAt",
           "updatedAt"
         ]
@@ -181,6 +226,17 @@
             "format": "date-time",
             "description": "Completion timestamp. Use null to mark the task as incomplete",
             "example": "2024-01-02T08:00:00.000Z"
+          },
+          "tagIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID format",
+              "example": "01234567-89ab-cdef-0123-456789abcdef"
+            },
+            "description": "Array of tag IDs to associate with the task",
+            "example": []
           }
         },
         "required": [
@@ -222,6 +278,17 @@
             "format": "date-time",
             "description": "Completion timestamp. Use null to mark the task as incomplete",
             "example": "2024-01-02T08:00:00.000Z"
+          },
+          "tagIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID format",
+              "example": "01234567-89ab-cdef-0123-456789abcdef"
+            },
+            "description": "Array of tag IDs to associate with the task. Replaces all existing tags",
+            "example": []
           }
         }
       },
@@ -339,6 +406,66 @@
             "example": "2024-01-01T10:25:00.000Z"
           }
         }
+      },
+      "TagListResponse": {
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            },
+            "description": "List of tags"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total number of tags",
+            "example": 5
+          }
+        },
+        "required": [
+          "tags",
+          "total"
+        ]
+      },
+      "TagResponse": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "$ref": "#/components/schemas/Tag"
+          }
+        },
+        "required": [
+          "tag"
+        ]
+      },
+      "CreateTag": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "description": "Name of the tag",
+            "example": "urgent"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateTag": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "description": "Name of the tag",
+            "example": "high-priority"
+          }
+        }
       }
     },
     "parameters": {}
@@ -411,6 +538,20 @@
             "required": false,
             "description": "Sort order: asc (ascending/oldest first) or desc (descending/newest first). Defaults to desc",
             "name": "order",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Filter tasks by tag IDs (comma-separated). Returns tasks with ANY of the specified tags (OR logic)",
+              "example": "01234567-89ab-cdef-0123-456789abcdef,98765432-10ab-cdef-0123-456789abcdef"
+            },
+            "required": false,
+            "description": "Filter tasks by tag IDs (comma-separated). Returns tasks with ANY of the specified tags (OR logic)",
+            "name": "tags",
             "in": "query"
           }
         ],
@@ -951,6 +1092,250 @@
           },
           "404": {
             "description": "Timer not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tags": {
+      "get": {
+        "summary": "Get all tags",
+        "description": "Retrieve all tags for the current user",
+        "responses": {
+          "200": {
+            "description": "Tags retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a tag",
+        "description": "Create a new tag",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTag"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tag created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - duplicate tag name or invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tags/{id}": {
+      "get": {
+        "summary": "Get a tag",
+        "description": "Retrieve a specific tag by ID",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tag ID",
+              "example": "01234567-89ab-cdef-0123-456789abcdef"
+            },
+            "required": true,
+            "description": "Tag ID",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tag retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tag not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a tag",
+        "description": "Update an existing tag by ID",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tag ID",
+              "example": "01234567-89ab-cdef-0123-456789abcdef"
+            },
+            "required": true,
+            "description": "Tag ID",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTag"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tag updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - duplicate tag name or invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tag not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a tag",
+        "description": "Delete a tag by ID. This will also remove the tag from all associated tasks.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tag ID",
+              "example": "01234567-89ab-cdef-0123-456789abcdef"
+            },
+            "required": true,
+            "description": "Tag ID",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tag deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tag not found",
             "content": {
               "application/json": {
                 "schema": {

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
+export * from './createTag'
 export * from './createTask'
 export * from './createTimer'
 export * from './errorResponse'
@@ -15,11 +16,15 @@ export * from './getApiTasksParams'
 export * from './getApiTasksSortBy'
 export * from './getApiTimersParams'
 export * from './healthResponse'
+export * from './tag'
+export * from './tagListResponse'
+export * from './tagResponse'
 export * from './task'
 export * from './taskListResponse'
 export * from './taskResponse'
 export * from './taskTimer'
 export * from './timerListResponse'
 export * from './timerResponse'
+export * from './updateTag'
 export * from './updateTask'
 export * from './updateTimer'

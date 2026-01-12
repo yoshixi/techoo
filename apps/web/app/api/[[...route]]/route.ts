@@ -14,7 +14,12 @@ import {
   getTimerRoute,
   createTimerRoute,
   updateTimerRoute,
-  deleteTimerRoute
+  deleteTimerRoute,
+  listTagsRoute,
+  getTagRoute,
+  createTagRoute,
+  updateTagRoute,
+  deleteTagRoute
 } from './routes'
 
 // Import handlers from local handlers directory
@@ -30,7 +35,12 @@ import {
   getTimerHandler,
   createTimerHandler,
   updateTimerHandler,
-  deleteTimerHandler
+  deleteTimerHandler,
+  listTagsHandler,
+  getTagHandler,
+  createTagHandler,
+  updateTagHandler,
+  deleteTagHandler
 } from './handlers'
 
 const app = new OpenAPIHono().basePath('/api')
@@ -65,6 +75,13 @@ app.openapi(getTimerRoute, getTimerHandler)
 app.openapi(createTimerRoute, createTimerHandler)
 app.openapi(updateTimerRoute, updateTimerHandler)
 app.openapi(deleteTimerRoute, deleteTimerHandler)
+
+// Register tag routes
+app.openapi(listTagsRoute, listTagsHandler)
+app.openapi(getTagRoute, getTagHandler)
+app.openapi(createTagRoute, createTagHandler)
+app.openapi(updateTagRoute, updateTagHandler)
+app.openapi(deleteTagRoute, deleteTagHandler)
 
 // The OpenAPI documentation will be available at /doc
 app.doc('/doc', {
