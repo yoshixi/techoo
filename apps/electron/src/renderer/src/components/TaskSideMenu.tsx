@@ -6,6 +6,7 @@ import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { Textarea } from './ui/textarea'
 import { TimerManager } from './TimerManager'
+import { TagCombobox } from './TagCombobox'
 import { formatDateInput, formatDateTimeInput, normalizeDueDate, normalizeDateTime } from '../lib/time'
 
 const AUTO_SAVE_DELAY_MS = 800
@@ -160,6 +161,18 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
     }
   }
 
+  const handleTagsChange = async (tagIds: string[]): Promise<void> => {
+    if (!currentTask) return
+    try {
+      const response = await putApiTasksId(currentTask.id, { tagIds })
+      setLocalTask(response.task)
+      lastSavedTaskRef.current = response.task
+      onTaskUpdated?.(response.task)
+    } catch (error) {
+      console.error('Failed to update tags:', error)
+    }
+  }
+
   return (
     <>
       <div className="fixed inset-0 z-40 bg-foreground/20" onClick={onClose} aria-hidden="true" />
@@ -251,6 +264,14 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
                         prev ? { ...prev, startAt: event.target.value } : prev
                       )
                     }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tags</Label>
+                  <TagCombobox
+                    selectedTagIds={localTask?.tags?.map((t) => t.id) ?? []}
+                    onSelectionChange={handleTagsChange}
+                    placeholder="Add tags..."
                   />
                 </div>
                 <div className="h-6 flex items-center">

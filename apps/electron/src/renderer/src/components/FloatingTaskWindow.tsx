@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import { Button } from './ui/button'
+import { Badge } from './ui/badge'
 import { TimerManager } from './TimerManager'
 import { putApiTasksId, useGetApiTasksId } from '../gen/api'
 
@@ -71,6 +72,15 @@ export const FloatingTaskWindow: React.FC = () => {
             Running Task
           </p>
           <h1 className="truncate text-base font-semibold text-foreground">{taskTitle}</h1>
+          {task?.task.tags && task.task.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {task.task.tags.map((tag) => (
+                <Badge key={tag.id} variant="outline" className="text-[10px] px-1.5 py-0">
+                  {tag.name}
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
         <Button
           size="icon"

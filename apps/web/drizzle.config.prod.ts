@@ -6,6 +6,8 @@ if (!process.env.TURSO_CONNECTION_URL || !process.env.TURSO_AUTH_TOKEN) {
   throw new Error('TURSO_CONNECTION_URL and TURSO_AUTH_TOKEN must be set for production config');
 }
 
+console.log(`database URL: ${process.env.TURSO_CONNECTION_URL}`)
+
 export default defineConfig({
   schema: './app/db/schema/schema.ts',
   out: './drizzle/migrations',
