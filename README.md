@@ -39,3 +39,20 @@ $ devenv tasks run web:test
 ## Location for planning doc
 
 Please put the planning doc in the `ai-docs` directory. 
+
+## Release
+
+### Electron App Release
+
+```sh
+#  patch version bump (0.0.3 → 0.0.4)
+pnpm run release:electron patch
+
+# minor version bump  (0.1.0 → 0.2.0)
+pnpm run release:electron minor
+
+# major version bump  (1.0.0 → 2.0.0)
+pnpm run release:electron major
+```
+
+```
