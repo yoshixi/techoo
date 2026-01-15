@@ -7,7 +7,7 @@ import { Label } from './ui/label'
 import { Textarea } from './ui/textarea'
 import { TimerManager } from './TimerManager'
 import { TagCombobox } from './TagCombobox'
-import { formatDateInput, formatDateTimeInput, normalizeDueDate, normalizeDateTime } from '../lib/time'
+import { formatDateTimeInput, normalizeDateTime } from '../lib/time'
 
 const AUTO_SAVE_DELAY_MS = 800
 
@@ -23,7 +23,6 @@ function hasEditableChanges(current: Task | null, saved: Task | null): boolean {
   return (
     current.title !== saved.title ||
     current.description !== saved.description ||
-    current.dueDate !== saved.dueDate ||
     current.startAt !== saved.startAt
   )
 }
@@ -74,7 +73,6 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
       await putApiTasksId(taskToSave.id, {
         title: taskToSave.title?.trim(),
         description: taskToSave.description?.trim(),
-        dueDate: normalizeDueDate(taskToSave.dueDate ?? ''),
         startAt: normalizeDateTime(taskToSave.startAt ?? '')
       })
       // Update the last saved reference after successful save
@@ -241,19 +239,6 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="task-due-date">Due date</Label>
-                  <Input
-                    id="task-due-date"
-                    type="date"
-                    value={formatDateInput(localTask?.dueDate)}
-                    onChange={(event) =>
-                      setLocalTask((prev) =>
-                        prev ? { ...prev, dueDate: event.target.value } : prev
-                      )
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="task-start-date">Start date & time</Label>
                   <Input
                     id="task-start-date"
@@ -286,49 +271,6 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
                   )}
                 </div>
               </div>
-            </section>
-
-            <section>
-              <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                Details
-              </h4>
-              <dl className="mt-3 grid grid-cols-2 gap-y-3 text-sm">
-                <dt className="text-muted-foreground">Status</dt>
-                <dd className="font-medium text-foreground">
-                  {isCompleted ? 'Completed' : 'To Do'}
-                </dd>
-
-                {isCompleted && (
-                  <>
-                    <dt className="text-muted-foreground">Completed</dt>
-                    <dd className="text-foreground">
-                      {currentTask?.completedAt
-                        ? new Date(currentTask.completedAt).toLocaleString()
-                        : '—'}
-                    </dd>
-                  </>
-                )}
-
-                <dt className="text-muted-foreground">Due Date</dt>
-                <dd className="text-foreground">
-                  {currentTask?.dueDate ? new Date(currentTask.dueDate).toLocaleDateString() : 'None'}
-                </dd>
-
-                <dt className="text-muted-foreground">Start Date & Time</dt>
-                <dd className="text-foreground">
-                  {currentTask?.startAt ? new Date(currentTask.startAt).toLocaleString() : 'None'}
-                </dd>
-
-                <dt className="text-muted-foreground">Created</dt>
-                <dd className="text-foreground">
-                  {currentTask?.createdAt ? new Date(currentTask.createdAt).toLocaleDateString() : '—'}
-                </dd>
-
-                <dt className="text-muted-foreground">Updated</dt>
-                <dd className="text-foreground">
-                  {currentTask?.updatedAt ? new Date(currentTask.updatedAt).toLocaleDateString() : '—'}
-                </dd>
-              </dl>
             </section>
 
             <section>
