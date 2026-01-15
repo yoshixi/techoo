@@ -903,7 +903,7 @@ function App(): React.JSX.Element {
         ) : (
           <div className="p-8">
             <main className="mx-auto max-w-6xl">
-              {timersError && (
+              {timersError && taskIds.length > 0 && (
                 <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
                   Failed to load timers.
                 </div>
