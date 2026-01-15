@@ -10,7 +10,7 @@ export const FloatingTaskWindow: React.FC = () => {
   const taskId = params.get('taskId')
   const initialTitle = params.get('title')
 
-  const { data: task, isLoading: taskLoading, mutate } = useGetApiTasksId(taskId ?? '', {
+  const { data: task, mutate } = useGetApiTasksId(taskId ?? '', {
     swr: {
       enabled: !!taskId
     }
@@ -55,8 +55,9 @@ export const FloatingTaskWindow: React.FC = () => {
     )
   }
 
-  // Show loading only if we don't have any title to display
-  if (taskLoading && !initialTitle) {
+  // Always render the UI immediately - use initialTitle while loading
+  // Only show loading if we have absolutely no title to display
+  if (!initialTitle && !task?.task.title) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-white/90">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

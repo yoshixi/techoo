@@ -29,7 +29,6 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
   const {
     data: timersResponse,
     error: timersError,
-    isLoading: timersLoading,
     mutate: mutateTimers
   } = useGetApiTasksTaskIdTimers(taskId)
 
@@ -109,17 +108,8 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
 
   const isCompact = mode === 'compact'
 
-  if (timersLoading) {
-    return (
-      <div
-        className={
-          isCompact
-            ? 'h-16 animate-pulse rounded-md bg-muted'
-            : 'h-20 animate-pulse rounded-md bg-gray-100'
-        }
-      ></div>
-    )
-  }
+  // Show interactive UI immediately while loading instead of skeleton
+  // This allows the user to see the timer controls right away
 
   if (timersError) {
     return (

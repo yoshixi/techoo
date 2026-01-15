@@ -189,21 +189,12 @@ function createFloatingWindow(taskId: string, title?: string): void {
   }
 
   // Layer 2: Next event loop tick - Using setImmediate()
-  //   Catches cases where the hide is triggered asynchronously but before
-  //   the next timer fires
+  //   Catches cases where the hide is triggered asynchronously
   setImmediate(() => {
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
       mainWindow.show()
     }
   })
-
-  // Layer 3: Short delay - Using setTimeout(50ms)
-  //   Final safeguard for any delayed side effects from window creation
-  setTimeout(() => {
-    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
-      mainWindow.show()
-    }
-  }, 50)
   // ===================================================================================
 }
 
