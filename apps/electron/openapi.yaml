@@ -314,6 +314,11 @@ components:
     UpdateTimer:
       type: object
       properties:
+        startTime:
+          type: string
+          format: date-time
+          description: Timestamp when the timer started
+          example: 2024-01-01T10:00:00.000Z
         endTime:
           type: string
           nullable: true

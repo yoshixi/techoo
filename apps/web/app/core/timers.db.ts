@@ -19,6 +19,7 @@ export interface CreateTimer {
 }
 
 export interface UpdateTimer {
+  startTime?: string
   endTime?: string | null
 }
 
@@ -131,6 +132,10 @@ export async function updateTimer(db: DB, timerId: string, data: UpdateTimer): P
   const now = getCurrentUnixTimestamp()
   const updateData: Partial<InsertTaskTimer> = {
     updatedAt: now
+  }
+
+  if (data.startTime !== undefined) {
+    updateData.startTime = parseISOToUnixTimestamp(data.startTime)
   }
 
   if (data.endTime !== undefined) {

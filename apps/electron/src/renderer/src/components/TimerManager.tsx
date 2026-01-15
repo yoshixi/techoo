@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Square, CheckCircle, Play } from 'lucide-react'
+import { Square, CheckCircle, Play, Pencil, Check, X } from 'lucide-react'
 import {
   useGetApiTasksTaskIdTimers,
   usePostApiTimers,
@@ -35,6 +35,10 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
   const { trigger: createTimer, isMutating: isCreating } = usePostApiTimers()
   const [activeTimer, setActiveTimer] = useState<TaskTimer | null>(null)
   const [elapsedTime, setElapsedTime] = useState<number>(0)
+  const [editingTimerId, setEditingTimerId] = useState<string | null>(null)
+  const [editingStartTime, setEditingStartTime] = useState<string>('')
+  const [editingEndTime, setEditingEndTime] = useState<string>('')
+  const [isUpdating, setIsUpdating] = useState(false)
 
   const timers = useMemo(() => timersResponse?.timers ?? [], [timersResponse?.timers])
 
@@ -90,6 +94,43 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
       onTimerStopped?.()
     } catch (error) {
       console.error('Failed to stop timer:', error)
+    }
+  }
+
+  const formatDatetimeLocal = (isoString: string): string => {
+    const date = new Date(isoString)
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+  }
+
+  const handleEditTimer = (timer: TaskTimer): void => {
+    setEditingTimerId(timer.id)
+    setEditingStartTime(formatDatetimeLocal(timer.startTime))
+    setEditingEndTime(timer.endTime ? formatDatetimeLocal(timer.endTime) : '')
+  }
+
+  const handleCancelEdit = (): void => {
+    setEditingTimerId(null)
+    setEditingStartTime('')
+    setEditingEndTime('')
+  }
+
+  const handleSaveTimer = async (): Promise<void> => {
+    if (!editingTimerId || !editingStartTime) return
+
+    setIsUpdating(true)
+    try {
+      await putApiTimersId(editingTimerId, {
+        startTime: new Date(editingStartTime).toISOString(),
+        endTime: editingEndTime ? new Date(editingEndTime).toISOString() : null
+      })
+      mutateTimers()
+      setEditingTimerId(null)
+      setEditingStartTime('')
+      setEditingEndTime('')
+    } catch (error) {
+      console.error('Failed to update timer:', error)
+    } finally {
+      setIsUpdating(false)
     }
   }
 
@@ -215,29 +256,78 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
             .map((timer) => (
               <div
                 key={timer.id}
-                className="flex justify-between text-xs text-gray-500 py-1 border-b border-gray-100 last:border-0"
+                className="flex justify-between items-center text-xs text-gray-500 py-1 border-b border-gray-100 last:border-0"
               >
-                <div className="flex gap-2">
-                  <span>{new Date(timer.startTime).toLocaleDateString()}</span>
-                  <span>
-                    {new Date(timer.startTime).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </span>
-                  <span>-</span>
-                  <span>
-                    {timer.endTime
-                      ? new Date(timer.endTime).toLocaleTimeString([], {
+                {editingTimerId === timer.id ? (
+                  <div className="flex items-center gap-2 flex-1 flex-wrap">
+                    <div className="flex items-center gap-1">
+                      <span className="text-gray-400">Start:</span>
+                      <input
+                        type="datetime-local"
+                        value={editingStartTime}
+                        onChange={(e) => setEditingStartTime(e.target.value)}
+                        className="text-xs border rounded px-1 py-0.5 text-gray-700"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-gray-400">End:</span>
+                      <input
+                        type="datetime-local"
+                        value={editingEndTime}
+                        onChange={(e) => setEditingEndTime(e.target.value)}
+                        className="text-xs border rounded px-1 py-0.5 text-gray-700"
+                        placeholder="Active"
+                      />
+                    </div>
+                    <button
+                      onClick={handleSaveTimer}
+                      disabled={isUpdating}
+                      className="p-1 text-green-600 hover:bg-green-100 rounded disabled:opacity-50"
+                      aria-label="Save"
+                    >
+                      <Check className="h-3 w-3" />
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      disabled={isUpdating}
+                      className="p-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50"
+                      aria-label="Cancel"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEditTimer(timer)}
+                        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                        aria-label="Edit timer"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <span>{new Date(timer.startTime).toLocaleDateString()}</span>
+                      <span>
+                        {new Date(timer.startTime).toLocaleTimeString([], {
                           hour: '2-digit',
                           minute: '2-digit'
-                        })
-                      : 'Now'}
-                  </span>
-                </div>
-                <div className="font-mono">
-                  {formatDuration(calculateDuration(timer.startTime, timer.endTime))}
-                </div>
+                        })}
+                      </span>
+                      <span>-</span>
+                      <span>
+                        {timer.endTime
+                          ? new Date(timer.endTime).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          : 'Now'}
+                      </span>
+                    </div>
+                    <div className="font-mono">
+                      {formatDuration(calculateDuration(timer.startTime, timer.endTime))}
+                    </div>
+                  </>
+                )}
               </div>
             ))}
         </div>

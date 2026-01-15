@@ -7,6 +7,8 @@
  */
 
 export interface UpdateTimer {
+  /** Timestamp when the timer started */
+  startTime?: string
   /**
    * Timestamp when the timer ended. Use null to remove end time
    * @nullable
