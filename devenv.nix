@@ -9,10 +9,14 @@
   packages = [ pkgs.git pkgs.pnpm pkgs.turso-cli ];
   
   languages = {
-    # requires python to run sqlite stuff.
+    # Python is needed for node-gyp (better-sqlite3), and setuptools provides distutils.
     python = {
       enable = true;
+      package = pkgs.python312;
       venv.enable = true;
+      venv.requirements = ''
+        setuptools
+      '';
     };
   };
 
