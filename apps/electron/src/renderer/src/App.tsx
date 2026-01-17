@@ -951,8 +951,8 @@ function App(): React.JSX.Element {
         {currentView === 'settings' ? (
           <SettingsView />
         ) : currentView === 'calendar' ? (
-          <div className="p-8">
-            <main className="mx-auto max-w-6xl flex h-[calc(100vh-160px)] min-h-0 flex-col gap-6">
+          <div className="flex flex-1 min-h-0 flex-col overflow-hidden p-8">
+            <main className="flex min-h-0 flex-1 flex-col gap-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -1299,21 +1299,21 @@ function App(): React.JSX.Element {
                 placeholder="Add tags"
                 className="w-64"
               />
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={handleCalendarCreate}
-                  disabled={isCreatingCalendarTask || !calendarDraft?.title.trim()}
-                >
-                  {isCreatingCalendarTask ? 'Creating...' : 'Create task'}
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setCalendarDraft(null)}
-                  disabled={isCreatingCalendarTask}
-                >
-                  Cancel
-                </Button>
-              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                onClick={handleCalendarCreate}
+                disabled={isCreatingCalendarTask || !calendarDraft?.title.trim()}
+              >
+                {isCreatingCalendarTask ? 'Creating...' : 'Create task'}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setCalendarDraft(null)}
+                disabled={isCreatingCalendarTask}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
         </DialogContent>

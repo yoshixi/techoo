@@ -87,3 +87,15 @@ Basic usage in App:
 - Drag-to-move uses document.elementFromPoint to detect the day column while dragging.
 - Slot height affects all positioning; ensure new code uses slotHeight for any y-position math.
 - When adjusting time granularity or visible range, update both CalendarView and TaskTimeRangePicker.
+
+## Notes / Learnings
+
+- Flex height issues required `min-h-0` on the flex container chain (`SidebarInset` and calendar wrappers). Without it, the calendar content expanded beyond the viewport and a single slot could fill the screen.
+- The calendar scroll area must be `flex-1` inside a `min-h-0` parent to allow the grid to size to the window instead of its content.
+
+## UI Design Principles (Session Preferences)
+
+- Prefer flat UI: avoid shadows on cards, blocks, and popovers unless strictly necessary.
+- Borders should be subtle (soft gray) rather than high-contrast black; avoid drawing too much attention to containers.
+- Use muted separators and low-contrast outlines to keep focus on content, not chrome.
+- Keep spacing consistent and avoid heavy visual weight around panels or inputs.
