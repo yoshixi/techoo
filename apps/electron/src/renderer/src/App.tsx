@@ -199,13 +199,14 @@ function App(): React.JSX.Element {
   const [currentTime, setCurrentTime] = useState(Date.now())
   const taskIds = useMemo(() => allTasks.map((task) => task.id), [allTasks])
 
+  const shouldFetchTimer = useMemo(() => taskIds.length > 0, [taskIds])
   const {
     data: timersResponse,
     error: timersError,
     isLoading: timersLoading,
     mutate: mutateTimers
   } = useGetApiTimers(taskIds.length ? { taskIds } : undefined, {
-    swr: { enabled: taskIds.length > 0 }
+    swr: { enabled: shouldFetchTimer }
   })
   const timers = timersResponse?.timers ?? []
   const activeTimersByTaskId = useMemo(() => {
@@ -903,7 +904,7 @@ function App(): React.JSX.Element {
         ) : (
           <div className="p-8">
             <main className="mx-auto max-w-6xl">
-              {timersError && taskIds.length > 0 && (
+              {timersError && shouldFetchTimer && (
                 <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
                   Failed to load timers.
                 </div>
