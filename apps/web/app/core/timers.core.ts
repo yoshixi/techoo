@@ -57,6 +57,10 @@ export const CreateTimerModel = z.object({
 
 // Update timer input model
 export const UpdateTimerModel = z.object({
+  startTime: z.iso.datetime().optional().openapi({
+    description: 'Timestamp when the timer started',
+    example: '2024-01-01T10:00:00.000Z'
+  }),
   endTime: z.iso.datetime().optional().nullable().openapi({
     description: 'Timestamp when the timer ended. Use null to remove end time',
     example: '2024-01-01T10:25:00.000Z'
