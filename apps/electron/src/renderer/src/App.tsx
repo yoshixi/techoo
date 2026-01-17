@@ -18,6 +18,7 @@ import { Switch } from './components/ui/switch'
 import { Badge } from './components/ui/badge'
 import { TagCombobox } from './components/TagCombobox'
 import {
+  deleteApiTasksId,
   postApiTasks,
   postApiTimers,
   putApiTasksId,
@@ -576,6 +577,20 @@ function App(): React.JSX.Element {
       .catch((error) => {
         console.error('Failed to update task tags:', error)
       })
+  }
+
+  const handleDeleteTask = async (taskId: string): Promise<void> => {
+    if (!confirm('Are you sure you want to delete this task?')) return
+
+    try {
+      await deleteApiTasksId(taskId)
+      if (selectedTask?.id === taskId) {
+        setSelectedTask(null)
+      }
+      await mutateBothTaskLists()
+    } catch (error) {
+      console.error('Failed to delete task:', error)
+    }
   }
 
   function handleStartTimer(taskId: string): void {

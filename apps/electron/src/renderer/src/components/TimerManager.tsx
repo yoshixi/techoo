@@ -145,6 +145,13 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
   }
 
+  const calculateDuration = (startTime: string, endTime?: string | null): number => {
+    const start = new Date(startTime).getTime()
+    const end = endTime ? new Date(endTime).getTime() : Date.now()
+    if (Number.isNaN(start) || Number.isNaN(end)) return 0
+    return Math.max(0, Math.floor((end - start) / 1000))
+  }
+
   const isCompact = mode === 'compact'
 
   // Show interactive UI immediately while loading instead of skeleton
