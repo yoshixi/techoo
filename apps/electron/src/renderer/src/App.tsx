@@ -279,6 +279,29 @@ function App(): React.JSX.Element {
     return () => clearInterval(interval)
   }, [])
 
+  // Sync active timer state to main process for tray display
+  useEffect(() => {
+    const entries = Array.from(activeTimersByTaskId.entries())
+    if (entries.length > 0) {
+      const [taskId, timer] = entries[0]
+      const task = allTasks.find((t) => t.id === taskId)
+      window.api.updateTimerState({
+        taskId,
+        taskTitle: task?.title || 'Task',
+        startTime: timer.startTime
+      })
+    } else {
+      window.api.updateTimerState(null)
+    }
+  }, [activeTimersByTaskId, allTasks])
+
+  // Cleanup timer state on unmount
+  useEffect(() => {
+    return () => {
+      window.api.updateTimerState(null)
+    }
+  }, [])
+
   // Helper to start adding a new task
   const startAddingTask = useCallback(() => {
     const now = new Date()

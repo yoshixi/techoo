@@ -18,7 +18,9 @@
       "Bash(python3:*)",
       "Bash(pnpm --filter web run test)",
       "Bash(gh pr:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(grep:*)",
+      "Bash(sips:*)"
     ]
   }
 }

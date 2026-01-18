@@ -3,6 +3,7 @@ import { existsSync } from 'fs'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/logo@2x.png?asset'
+import { TrayManager } from './tray'
 
 function setupContentSecurityPolicy(): void {
   const apiUrl = import.meta.env.MAIN_VITE_API_URL || 'http://localhost:3000'
@@ -63,6 +64,7 @@ function resolvePreloadPath(): string {
 
 let mainWindow: BrowserWindow | null = null
 const floatingWindows = new Map<string, BrowserWindow>()
+let trayManager: TrayManager | null = null
 
 function resolveRendererUrl(query?: Record<string, string>): string | null {
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -290,7 +292,19 @@ app.whenReady().then(() => {
     closeFloatingWindow(taskId)
   })
 
+  // Timer state updates from renderer for tray display
+  ipcMain.on(
+    'timer:state-change',
+    (_event, state: { taskId: string; taskTitle: string; startTime: string } | null) => {
+      trayManager?.updateTimerState(state)
+    }
+  )
+
   createWindow()
+
+  // Initialize tray after window is created
+  trayManager = new TrayManager(() => mainWindow)
+  trayManager.init()
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
@@ -306,6 +320,12 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+// Cleanup tray before quitting
+app.on('before-quit', () => {
+  trayManager?.destroy()
+  trayManager = null
 })
 
 // In this file you can include the rest of your app's specific main process

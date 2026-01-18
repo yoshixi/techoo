@@ -5,7 +5,12 @@ import { electronAPI } from '@electron-toolkit/preload'
 const api = {
   openFloatingTaskWindow: (payload: { taskId: string; title?: string }) =>
     ipcRenderer.invoke('floating-task:open', payload),
-  closeFloatingTaskWindow: (taskId: string) => ipcRenderer.invoke('floating-task:close', taskId)
+  closeFloatingTaskWindow: (taskId: string) => ipcRenderer.invoke('floating-task:close', taskId),
+  updateTimerState: (
+    state: { taskId: string; taskTitle: string; startTime: string } | null
+  ): void => {
+    ipcRenderer.send('timer:state-change', state)
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
