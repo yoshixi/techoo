@@ -146,6 +146,7 @@ function App(): React.JSX.Element {
     tagIds: string[]
   } | null>(null)
   const [isCreatingCalendarTask, setIsCreatingCalendarTask] = useState(false)
+  const [calendarCreateError, setCalendarCreateError] = useState<string | null>(null)
 
   // Query for tasks with active timers (In Progress section)
   const activeTaskQuery = useMemo(
@@ -552,6 +553,7 @@ function App(): React.JSX.Element {
   const handleCalendarCreate = async (): Promise<void> => {
     if (!calendarDraft || !calendarDraft.title.trim()) return
     setIsCreatingCalendarTask(true)
+    setCalendarCreateError(null)
     const payload = {
       title: calendarDraft.title.trim(),
       description: calendarDraft.description.trim() || undefined,
@@ -563,9 +565,11 @@ function App(): React.JSX.Element {
     try {
       await postApiTasks(payload)
       setCalendarDraft(null)
+      setCalendarCreateError(null)
       await mutateBothTaskLists()
     } catch (error) {
       console.error('Failed to create task:', error)
+      setCalendarCreateError(getErrorMessage(error))
     } finally {
       setIsCreatingCalendarTask(false)
     }
@@ -1018,6 +1022,7 @@ function App(): React.JSX.Element {
                   onTaskStartTimer={handleStartTimer}
                   onTaskStopTimer={handleStopTimer}
                   onCreateRange={({ startAt, endAt }) => {
+                    setCalendarCreateError(null)
                     setCalendarDraft({
                       title: '',
                       description: '',
@@ -1243,6 +1248,7 @@ function App(): React.JSX.Element {
         onOpenChange={(open) => {
           if (!open && !isCreatingCalendarTask) {
             setCalendarDraft(null)
+            setCalendarCreateError(null)
           }
         }}
       >
@@ -1256,6 +1262,11 @@ function App(): React.JSX.Element {
                 </div>
               )}
             </div>
+            {calendarCreateError && (
+              <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+                {calendarCreateError}
+              </div>
+            )}
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label htmlFor="calendar-start-at">Start time</Label>
@@ -1359,7 +1370,22 @@ function App(): React.JSX.Element {
 }
 
 function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message
+  if (error instanceof Error) {
+    const httpMatch = error.message.match(/^HTTP\s+\d+:\s*(.*)$/i)
+    if (httpMatch) {
+      const rawMessage = httpMatch[1].trim()
+      if (rawMessage) {
+        try {
+          const parsed = JSON.parse(rawMessage) as { error?: string; message?: string }
+          if (parsed.error) return parsed.error
+          if (parsed.message) return parsed.message
+        } catch {
+          return rawMessage
+        }
+      }
+    }
+    return error.message
+  }
   if (error && typeof error === 'object' && 'error' in error) {
     const message = (error as { error?: string }).error
     if (message) return message
