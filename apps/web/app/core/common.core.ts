@@ -10,7 +10,18 @@ export const UUIDSchema = z.string().uuid().openapi({
 })
 
 export function formatTimestamp(timestamp: number): string {
-  return new Date(timestamp * 1000).toISOString()
+  if (!Number.isFinite(timestamp)) {
+    console.warn('Invalid timestamp value:', timestamp)
+    return new Date(0).toISOString()
+  }
+
+  const date = new Date(timestamp * 1000)
+  if (Number.isNaN(date.getTime())) {
+    console.warn('Invalid timestamp value after conversion:', timestamp)
+    return new Date(0).toISOString()
+  }
+
+  return date.toISOString()
 }
 
 export function parseISOToUnixTimestamp(isoString: string): number {
