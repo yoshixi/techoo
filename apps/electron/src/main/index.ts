@@ -292,11 +292,14 @@ app.whenReady().then(() => {
     closeFloatingWindow(taskId)
   })
 
-  // Timer state updates from renderer for tray display
+  // Timer states updates from renderer for tray display (supports multiple timers)
   ipcMain.on(
-    'timer:state-change',
-    (_event, state: { taskId: string; taskTitle: string; startTime: string } | null) => {
-      trayManager?.updateTimerState(state)
+    'timer:states-change',
+    (
+      _event,
+      timers: { timerId: string; taskId: string; taskTitle: string; startTime: string }[]
+    ) => {
+      trayManager?.updateTimerStates(timers)
     }
   )
 
@@ -305,6 +308,11 @@ app.whenReady().then(() => {
   // Initialize tray after window is created
   trayManager = new TrayManager(() => mainWindow)
   trayManager.init()
+
+  // Wire up show task detail callback - opens task modal in renderer
+  trayManager.setOnShowTaskDetail((taskId: string) => {
+    mainWindow?.webContents.send('tray:show-task-detail', taskId)
+  })
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

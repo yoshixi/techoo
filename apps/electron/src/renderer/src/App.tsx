@@ -279,28 +279,38 @@ function App(): React.JSX.Element {
     return () => clearInterval(interval)
   }, [])
 
-  // Sync active timer state to main process for tray display
+  // Sync all active timer states to main process for tray display
   useEffect(() => {
-    const entries = Array.from(activeTimersByTaskId.entries())
-    if (entries.length > 0) {
-      const [taskId, timer] = entries[0]
+    const timerStates = Array.from(activeTimersByTaskId.entries()).map(([taskId, timer]) => {
       const task = allTasks.find((t) => t.id === taskId)
-      window.api.updateTimerState({
+      return {
+        timerId: timer.id,
         taskId,
         taskTitle: task?.title || 'Task',
         startTime: timer.startTime
-      })
-    } else {
-      window.api.updateTimerState(null)
-    }
+      }
+    })
+    window.api.updateTimerStates(timerStates)
   }, [activeTimersByTaskId, allTasks])
 
-  // Cleanup timer state on unmount
+  // Cleanup timer states on unmount
   useEffect(() => {
     return () => {
-      window.api.updateTimerState(null)
+      window.api.updateTimerStates([])
     }
   }, [])
+
+  // Listen for show task detail request from tray menu
+  useEffect(() => {
+    const unsubscribe = window.api.onShowTaskDetail((taskId: string) => {
+      // Find the task and show the detail modal
+      const task = allTasks.find((t) => t.id === taskId)
+      if (task) {
+        setSelectedTask(task)
+      }
+    })
+    return unsubscribe
+  }, [allTasks])
 
   // Helper to start adding a new task
   const startAddingTask = useCallback(() => {

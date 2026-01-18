@@ -2,6 +2,7 @@ import { Tray, Menu, app, BrowserWindow, nativeImage } from 'electron'
 import { join } from 'path'
 
 interface TimerState {
+  timerId: string
   taskId: string
   taskTitle: string
   startTime: string
@@ -10,7 +11,8 @@ interface TimerState {
 export class TrayManager {
   private tray: Tray | null = null
   private timerInterval: NodeJS.Timeout | null = null
-  private currentTimerState: TimerState | null = null
+  private activeTimers: TimerState[] = []
+  private onShowTaskDetail: ((taskId: string) => void) | null = null
 
   constructor(private getMainWindow: () => BrowserWindow | null) {}
 
@@ -19,12 +21,23 @@ export class TrayManager {
     const icon = nativeImage.createFromPath(iconPath)
 
     this.tray = new Tray(icon)
-    this.tray.setToolTip('Shuchu - No active timer')
+    this.tray.setToolTip('Shuchu - No active timers')
     this.updateContextMenu()
 
     this.tray.on('click', () => {
       this.showMainWindow()
     })
+
+    // macOS-only: show context menu on hover
+    if (process.platform === 'darwin') {
+      this.tray.on('mouse-enter', () => {
+        this.tray?.popUpContextMenu()
+      })
+    }
+  }
+
+  setOnShowTaskDetail(callback: (taskId: string) => void): void {
+    this.onShowTaskDetail = callback
   }
 
   private getIconPath(): string {
@@ -49,9 +62,31 @@ export class TrayManager {
   private updateContextMenu(): void {
     const menuItems: Electron.MenuItemConstructorOptions[] = []
 
-    if (this.currentTimerState) {
+    if (this.activeTimers.length > 0) {
+      // Sort by most recent start time first
+      const sortedTimers = [...this.activeTimers].sort((a, b) => {
+        return new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+      })
+
+      // Add each timer as a clickable row - clicking shows task detail
+      for (const timer of sortedTimers) {
+        const elapsed = this.calculateElapsed(timer.startTime)
+        const timeString = this.formatElapsed(elapsed)
+        const title = this.truncateTitle(timer.taskTitle, 25)
+
+        menuItems.push({
+          label: `${title}  ${timeString}`,
+          click: () => {
+            this.showMainWindow()
+            this.onShowTaskDetail?.(timer.taskId)
+          }
+        })
+      }
+
+      menuItems.push({ type: 'separator' })
+    } else {
       menuItems.push({
-        label: `Timer: ${this.truncateTitle(this.currentTimerState.taskTitle, 30)}`,
+        label: 'No active timers',
         enabled: false
       })
       menuItems.push({ type: 'separator' })
@@ -73,17 +108,21 @@ export class TrayManager {
     this.tray?.setContextMenu(contextMenu)
   }
 
-  updateTimerState(state: TimerState | null): void {
-    this.currentTimerState = state
+  updateTimerStates(timers: TimerState[]): void {
+    this.activeTimers = timers
 
     if (this.timerInterval) {
       clearInterval(this.timerInterval)
       this.timerInterval = null
     }
 
-    if (state) {
+    if (timers.length > 0) {
       this.updateDisplay()
-      this.timerInterval = setInterval(() => this.updateDisplay(), 1000)
+      // Update display and context menu every second
+      this.timerInterval = setInterval(() => {
+        this.updateDisplay()
+        this.updateContextMenu()
+      }, 1000)
     } else {
       this.clearDisplay()
     }
@@ -92,19 +131,33 @@ export class TrayManager {
   }
 
   private updateDisplay(): void {
-    if (!this.currentTimerState || !this.tray) return
+    if (!this.tray) return
 
-    const elapsed = this.calculateElapsed(this.currentTimerState.startTime)
-    const timeString = this.formatElapsed(elapsed)
-    const taskTitle = this.truncateTitle(this.currentTimerState.taskTitle, 20)
+    const count = this.activeTimers.length
 
-    if (process.platform === 'darwin') {
-      // macOS: Show time in menu bar title (next to icon)
-      this.tray.setTitle(` ${timeString}`)
+    if (count === 0) {
+      this.clearDisplay()
+      return
     }
 
-    // All platforms: Update tooltip
-    this.tray.setToolTip(`${taskTitle} - ${timeString}`)
+    if (process.platform === 'darwin') {
+      // macOS: Show timer count in menu bar title
+      if (count === 1) {
+        this.tray.setTitle(' 1 timer')
+      } else {
+        this.tray.setTitle(` ${count} timers`)
+      }
+    }
+
+    // Tooltip: show count and first task
+    if (count === 1) {
+      const timer = this.activeTimers[0]
+      const elapsed = this.calculateElapsed(timer.startTime)
+      const timeString = this.formatElapsed(elapsed)
+      this.tray.setToolTip(`${timer.taskTitle} - ${timeString}`)
+    } else {
+      this.tray.setToolTip(`${count} active timers`)
+    }
   }
 
   private clearDisplay(): void {
@@ -113,7 +166,7 @@ export class TrayManager {
     if (process.platform === 'darwin') {
       this.tray.setTitle('')
     }
-    this.tray.setToolTip('Shuchu - No active timer')
+    this.tray.setToolTip('Shuchu - No active timers')
   }
 
   private calculateElapsed(startTime: string): number {
@@ -134,7 +187,7 @@ export class TrayManager {
 
   private truncateTitle(title: string, maxLength: number): string {
     if (title.length <= maxLength) return title
-    return title.substring(0, maxLength - 1) + '...'
+    return title.substring(0, maxLength - 1) + '…'
   }
 
   destroy(): void {
