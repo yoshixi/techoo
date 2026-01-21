@@ -1251,6 +1251,9 @@ function App(): React.JSX.Element {
                               <Button size="sm" variant="outline" onClick={handleCancelAdd}>
                                 Cancel
                               </Button>
+                              <span className="text-xs text-muted-foreground">
+                                Press Enter to save
+                              </span>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1382,7 +1385,16 @@ function App(): React.JSX.Element {
                 onClick={handleCalendarCreate}
                 disabled={isCreatingCalendarTask || !calendarDraft?.title.trim()}
               >
-                {isCreatingCalendarTask ? 'Creating...' : 'Create task'}
+                {isCreatingCalendarTask ? (
+                  'Creating...'
+                ) : (
+                  <>
+                    <span className="mr-1 text-sm text-primary-foreground/80">
+                      {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}⏎
+                    </span>
+                    Create
+                  </>
+                )}
               </Button>
               <Button
                 variant="ghost"

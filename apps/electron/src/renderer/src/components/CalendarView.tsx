@@ -179,6 +179,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     offsetSlots: number
     startSlot: number
   } | null>(null)
+  const [dragResize, setDragResize] = useState<{
+    task: Task
+    dayIndex: number
+    startSlot: number
+    endSlot: number
+    edge: 'top' | 'bottom'
+  } | null>(null)
   const [didDragTask, setDidDragTask] = useState(false)
   const activeColumnRef = React.useRef<HTMLDivElement | null>(null)
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null)
@@ -323,6 +330,54 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     }
   }, [dragTask, activeBase, viewMode, onTaskMove])
 
+  // Effect for drag-to-resize task
+  React.useEffect(() => {
+    if (!dragResize) return undefined
+
+    const handleMouseMove = (event: MouseEvent): void => {
+      const hit = document.elementFromPoint(event.clientX, event.clientY)
+      const column = hit?.closest('[data-day-index]') as HTMLDivElement | null
+      if (!column) return
+
+      const pointerSlot = getSlotIndexFromEvent(event, column, slotHeight)
+
+      setDragResize((prev) => {
+        if (!prev) return prev
+        if (prev.edge === 'top') {
+          // Dragging top edge - adjust startSlot, keep endSlot fixed
+          // endSlot is exclusive, so max startSlot is endSlot - 1
+          const newStartSlot = clamp(pointerSlot, 0, prev.endSlot - 1)
+          return { ...prev, startSlot: newStartSlot }
+        } else {
+          // Dragging bottom edge - adjust endSlot, keep startSlot fixed
+          // endSlot is exclusive, so pointerSlot + 1 makes the task cover that slot
+          const newEndSlot = clamp(pointerSlot + 1, prev.startSlot + 1, SLOT_COUNT)
+          return { ...prev, endSlot: newEndSlot }
+        }
+      })
+    }
+
+    const handleMouseUp = (): void => {
+      if (!dragResize) return
+      const baseDate = addDays(activeBase, viewMode === 'day' ? 0 : dragResize.dayIndex)
+      const startDate = dateForSlot(baseDate, dragResize.startSlot)
+      const endDate = dateForSlot(baseDate, dragResize.endSlot)
+      onTaskMove?.(dragResize.task, {
+        startAt: startDate.toISOString(),
+        endAt: endDate.toISOString()
+      })
+      setDragResize(null)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [dragResize, activeBase, viewMode, onTaskMove, slotHeight])
+
   React.useEffect(() => {
     if (!scrollContainerRef.current) return
     const targetTop = VISIBLE_START_HOUR * SLOTS_PER_HOUR * slotHeight
@@ -392,6 +447,23 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       durationSlots,
       offsetSlots: clamp(slotAtPointer - item.startSlot, 0, durationSlots - 1),
       startSlot: item.startSlot
+    })
+  }
+
+  const handleResizeMouseDown = (
+    event: React.MouseEvent<HTMLDivElement>,
+    item: TaskLayout,
+    edge: 'top' | 'bottom'
+  ): void => {
+    event.preventDefault()
+    event.stopPropagation()
+    setDidDragTask(true)
+    setDragResize({
+      task: item.task,
+      dayIndex: item.dayIndex,
+      startSlot: item.startSlot,
+      endSlot: item.endSlot,
+      edge
     })
   }
 
@@ -532,6 +604,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       style={{ top: nowTop }}
                     >
                       <div className="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-red-500" />
+                      <div className="absolute -left-14 top-1/2 -translate-y-1/2 text-[10px] font-medium text-red-500">
+                        {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                      </div>
                     </div>
                   )}
                   {dragTask && dragTask.dayIndex === dayIndex && (
@@ -543,9 +618,24 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       }}
                     />
                   )}
+                  {dragResize && dragResize.dayIndex === dayIndex && (
+                    <div
+                      className="absolute left-1 right-1 rounded-md bg-primary/20 outline outline-1 outline-primary/40"
+                      style={{
+                        top: dragResize.startSlot * slotHeight,
+                        height: (dragResize.endSlot - dragResize.startSlot) * slotHeight
+                      }}
+                    />
+                  )}
                   {dayTasks.map((item) => {
-                    const top = item.startSlot * slotHeight
-                    const height = Math.max(1, (item.endSlot - item.startSlot) * slotHeight)
+                    // Check if this task is being resized
+                    const isResizing = dragResize?.task.id === item.task.id
+                    const resizeItem = isResizing ? dragResize : null
+                    const displayStartSlot = resizeItem ? resizeItem.startSlot : item.startSlot
+                    const displayEndSlot = resizeItem ? resizeItem.endSlot : item.endSlot
+
+                    const top = displayStartSlot * slotHeight
+                    const height = Math.max(1, (displayEndSlot - displayStartSlot) * slotHeight)
                     const width = 100 / item.laneCount
                     const left = item.lane * width
                     const isDragging = dragTask?.task.id === item.task.id
@@ -567,7 +657,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                         data-task-block="true"
                         className={cn(
                           'absolute rounded-md bg-primary/15 px-2 py-1 text-left text-xs outline outline-1 outline-primary/30 hover:bg-primary/20',
-                          isDragging && 'opacity-40',
+                          (isDragging || isResizing) && 'opacity-40',
                           isCompleted && 'bg-muted/60 text-slate-500 outline-muted-foreground/30 hover:bg-muted/70',
                           activeTimer && 'bg-red-500/15 text-red-700 outline-red-500/40 hover:bg-red-500/20'
                         )}
@@ -578,6 +668,18 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                           width: `${width}%`
                         }}
                       >
+                        {/* Top resize handle */}
+                        <div
+                          data-task-action="true"
+                          className="absolute left-0 right-0 top-0 h-2 cursor-ns-resize hover:bg-primary/30 rounded-t-md"
+                          onMouseDown={(event) => handleResizeMouseDown(event, item, 'top')}
+                        />
+                        {/* Bottom resize handle */}
+                        <div
+                          data-task-action="true"
+                          className="absolute left-0 right-0 bottom-0 h-2 cursor-ns-resize hover:bg-primary/30 rounded-b-md"
+                          onMouseDown={(event) => handleResizeMouseDown(event, item, 'bottom')}
+                        />
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <div className="font-medium text-foreground/90 line-clamp-1">
