@@ -107,8 +107,9 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
       await putApiTasksId(taskToSave.id, {
         title: taskToSave.title?.trim(),
         description: taskToSave.description?.trim(),
-        startAt: normalizeDateTime(taskToSave.startAt ?? ''),
-        endAt: normalizeDateTime(taskToSave.endAt ?? '')
+        // Use null to clear the field when empty, undefined means "don't update"
+        startAt: taskToSave.startAt ? normalizeDateTime(taskToSave.startAt) : null,
+        endAt: taskToSave.endAt ? normalizeDateTime(taskToSave.endAt) : null
       })
       // Update the last saved reference after successful save
       lastSavedTaskRef.current = taskToSave

@@ -608,7 +608,8 @@ function App(): React.JSX.Element {
 
     let updateValue: string | null | undefined
     if (editingCell.field === 'startAt') {
-      updateValue = normalizeDateTime(editingValue)
+      // Use null to clear the field, undefined means "don't update"
+      updateValue = editingValue ? normalizeDateTime(editingValue) : null
     } else {
       updateValue = editingValue.trim()
     }
