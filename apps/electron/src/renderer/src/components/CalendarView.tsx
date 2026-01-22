@@ -707,7 +707,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 startOfDay(dayDate).getTime() === startOfDay(now).getTime()
               const nowMinutes = now.getHours() * 60 + now.getMinutes()
               const nowTop = clamp(
-                Math.round(nowMinutes / slotMinutes) * slotHeight,
+                (nowMinutes * slotHeight) / slotMinutes,
                 0,
                 slotCount * slotHeight
               )

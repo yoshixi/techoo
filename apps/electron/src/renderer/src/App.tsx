@@ -848,6 +848,59 @@ function App(): React.JSX.Element {
         }}
       >
         <TableCell onClick={(e) => { e.stopPropagation(); setEditingTagsTaskId(null) }}>
+          <div className="flex items-center gap-1">
+            {activeTimersByTaskId.has(task.id) ? (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => {
+                  const activeTimer = activeTimersByTaskId.get(task.id)
+                  if (activeTimer) {
+                    handleStopTimer(task.id, activeTimer.id)
+                  }
+                }}
+                className="h-7 w-7 hover:bg-red-100"
+                title="Stop timer"
+              >
+                <Square className="h-4 w-4 text-red-600 animate-pulse" />
+              </Button>
+            ) : (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => handleStartTimer(task.id)}
+                className="h-7 w-7 hover:bg-green-100"
+                disabled={timersLoading}
+                title="Start timer"
+              >
+                <Play className="h-4 w-4 text-green-600" />
+              </Button>
+            )}
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => handleToggleTaskCompletion(task)}
+              title={task.completedAt ? 'Mark incomplete' : 'Mark complete'}
+              className={task.completedAt ? 'opacity-50' : 'hover:bg-green-100'}
+            >
+              <CheckCircle className={`h-4 w-4 ${task.completedAt ? 'text-gray-400' : 'text-green-600'}`} />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => {
+                setSelectedTask(task)
+                const index = allTasksForNavigation.findIndex((t) => t.id === task.id)
+                setFocusedTaskIndex(index)
+              }}
+              title="Open task details"
+              className="hover:bg-blue-100"
+            >
+              <Maximize2 className="h-4 w-4 text-blue-600" />
+            </Button>
+          </div>
+        </TableCell>
+        <TableCell onClick={(e) => { e.stopPropagation(); setEditingTagsTaskId(null) }}>
           <span className="text-sm">
             {getTotalTimeDisplay(task.id)}
           </span>
@@ -963,59 +1016,6 @@ function App(): React.JSX.Element {
             </div>
           )}
         </TableCell>
-        <TableCell onClick={(e) => { e.stopPropagation(); setEditingTagsTaskId(null) }}>
-          <div className="flex items-center gap-1">
-            {activeTimersByTaskId.has(task.id) ? (
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => {
-                  const activeTimer = activeTimersByTaskId.get(task.id)
-                  if (activeTimer) {
-                    handleStopTimer(task.id, activeTimer.id)
-                  }
-                }}
-                className="h-7 w-7 hover:bg-red-100"
-                title="Stop timer"
-              >
-                <Square className="h-4 w-4 text-red-600 animate-pulse" />
-              </Button>
-            ) : (
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => handleStartTimer(task.id)}
-                className="h-7 w-7 hover:bg-green-100"
-                disabled={timersLoading}
-                title="Start timer"
-              >
-                <Play className="h-4 w-4 text-green-600" />
-              </Button>
-            )}
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => handleToggleTaskCompletion(task)}
-              title={task.completedAt ? 'Mark incomplete' : 'Mark complete'}
-              className={task.completedAt ? 'opacity-50' : 'hover:bg-green-100'}
-            >
-              <CheckCircle className={`h-4 w-4 ${task.completedAt ? 'text-gray-400' : 'text-green-600'}`} />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => {
-                setSelectedTask(task)
-                const index = allTasksForNavigation.findIndex((t) => t.id === task.id)
-                setFocusedTaskIndex(index)
-              }}
-              title="Open task details"
-              className="hover:bg-blue-100"
-            >
-              <Maximize2 className="h-4 w-4 text-blue-600" />
-            </Button>
-          </div>
-        </TableCell>
       </TableRow>
     )
   }
@@ -1024,12 +1024,12 @@ function App(): React.JSX.Element {
     return (
       <TableHeader>
         <TableRow>
+          <TableHead>Actions</TableHead>
           <TableHead>Time Tracked</TableHead>
           <TableHead>Start Date</TableHead>
           <TableHead>Title</TableHead>
           <TableHead>Description</TableHead>
           <TableHead>Tags</TableHead>
-          <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
     )
