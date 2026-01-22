@@ -1144,7 +1144,7 @@ function App(): React.JSX.Element {
                       <CardDescription>
                         {tasksLoading
                           ? 'Loading tasks...'
-                          : `${inactiveTasks.length} task${inactiveTasks.length === 1 ? '' : 's'}`}
+                          : `${allTasks.length} task${allTasks.length === 1 ? '' : 's'}`}
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-3">
@@ -1307,7 +1307,7 @@ function App(): React.JSX.Element {
                           </TableCell>
                         </TableRow>
                       )}
-                      {!tasksLoading && !tasksError && inactiveTasks.map(renderTaskRow)}
+                      {!tasksLoading && !tasksError && allTasks.map(renderTaskRow)}
                     </TableBody>
                   </Table>
                 </CardContent>
