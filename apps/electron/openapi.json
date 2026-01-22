@@ -104,6 +104,13 @@
             "description": "Start date for the task in ISO 8601 format",
             "example": "2024-01-01T09:00:00.000Z"
           },
+          "endAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "End date for the task in ISO 8601 format",
+            "example": "2024-01-01T17:00:00.000Z"
+          },
           "completedAt": {
             "type": "string",
             "nullable": true,
@@ -220,6 +227,12 @@
             "description": "Start date for the task in ISO 8601 format",
             "example": "2024-01-01T09:00:00.000Z"
           },
+          "endAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "End date for the task in ISO 8601 format",
+            "example": "2024-01-01T17:00:00.000Z"
+          },
           "completedAt": {
             "type": "string",
             "nullable": true,
@@ -271,6 +284,13 @@
             "format": "date-time",
             "description": "Start date for the task in ISO 8601 format. Use null to remove start date",
             "example": "2024-01-01T09:00:00.000Z"
+          },
+          "endAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "End date for the task in ISO 8601 format. Use null to remove end date",
+            "example": "2024-01-01T17:00:00.000Z"
           },
           "completedAt": {
             "type": "string",
@@ -689,6 +709,21 @@
             "required": false,
             "description": "Filter tasks by whether they have an active timer running",
             "name": "hasActiveTimer",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Filter tasks by whether they have a scheduled start time (startAt). true = only scheduled tasks, false = only unscheduled tasks",
+              "example": true
+            },
+            "required": false,
+            "description": "Filter tasks by whether they have a scheduled start time (startAt). true = only scheduled tasks, false = only unscheduled tasks",
+            "name": "scheduled",
             "in": "query"
           },
           {

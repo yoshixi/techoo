@@ -18,6 +18,8 @@ interface TaskSideMenuProps {
   task: Task | null
   onClose: () => void
   onTaskUpdated?: (task: Task) => void
+  /** All tasks to display in the schedule picker */
+  tasks?: Task[]
 }
 
 // Helper to check if editable fields have changed
@@ -34,7 +36,8 @@ function hasEditableChanges(current: Task | null, saved: Task | null): boolean {
 export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
   task,
   onClose,
-  onTaskUpdated
+  onTaskUpdated,
+  tasks
 }) => {
   const titleInputRef = useRef<HTMLInputElement | null>(null)
   const scheduleContainerRef = useRef<HTMLDivElement | null>(null)
@@ -271,6 +274,8 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
                     <TaskTimeRangePicker
                       startAt={localTask?.startAt}
                       endAt={localTask?.endAt}
+                      tasks={tasks}
+                      currentTaskId={task?.id}
                       onChange={({ startAt, endAt }) => {
                         setLocalTask((prev) =>
                           prev ? { ...prev, startAt, endAt } : prev

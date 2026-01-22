@@ -18,77 +18,32 @@ import { ChevronLeft, ChevronRight, Minus, Pencil, Play, Plus, Square, Trash2 } 
 import { Button } from './ui/button'
 import { cn } from '../lib/utils'
 import type { Task, TaskTimer } from '../gen/api'
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-/** Total minutes in a day (24 hours * 60 minutes) */
-const MINUTES_PER_DAY = 24 * 60
-
-/** Default task duration when endAt is not specified */
-const DEFAULT_DURATION_MINUTES = 30
-
-/** Milliseconds in a day, used for date calculations */
-const DAY_MS = 24 * 60 * 60 * 1000
-
-/** Start hour for the default visible window (6 AM) */
-const VISIBLE_START_HOUR = 6
-
-/** End hour for the default visible window (12 PM / noon) */
-const VISIBLE_END_HOUR = 12
-
-/** Minimum slot height in pixels to ensure readability */
-const MIN_SLOT_HEIGHT_PX = 4
-
-/** Vertical offset to center hour labels with grid lines. See usage comment for details. */
-const HOUR_LABEL_VERTICAL_OFFSET = 6
-
-// ============================================================================
-// Zoom Configuration
-// ============================================================================
-
-/** Minimum zoom level (50% = zoomed out, shows more time in less space) */
-const MIN_ZOOM = 0.5
-
-/** Maximum zoom level (300% = zoomed in, shows less time in more detail) */
-const MAX_ZOOM = 3.0
-
-/** Increment/decrement step for zoom controls */
-const ZOOM_STEP = 0.25
-
-/** Default zoom level (100%) */
-const DEFAULT_ZOOM = 1.0
-
-/**
- * Determines slot granularity (minutes per slot) based on zoom level.
- * Lower zoom levels use coarser slots for better overview,
- * higher zoom levels use finer slots for precise scheduling.
- *
- * @param zoom - Current zoom level (0.5 to 3.0)
- * @returns Minutes per time slot (30, 15, 10, or 5)
- */
-const getSlotMinutesForZoom = (zoom: number): number => {
-  if (zoom <= 0.75) return 30  // 30 min slots when zoomed out (overview)
-  if (zoom <= 1.5) return 15   // 15 min slots at default zoom
-  if (zoom <= 2.25) return 10  // 10 min slots when zoomed in
-  return 5                      // 5 min slots when fully zoomed in (precise)
-}
-
-/**
- * Calculates slot configuration based on zoom level.
- *
- * @param zoom - Current zoom level
- * @returns Object containing slotMinutes, slotsPerHour, and total slotCount
- */
-const getSlotConfig = (zoom: number) => {
-  const slotMinutes = getSlotMinutesForZoom(zoom)
-  return {
-    slotMinutes,
-    slotsPerHour: 60 / slotMinutes,
-    slotCount: MINUTES_PER_DAY / slotMinutes
-  }
-}
+import {
+  MINUTES_PER_DAY,
+  DAY_MS,
+  VISIBLE_START_HOUR,
+  VISIBLE_END_HOUR_CALENDAR as VISIBLE_END_HOUR,
+  MIN_SLOT_HEIGHT_PX,
+  HOUR_LABEL_VERTICAL_OFFSET,
+  MIN_ZOOM,
+  MAX_ZOOM,
+  ZOOM_STEP,
+  DEFAULT_ZOOM,
+  getSlotConfig,
+  clamp,
+  startOfDay,
+  startOfWeek,
+  addDays,
+  formatDayLabel,
+  formatWeekLabel,
+  formatHourLabel,
+  formatTimeRange,
+  computeTaskEnd,
+  getSlotIndexFromEvent,
+  dateForSlot,
+  assignLanes,
+  type TaskLayout
+} from '../lib/calendar-utils'
 
 // ============================================================================
 // Types
@@ -96,28 +51,6 @@ const getSlotConfig = (zoom: number) => {
 
 /** Calendar view mode: single day or full week */
 export type ViewMode = 'day' | 'week'
-
-/**
- * Internal representation of a task positioned on the calendar grid.
- * Contains layout information for rendering (lane assignment, slot positions).
- */
-type TaskLayout = {
-  task: Task
-  /** Which day column (0 for day view, 0-6 for week view) */
-  dayIndex: number
-  /** Starting slot index (inclusive) */
-  startSlot: number
-  /** Ending slot index (exclusive) */
-  endSlot: number
-  /** Horizontal lane for overlapping tasks (0-based) */
-  lane: number
-  /** Total number of lanes in this time range */
-  laneCount: number
-  /** Parsed start date */
-  startDate: Date
-  /** Parsed/computed end date */
-  endDate: Date
-}
 
 /** Props for the CalendarView component */
 type CalendarViewProps = {
@@ -145,149 +78,6 @@ type CalendarViewProps = {
   onCreateRange?: (range: { startAt: string; endAt: string }) => void
   /** Additional CSS classes */
   className?: string
-}
-
-// ============================================================================
-// Utility Functions
-// ============================================================================
-
-/** Clamps a value between min and max bounds */
-const clamp = (value: number, min: number, max: number): number =>
-  Math.max(min, Math.min(max, value))
-
-/** Returns midnight (00:00:00) of the given date */
-const startOfDay = (date: Date): Date =>
-  new Date(date.getFullYear(), date.getMonth(), date.getDate())
-
-/**
- * Returns the Monday of the week containing the given date.
- * Week starts on Monday (ISO week).
- */
-const startOfWeek = (date: Date): Date => {
-  const day = date.getDay()
-  const diff = (day + 6) % 7 // Days since Monday
-  const start = new Date(date)
-  start.setDate(start.getDate() - diff)
-  return startOfDay(start)
-}
-
-/** Adds (or subtracts) days from a date */
-const addDays = (date: Date, days: number): Date => {
-  const next = new Date(date)
-  next.setDate(next.getDate() + days)
-  return next
-}
-
-// ============================================================================
-// Formatting Functions
-// ============================================================================
-
-/** Formats a date as "Mon, Jan 1" for day column headers */
-const formatDayLabel = (date: Date): string =>
-  date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-
-/** Formats a week range as "Jan 1 - Jan 7" for week view header */
-const formatWeekLabel = (start: Date): string => {
-  const end = addDays(start, 6)
-  const startLabel = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  const endLabel = end.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  return `${startLabel} - ${endLabel}`
-}
-
-/** Formats an hour as "09:00" for the time gutter */
-const formatHourLabel = (hour: number): string => `${String(hour).padStart(2, '0')}:00`
-
-/** Formats a time range as "09:00 - 10:30" for task display */
-const formatTimeRange = (start: Date, end: Date): string =>
-  `${start.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`
-
-/**
- * Computes the end date for a task.
- * If endAt is provided and valid, uses that; otherwise defaults to start + DEFAULT_DURATION_MINUTES.
- */
-const computeTaskEnd = (start: Date, endAt?: string | null): Date => {
-  if (endAt) {
-    const parsed = new Date(endAt)
-    if (!Number.isNaN(parsed.getTime())) return parsed
-  }
-  return new Date(start.getTime() + DEFAULT_DURATION_MINUTES * 60 * 1000)
-}
-
-// ============================================================================
-// Grid Calculation Functions
-// ============================================================================
-
-/**
- * Converts a mouse event Y position to a slot index within a day column.
- *
- * @param event - The mouse event
- * @param column - The day column DOM element
- * @param slotHeight - Height of each slot in pixels
- * @param slotCount - Total number of slots in a day
- * @returns The slot index (0 to slotCount-1)
- */
-const getSlotIndexFromEvent = (
-  event: MouseEvent,
-  column: HTMLDivElement,
-  slotHeight: number,
-  slotCount: number
-): number => {
-  const rect = column.getBoundingClientRect()
-  const offset = event.clientY - rect.top
-  const clamped = clamp(offset, 0, rect.height - 1)
-  return clamp(Math.floor(clamped / slotHeight), 0, slotCount - 1)
-}
-
-/**
- * Converts a slot index to a Date object.
- *
- * @param baseDate - The midnight date of the day
- * @param slot - The slot index
- * @param slotMinutes - Minutes per slot
- * @returns Date object at the start of that slot
- */
-const dateForSlot = (baseDate: Date, slot: number, slotMinutes: number): Date => {
-  const minutes = slot * slotMinutes
-  const result = new Date(baseDate)
-  result.setMinutes(minutes, 0, 0)
-  return result
-}
-
-/**
- * Assigns horizontal lanes to overlapping tasks using a greedy algorithm.
- * Tasks are sorted by start time, then assigned to the first available lane
- * that doesn't overlap with their time range.
- *
- * @param tasks - Array of TaskLayout items to assign lanes to
- * @returns The same tasks with lane and laneCount properties populated
- */
-const assignLanes = (tasks: TaskLayout[]): TaskLayout[] => {
-  // Track the end slot of the last task in each lane
-  const lanesEnd: number[] = []
-
-  // Sort by start time (then by end time for same start)
-  const sorted = [...tasks].sort((a, b) => {
-    if (a.startSlot === b.startSlot) return a.endSlot - b.endSlot
-    return a.startSlot - b.startSlot
-  })
-
-  sorted.forEach((item) => {
-    // Find first lane where this task fits (no overlap)
-    let laneIndex = lanesEnd.findIndex((endSlot) => item.startSlot >= endSlot)
-    if (laneIndex === -1) {
-      // No available lane, create a new one
-      laneIndex = lanesEnd.length
-      lanesEnd.push(item.endSlot)
-    } else {
-      // Reuse this lane and update its end slot
-      lanesEnd[laneIndex] = item.endSlot
-    }
-    item.lane = laneIndex
-  })
-
-  // Set laneCount on all items so they know how wide to render
-  const laneCount = Math.max(lanesEnd.length, 1)
-  return sorted.map((item) => ({ ...item, laneCount }))
 }
 
 /**

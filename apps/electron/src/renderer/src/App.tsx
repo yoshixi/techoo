@@ -149,6 +149,7 @@ function KeyboardShortcuts({
 function App(): React.JSX.Element {
   const [currentView, setCurrentView] = useState<View>('calendar')
   const [showCompleted, setShowCompleted] = useState(false)
+  const [showUnscheduled, setShowUnscheduled] = useState(true)
   const [filterTagIds, setFilterTagIds] = useState<string[]>([])
   const [sortBy, setSortBy] = useState<'createdAt' | 'startAt'>('startAt')
   const [calendarViewMode, setCalendarViewMode] = useState<ViewMode>('day')
@@ -167,11 +168,12 @@ function App(): React.JSX.Element {
     () => ({
       completed: currentView === 'calendar' ? undefined : (showCompleted ? undefined : ('false' as const)),
       hasActiveTimer: 'true' as const,
+      scheduled: currentView === 'calendar' ? undefined : (showUnscheduled ? undefined : ('true' as const)),
       sortBy,
       order: 'asc' as const,
       tags: filterTagIds.length ? filterTagIds : undefined
     }),
-    [showCompleted, sortBy, filterTagIds, currentView]
+    [showCompleted, showUnscheduled, sortBy, filterTagIds, currentView]
   )
   const {
     data: activeTasksResponse,
@@ -201,11 +203,12 @@ function App(): React.JSX.Element {
     () => ({
       completed: currentView === 'calendar' ? undefined : (showCompleted ? undefined : ('false' as const)),
       hasActiveTimer: 'false' as const,
+      scheduled: currentView === 'calendar' ? undefined : (showUnscheduled ? undefined : ('true' as const)),
       sortBy,
       order: 'asc' as const,
       tags: filterTagIds.length ? filterTagIds : undefined
     }),
-    [showCompleted, sortBy, filterTagIds, currentView]
+    [showCompleted, showUnscheduled, sortBy, filterTagIds, currentView]
   )
   const {
     data: inactiveTasksResponse,
@@ -368,11 +371,8 @@ function App(): React.JSX.Element {
 
   // Helper to start adding a new task
   const startAddingTask = useCallback(() => {
-    const now = new Date()
-    const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
-      .toISOString()
-      .slice(0, 16)
-    setNewTaskFields((prev) => ({ ...prev, startAt: localDateTime, tagIds: filterTagIds }))
+    // Keep startAt blank to allow creating unscheduled tasks
+    setNewTaskFields((prev) => ({ ...prev, startAt: '', tagIds: filterTagIds }))
     setIsAddingTask(true)
   }, [filterTagIds])
 
@@ -1172,6 +1172,18 @@ function App(): React.JSX.Element {
                         />
                       </div>
 
+                      <div className="flex items-center justify-between w-[150px] h-8 rounded-md border border-input px-3">
+                        <Label htmlFor="show-unscheduled" className="text-sm cursor-pointer">
+                          Unscheduled
+                        </Label>
+                        <Switch
+                          id="show-unscheduled"
+                          checked={showUnscheduled}
+                          onCheckedChange={setShowUnscheduled}
+                          className="scale-75"
+                        />
+                      </div>
+
                       <TagCombobox
                         selectedTagIds={filterTagIds}
                         onSelectionChange={setFilterTagIds}
@@ -1435,6 +1447,7 @@ function App(): React.JSX.Element {
                 setSelectedTask(updated)
                 await mutateBothTaskLists()
               }}
+              tasks={allTasks}
             />
           ) : null}
         </DialogContent>

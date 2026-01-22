@@ -159,6 +159,7 @@ export async function ensureDefaultUser(db: DB): Promise<SelectUser> {
 type TaskFilterOptions = {
   completed?: boolean
   hasActiveTimer?: boolean
+  scheduled?: boolean
   sortBy?: 'createdAt' | 'startAt' | 'dueDate'
   order?: 'asc' | 'desc'
   tags?: string[]
@@ -230,6 +231,15 @@ export async function getAllTasks(db: DB, userId: string, filters?: TaskFilterOp
       // Only include tasks that do NOT have an active timer
       baseConditions.push(notExists(activeTimerSubquery))
     }
+  }
+
+  // Apply scheduled filter (whether task has a startAt time)
+  if (filters?.scheduled === true) {
+    // Only include tasks that have a scheduled start time
+    baseConditions.push(sql`${tasksTable.startAt} IS NOT NULL`)
+  } else if (filters?.scheduled === false) {
+    // Only include tasks that do NOT have a scheduled start time
+    baseConditions.push(isNull(tasksTable.startAt))
   }
 
   // Execute query with all conditions

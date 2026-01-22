@@ -7,6 +7,7 @@
  */
 import type { GetApiTasksCompleted } from './getApiTasksCompleted'
 import type { GetApiTasksHasActiveTimer } from './getApiTasksHasActiveTimer'
+import type { GetApiTasksScheduled } from './getApiTasksScheduled'
 import type { GetApiTasksSortBy } from './getApiTasksSortBy'
 import type { GetApiTasksOrder } from './getApiTasksOrder'
 
@@ -19,6 +20,10 @@ export type GetApiTasksParams = {
    * Filter tasks by whether they have an active timer running
    */
   hasActiveTimer?: GetApiTasksHasActiveTimer
+  /**
+   * Filter tasks by whether they have a scheduled start time (startAt). true = only scheduled tasks, false = only unscheduled tasks
+   */
+  scheduled?: GetApiTasksScheduled
   /**
    * Sort tasks by field (createdAt, startAt, or dueDate)
    */
