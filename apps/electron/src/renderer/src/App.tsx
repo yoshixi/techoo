@@ -69,14 +69,18 @@ function matchesKeyBinding(e: KeyboardEvent, binding: KeyBinding): boolean {
 
 // Keyboard shortcut handler component (must be inside SidebarProvider)
 function KeyboardShortcuts({
+  currentView,
   onNewTask,
+  onNewCalendarTask,
   onToggleTimer,
   onNavigateNext,
   onNavigatePrev,
   isAddingTask,
   isEditing
 }: {
+  currentView: View
   onNewTask: () => void
+  onNewCalendarTask: () => void
   onToggleTimer: () => void
   onNavigateNext: () => void
   onNavigatePrev: () => void
@@ -93,10 +97,12 @@ function KeyboardShortcuts({
         return
       }
 
-      // Command/Ctrl + N: New task
+      // Command/Ctrl + N: New task (behavior depends on current view)
       if (matchesKeyBinding(e, keyMaps.NEW_TASK)) {
         e.preventDefault()
-        if (!isAddingTask) {
+        if (currentView === 'calendar') {
+          onNewCalendarTask()
+        } else if (currentView === 'tasks' && !isAddingTask) {
           onNewTask()
         }
         return
@@ -135,13 +141,13 @@ function KeyboardShortcuts({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [toggleSidebar, onNewTask, onToggleTimer, onNavigateNext, onNavigatePrev, isAddingTask, isEditing])
+  }, [toggleSidebar, currentView, onNewTask, onNewCalendarTask, onToggleTimer, onNavigateNext, onNavigatePrev, isAddingTask, isEditing])
 
   return null
 }
 
 function App(): React.JSX.Element {
-  const [currentView, setCurrentView] = useState<View>('tasks')
+  const [currentView, setCurrentView] = useState<View>('calendar')
   const [showCompleted, setShowCompleted] = useState(false)
   const [filterTagIds, setFilterTagIds] = useState<string[]>([])
   const [sortBy, setSortBy] = useState<'createdAt' | 'startAt'>('startAt')
@@ -156,7 +162,7 @@ function App(): React.JSX.Element {
   const [isCreatingCalendarTask, setIsCreatingCalendarTask] = useState(false)
   const [calendarCreateError, setCalendarCreateError] = useState<string | null>(null)
 
-  // Query for tasks with active timers (In Progress section)
+  // Query for tasks with active timers (filtered by current view settings)
   const activeTaskQuery = useMemo(
     () => ({
       completed: currentView === 'calendar' ? undefined : (showCompleted ? undefined : ('false' as const)),
@@ -174,6 +180,21 @@ function App(): React.JSX.Element {
     mutate: mutateActiveTasks
   } = useGetApiTasks(activeTaskQuery)
   const activeTasks = activeTasksResponse?.tasks ?? []
+
+  // Query for ALL tasks with active timers (for sidebar - no filters applied)
+  const sidebarActiveTaskQuery = useMemo(
+    () => ({
+      hasActiveTimer: 'true' as const,
+      sortBy: 'startAt' as const,
+      order: 'asc' as const
+    }),
+    []
+  )
+  const {
+    data: sidebarActiveTasksResponse,
+    mutate: mutateSidebarActiveTasks
+  } = useGetApiTasks(sidebarActiveTaskQuery)
+  const sidebarActiveTasks = sidebarActiveTasksResponse?.tasks ?? []
 
   // Query for tasks without active timers (Tasks section)
   const inactiveTaskQuery = useMemo(
@@ -195,14 +216,21 @@ function App(): React.JSX.Element {
   const inactiveTasks = inactiveTasksResponse?.tasks ?? []
 
   // Combined tasks for operations that need to find a task
-  const allTasks = useMemo(() => [...activeTasks, ...inactiveTasks], [activeTasks, inactiveTasks])
+  const allTasks = useMemo(() => {
+    // Merge activeTasks, inactiveTasks, and sidebarActiveTasks, removing duplicates
+    const taskMap = new Map<string, Task>()
+    for (const task of [...activeTasks, ...inactiveTasks, ...sidebarActiveTasks]) {
+      taskMap.set(task.id, task)
+    }
+    return Array.from(taskMap.values())
+  }, [activeTasks, inactiveTasks, sidebarActiveTasks])
   const tasksLoading = activeTasksLoading || inactiveTasksLoading
   const tasksError = activeTasksError || inactiveTasksError
 
-  // Helper to mutate both task lists
+  // Helper to mutate all task lists
   const mutateBothTaskLists = useCallback(() => {
-    return Promise.all([mutateActiveTasks(), mutateInactiveTasks()])
-  }, [mutateActiveTasks, mutateInactiveTasks])
+    return Promise.all([mutateActiveTasks(), mutateInactiveTasks(), mutateSidebarActiveTasks()])
+  }, [mutateActiveTasks, mutateInactiveTasks, mutateSidebarActiveTasks])
 
   const [isAddingTask, setIsAddingTask] = useState(false)
   const [newTaskFields, setNewTaskFields] = useState({
@@ -346,6 +374,22 @@ function App(): React.JSX.Element {
       .slice(0, 16)
     setNewTaskFields((prev) => ({ ...prev, startAt: localDateTime, tagIds: filterTagIds }))
     setIsAddingTask(true)
+  }, [filterTagIds])
+
+  // Helper to start adding a new task via calendar (opens dialog with current time)
+  const startAddingCalendarTask = useCallback(() => {
+    const now = new Date()
+    const endTime = new Date(now.getTime() + 60 * 60 * 1000) // 1 hour later
+    const formatLocal = (date: Date): string =>
+      new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+    setCalendarCreateError(null)
+    setCalendarDraft({
+      title: '',
+      description: '',
+      startAt: formatLocal(now),
+      endAt: formatLocal(endTime),
+      tagIds: filterTagIds
+    })
   }, [filterTagIds])
 
   // Helper to toggle timer for a task
@@ -995,7 +1039,9 @@ function App(): React.JSX.Element {
   return (
     <SidebarProvider defaultOpen={false}>
       <KeyboardShortcuts
+        currentView={currentView}
         onNewTask={startAddingTask}
+        onNewCalendarTask={startAddingCalendarTask}
         onToggleTimer={handleKeyboardToggleTimer}
         onNavigateNext={handleNavigateNext}
         onNavigatePrev={handleNavigatePrev}
@@ -1005,7 +1051,7 @@ function App(): React.JSX.Element {
       <AppSidebar
         currentView={currentView}
         onViewChange={setCurrentView}
-        activeTasks={activeTasks}
+        activeTasks={sidebarActiveTasks}
         activeTimersByTaskId={activeTimersByTaskId}
         onStopTimer={handleStopTimer}
         onOpenTaskDetail={setSelectedTask}
