@@ -329,6 +329,7 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
             activities={activitiesQuery.data?.activities}
             isLoading={activitiesQuery.isLoading}
             error={activitiesQuery.error}
+            onTimerUpdated={() => activitiesQuery.mutate?.()}
           />
         </section>
 
