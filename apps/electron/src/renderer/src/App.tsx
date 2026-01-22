@@ -320,6 +320,24 @@ function App(): React.JSX.Element {
     return unsubscribe
   }, [allTasks])
 
+  // Listen for timer events from system notifications
+  useEffect(() => {
+    const unsubscribeStart = window.api.onNotificationTimerStarted(() => {
+      // Refresh both task lists and timers when timer is started from notification
+      mutateBothTaskLists()
+      mutateTimers()
+    })
+    const unsubscribeStop = window.api.onNotificationTimerStopped(() => {
+      // Refresh both task lists and timers when timer is stopped from notification
+      mutateBothTaskLists()
+      mutateTimers()
+    })
+    return () => {
+      unsubscribeStart()
+      unsubscribeStop()
+    }
+  }, [mutateBothTaskLists, mutateTimers])
+
   // Helper to start adding a new task
   const startAddingTask = useCallback(() => {
     const now = new Date()

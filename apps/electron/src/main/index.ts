@@ -4,6 +4,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/logo@2x.png?asset'
 import { TrayManager } from './tray'
+import { NotificationScheduler } from './notificationScheduler'
 
 function setupContentSecurityPolicy(): void {
   const apiUrl = import.meta.env.MAIN_VITE_API_URL || 'http://localhost:3000'
@@ -65,6 +66,7 @@ function resolvePreloadPath(): string {
 let mainWindow: BrowserWindow | null = null
 const floatingWindows = new Map<string, BrowserWindow>()
 let trayManager: TrayManager | null = null
+let notificationScheduler: NotificationScheduler | null = null
 
 function createApplicationMenu(): void {
   const isMac = process.platform === 'darwin'
@@ -429,6 +431,28 @@ app.whenReady().then(() => {
     mainWindow?.webContents.send('tray:show-task-detail', taskId)
   })
 
+  // Initialize notification scheduler for task reminders
+  notificationScheduler = new NotificationScheduler()
+  notificationScheduler.setHandlers({
+    onStartTimer: (taskId: string) => {
+      // Notify renderer to refresh timers and open floating window
+      mainWindow?.webContents.send('notification:timer-started', taskId)
+      const task = { taskId, title: undefined }
+      createFloatingWindow(task.taskId, task.title)
+    },
+    onStopTimer: (taskId: string, _timerId: string) => {
+      // Notify renderer to refresh timers and close floating window
+      mainWindow?.webContents.send('notification:timer-stopped', taskId)
+      closeFloatingWindow(taskId)
+    },
+    onShowTask: (taskId: string) => {
+      // Show the main window and open task detail
+      mainWindow?.show()
+      mainWindow?.webContents.send('tray:show-task-detail', taskId)
+    }
+  })
+  notificationScheduler.start()
+
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
@@ -445,9 +469,11 @@ app.on('window-all-closed', () => {
   }
 })
 
-// Cleanup tray and shortcuts before quitting
+// Cleanup tray, shortcuts, and notification scheduler before quitting
 app.on('before-quit', () => {
   globalShortcut.unregisterAll()
+  notificationScheduler?.stop()
+  notificationScheduler = null
   trayManager?.destroy()
   trayManager = null
 })
