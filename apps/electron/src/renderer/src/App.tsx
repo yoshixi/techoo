@@ -848,38 +848,9 @@ function App(): React.JSX.Element {
         }}
       >
         <TableCell onClick={(e) => { e.stopPropagation(); setEditingTagsTaskId(null) }}>
-          <div className="flex items-center gap-2">
-            <span className="text-sm min-w-[3rem]">
-              {getTotalTimeDisplay(task.id)}
-            </span>
-            {activeTimersByTaskId.has(task.id) ? (
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => {
-                  const activeTimer = activeTimersByTaskId.get(task.id)
-                  if (activeTimer) {
-                    handleStopTimer(task.id, activeTimer.id)
-                  }
-                }}
-                className="h-7 w-7 hover:bg-red-100"
-                title="Stop timer"
-              >
-                <Square className="h-4 w-4 text-red-600 animate-pulse" />
-              </Button>
-            ) : (
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => handleStartTimer(task.id)}
-                className="h-7 w-7 hover:bg-green-100"
-                disabled={timersLoading}
-                title="Start timer"
-              >
-                <Play className="h-4 w-4 text-green-600" />
-              </Button>
-            )}
-          </div>
+          <span className="text-sm">
+            {getTotalTimeDisplay(task.id)}
+          </span>
         </TableCell>
         <TableCell
           onClick={(e) => {
@@ -993,7 +964,34 @@ function App(): React.JSX.Element {
           )}
         </TableCell>
         <TableCell onClick={(e) => { e.stopPropagation(); setEditingTagsTaskId(null) }}>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            {activeTimersByTaskId.has(task.id) ? (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => {
+                  const activeTimer = activeTimersByTaskId.get(task.id)
+                  if (activeTimer) {
+                    handleStopTimer(task.id, activeTimer.id)
+                  }
+                }}
+                className="h-7 w-7 hover:bg-red-100"
+                title="Stop timer"
+              >
+                <Square className="h-4 w-4 text-red-600 animate-pulse" />
+              </Button>
+            ) : (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => handleStartTimer(task.id)}
+                className="h-7 w-7 hover:bg-green-100"
+                disabled={timersLoading}
+                title="Start timer"
+              >
+                <Play className="h-4 w-4 text-green-600" />
+              </Button>
+            )}
             <Button
               size="icon"
               variant="ghost"
