@@ -119,13 +119,13 @@ export const TagCombobox: React.FC<TagComboboxProps> = ({
   }
 
   return (
-    <div ref={containerRef} className={cn('relative', className)}>
+    <div ref={containerRef} className={cn('relative h-10', className)}>
       {/* Trigger / Selected tags display */}
       <div
         className={cn(
-          'flex min-h-10 w-full items-center gap-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm cursor-pointer transition-colors',
-          'focus-within:outline-none focus-within:ring-1 focus-within:ring-ring',
-          isOpen && 'ring-1 ring-ring'
+          'flex h-full w-full items-center justify-between gap-1 rounded-md border border-input bg-transparent px-3 text-sm cursor-pointer transition-colors',
+          'focus-within:outline-none focus-within:ring-2 focus-within:ring-ring/40',
+          isOpen && 'ring-2 ring-ring/40'
         )}
         onClick={() => {
           setIsOpen(true)
@@ -133,22 +133,26 @@ export const TagCombobox: React.FC<TagComboboxProps> = ({
         }}
       >
         <div className="flex flex-1 items-center gap-1 min-w-0 overflow-hidden">
-          {selectedTags.map((tag) => (
-            <Badge
-              key={tag.id}
-              variant="default"
-              className="gap-1 pr-1 shrink-0"
-            >
-              {tag.name}
-              <button
-                type="button"
-                onClick={(e) => handleRemoveTag(tag.id, e)}
-                className="rounded-full p-0.5 hover:bg-secondary-foreground/20"
+          {selectedTags.length > 0 ? (
+            selectedTags.map((tag) => (
+              <Badge
+                key={tag.id}
+                variant="default"
+                className="gap-1 pr-1 shrink-0 text-xs py-0"
               >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
+                {tag.name}
+                <button
+                  type="button"
+                  onClick={(e) => handleRemoveTag(tag.id, e)}
+                  className="rounded-full p-0.5 hover:bg-secondary-foreground/20"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </Badge>
+            ))
+          ) : (
+            <span className="text-muted-foreground">{placeholder}</span>
+          )}
           <input
             ref={inputRef}
             type="text"
@@ -156,8 +160,8 @@ export const TagCombobox: React.FC<TagComboboxProps> = ({
             onChange={(e) => setSearchValue(e.target.value)}
             onFocus={() => setIsOpen(true)}
             onKeyDown={handleKeyDown}
-            placeholder={selectedTags.length === 0 ? placeholder : ''}
-            className="flex-1 min-w-[60px] bg-transparent outline-none placeholder:text-muted-foreground"
+            placeholder=""
+            className="flex-1 min-w-[30px] bg-transparent outline-none text-sm"
           />
         </div>
         <ChevronDown className="h-4 w-4 opacity-60 shrink-0" />

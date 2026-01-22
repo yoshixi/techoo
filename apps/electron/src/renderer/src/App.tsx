@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Clock4, Plus, Play, Square, CheckCircle, Maximize2 } from 'lucide-react'
+import { Clock4, Plus, Play, Square, CheckCircle, Maximize2, ArrowUpDown } from 'lucide-react'
 
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card'
@@ -16,6 +16,13 @@ import {
 } from './components/ui/table'
 import { Switch } from './components/ui/switch'
 import { Badge } from './components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from './components/ui/select'
 import { TagCombobox } from './components/TagCombobox'
 import {
   deleteApiTasksId,
@@ -34,7 +41,7 @@ import { SettingsView } from './components/SettingsView'
 import { SidebarProvider, SidebarInset, useSidebar } from './components/ui/sidebar'
 import { Dialog, DialogContent } from './components/ui/dialog'
 import { formatDateTime, formatDateTimeInput, normalizeDueDate, normalizeDateTime } from './lib/time'
-import { CalendarView } from './components/CalendarView'
+import { CalendarView, type ViewMode } from './components/CalendarView'
 
 type View = 'tasks' | 'calendar' | 'settings'
 
@@ -138,6 +145,7 @@ function App(): React.JSX.Element {
   const [showCompleted, setShowCompleted] = useState(false)
   const [filterTagIds, setFilterTagIds] = useState<string[]>([])
   const [sortBy, setSortBy] = useState<'createdAt' | 'startAt'>('startAt')
+  const [calendarViewMode, setCalendarViewMode] = useState<ViewMode>('day')
   const [calendarDraft, setCalendarDraft] = useState<{
     title: string
     description: string
@@ -278,6 +286,39 @@ function App(): React.JSX.Element {
 
     return () => clearInterval(interval)
   }, [])
+
+  // Sync all active timer states to main process for tray display
+  useEffect(() => {
+    const timerStates = Array.from(activeTimersByTaskId.entries()).map(([taskId, timer]) => {
+      const task = allTasks.find((t) => t.id === taskId)
+      return {
+        timerId: timer.id,
+        taskId,
+        taskTitle: task?.title || 'Task',
+        startTime: timer.startTime
+      }
+    })
+    window.api.updateTimerStates(timerStates)
+  }, [activeTimersByTaskId, allTasks])
+
+  // Cleanup timer states on unmount
+  useEffect(() => {
+    return () => {
+      window.api.updateTimerStates([])
+    }
+  }, [])
+
+  // Listen for show task detail request from tray menu
+  useEffect(() => {
+    const unsubscribe = window.api.onShowTaskDetail((taskId: string) => {
+      // Find the task and show the detail modal
+      const task = allTasks.find((t) => t.id === taskId)
+      if (task) {
+        setSelectedTask(task)
+      }
+    })
+    return unsubscribe
+  }, [allTasks])
 
   // Helper to start adding a new task
   const startAddingTask = useCallback(() => {
@@ -708,10 +749,6 @@ function App(): React.JSX.Element {
     return activeTimersByTaskId.has(taskId)
   }
 
-  function hasTimers(taskId: string): boolean {
-    return timers.some(timer => timer.taskId === taskId)
-  }
-
   function handleToggleTaskCompletion(task: Task): void {
     const newCompletedAt = task.completedAt ? null : new Date().toISOString()
     const isInActiveList = activeTasks.some(t => t.id === task.id)
@@ -910,17 +947,15 @@ function App(): React.JSX.Element {
         </TableCell>
         <TableCell onClick={(e) => { e.stopPropagation(); setEditingTagsTaskId(null) }}>
           <div className="flex items-center gap-2">
-            {hasTimers(task.id) && (
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => handleToggleTaskCompletion(task)}
-                title={task.completedAt ? 'Mark incomplete' : 'Mark complete'}
-                className={task.completedAt ? 'opacity-50' : 'hover:bg-green-100'}
-              >
-                <CheckCircle className={`h-4 w-4 ${task.completedAt ? 'text-gray-400' : 'text-green-600'}`} />
-              </Button>
-            )}
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => handleToggleTaskCompletion(task)}
+              title={task.completedAt ? 'Mark incomplete' : 'Mark complete'}
+              className={task.completedAt ? 'opacity-50' : 'hover:bg-green-100'}
+            >
+              <CheckCircle className={`h-4 w-4 ${task.completedAt ? 'text-gray-400' : 'text-green-600'}`} />
+            </Button>
             <Button
               size="icon"
               variant="ghost"
@@ -1006,6 +1041,8 @@ function App(): React.JSX.Element {
                 <CalendarView
                   className="flex-1 min-h-0"
                   tasks={allTasks}
+                  viewMode={calendarViewMode}
+                  onViewModeChange={setCalendarViewMode}
                   onTaskSelect={(task) => {
                     setSelectedTask(task)
                     const index = allTasksForNavigation.findIndex((t) => t.id === task.id)
@@ -1036,52 +1073,16 @@ function App(): React.JSX.Element {
             </main>
           </div>
         ) : (
-          <div className="p-8">
-            <main className="mx-auto max-w-6xl">
+          <div className="flex flex-1 min-h-0 flex-col p-8">
+            <main className="mx-auto max-w-6xl w-full flex flex-col min-h-0 flex-1 gap-6">
               {timersError && shouldFetchTimer && (
                 <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
                   Failed to load timers.
                 </div>
               )}
 
-              {/* Controls */}
-              <div className="mb-6 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>Sort by:</span>
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as 'createdAt' | 'startAt')}
-                      className="rounded px-2 py-1 text-sm bg-background"
-                    >
-                      <option value="startAt">Start Date</option>
-                      <option value="createdAt">Created Date</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>Show completed</span>
-                    <Switch checked={showCompleted} onCheckedChange={setShowCompleted} />
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>Tags:</span>
-                    <TagCombobox
-                      selectedTagIds={filterTagIds}
-                      onSelectionChange={setFilterTagIds}
-                      placeholder="All tags"
-                      className="w-48"
-                    />
-                  </div>
-                </div>
-                {!isAddingTask && (
-                  <Button onClick={startAddingTask}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Task
-                  </Button>
-                )}
-              </div>
-
               {/* In Progress Section */}
-              <Card className="mb-6">
+              <Card className="shrink-0">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <span className="relative flex h-2 w-2">
@@ -1119,16 +1120,58 @@ function App(): React.JSX.Element {
               </Card>
 
               {/* Upcoming Tasks Section */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tasks</CardTitle>
-                  <CardDescription>
-                    {tasksLoading
-                      ? 'Loading tasks...'
-                      : `${inactiveTasks.length} task${inactiveTasks.length === 1 ? '' : 's'}`}
-                  </CardDescription>
+              <Card className="flex flex-col min-h-0 flex-1">
+                <CardHeader className="shrink-0">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Tasks</CardTitle>
+                      <CardDescription>
+                        {tasksLoading
+                          ? 'Loading tasks...'
+                          : `${inactiveTasks.length} task${inactiveTasks.length === 1 ? '' : 's'}`}
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'createdAt' | 'startAt')}>
+                        <SelectTrigger className="w-[140px] h-8">
+                          <ArrowUpDown className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                          <SelectValue placeholder="Sort by" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="startAt">Start Date</SelectItem>
+                          <SelectItem value="createdAt">Created Date</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <div className="flex items-center justify-between w-[140px] h-8 rounded-md border border-input px-3">
+                        <Label htmlFor="show-completed" className="text-sm cursor-pointer">
+                          Completed
+                        </Label>
+                        <Switch
+                          id="show-completed"
+                          checked={showCompleted}
+                          onCheckedChange={setShowCompleted}
+                          className="scale-75"
+                        />
+                      </div>
+
+                      <TagCombobox
+                        selectedTagIds={filterTagIds}
+                        onSelectionChange={setFilterTagIds}
+                        placeholder="Tags"
+                        className="w-[140px] h-8"
+                      />
+
+                      {!isAddingTask && (
+                        <Button size="sm" onClick={startAddingTask}>
+                          <Plus className="mr-1.5 h-3.5 w-3.5" />
+                          Add Task
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1 min-h-0 overflow-y-auto">
                   <Table>
                     {renderTableHeader()}
                     <TableBody>
@@ -1208,6 +1251,9 @@ function App(): React.JSX.Element {
                               <Button size="sm" variant="outline" onClick={handleCancelAdd}>
                                 Cancel
                               </Button>
+                              <span className="text-xs text-muted-foreground">
+                                Press Enter to save
+                              </span>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1252,7 +1298,15 @@ function App(): React.JSX.Element {
           }
         }}
       >
-        <DialogContent className="max-w-xl w-[95vw]">
+        <DialogContent
+          className="max-w-xl w-[95vw]"
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' || !event.metaKey) return
+            event.preventDefault()
+            if (isCreatingCalendarTask || !calendarDraft?.title.trim()) return
+            handleCalendarCreate()
+          }}
+        >
           <div className="space-y-4">
             <div className="space-y-1">
               <div className="text-lg font-semibold">New task</div>
@@ -1331,7 +1385,16 @@ function App(): React.JSX.Element {
                 onClick={handleCalendarCreate}
                 disabled={isCreatingCalendarTask || !calendarDraft?.title.trim()}
               >
-                {isCreatingCalendarTask ? 'Creating...' : 'Create task'}
+                {isCreatingCalendarTask ? (
+                  'Creating...'
+                ) : (
+                  <>
+                    <span className="mr-1 text-sm text-primary-foreground/80">
+                      {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}⏎
+                    </span>
+                    Create
+                  </>
+                )}
               </Button>
               <Button
                 variant="ghost"

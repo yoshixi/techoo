@@ -19,6 +19,20 @@ type DragSelection = {
   endSlot: number
 }
 
+type DragMove = {
+  dayIndex: number
+  startSlot: number
+  duration: number // in slots
+  offsetSlot: number // offset from pointer to block start
+}
+
+type DragResize = {
+  dayIndex: number
+  startSlot: number
+  endSlot: number
+  edge: 'top' | 'bottom'
+}
+
 type TaskTimeRangePickerProps = {
   startAt?: string | null
   endAt?: string | null
@@ -119,8 +133,11 @@ export const TaskTimeRangePicker: React.FC<TaskTimeRangePickerProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>('day')
   const [anchorDate, setAnchorDate] = useState<Date>(() => startOfDay(new Date()))
   const [dragSelection, setDragSelection] = useState<DragSelection | null>(null)
+  const [dragMove, setDragMove] = useState<DragMove | null>(null)
+  const [dragResize, setDragResize] = useState<DragResize | null>(null)
   const activeColumnRef = useRef<HTMLDivElement | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
+  const gridRef = useRef<HTMLDivElement | null>(null)
 
   const dayStart = useMemo(() => startOfDay(anchorDate), [anchorDate])
   const weekStart = useMemo(() => startOfWeek(anchorDate), [anchorDate])
@@ -167,6 +184,144 @@ export const TaskTimeRangePicker: React.FC<TaskTimeRangePickerProps> = ({
     }
   }, [dragSelection, activeBase, viewMode, onChange])
 
+  // Effect for drag-to-move existing selection
+  useEffect(() => {
+    if (!dragMove) return undefined
+
+    const handleMouseMove = (event: MouseEvent): void => {
+      if (!gridRef.current) return
+
+      // Find which column we're over
+      const columns = Array.from(gridRef.current.querySelectorAll('[data-day-column]'))
+      let targetDayIndex = dragMove.dayIndex
+      let targetRect: DOMRect | null = null
+
+      for (let index = 0; index < columns.length; index++) {
+        const col = columns[index]
+        const rect = col.getBoundingClientRect()
+        if (event.clientX >= rect.left && event.clientX <= rect.right) {
+          targetDayIndex = index
+          targetRect = rect
+          break
+        }
+      }
+
+      if (targetRect) {
+        const offset = event.clientY - targetRect.top
+        const clamped = clamp(offset, 0, targetRect.height - 1)
+        const pointerSlot = clamp(Math.floor(clamped / SLOT_HEIGHT_PX), 0, SLOT_COUNT - 1)
+        const newStartSlot = clamp(pointerSlot - dragMove.offsetSlot, 0, SLOT_COUNT - dragMove.duration)
+
+        setDragMove((prev) =>
+          prev ? { ...prev, dayIndex: targetDayIndex, startSlot: newStartSlot } : prev
+        )
+      }
+    }
+
+    const handleMouseUp = (): void => {
+      if (!dragMove) return
+      const { dayIndex, startSlot, duration } = dragMove
+      const baseDate = addDays(activeBase, viewMode === 'day' ? 0 : dayIndex)
+      const startDate = dateForSlot(baseDate, startSlot)
+      const endDate = dateForSlot(baseDate, startSlot + duration)
+      onChange({ startAt: startDate.toISOString(), endAt: endDate.toISOString() })
+      setDragMove(null)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [dragMove, activeBase, viewMode, onChange])
+
+  // Effect for drag-to-resize selection
+  useEffect(() => {
+    if (!dragResize) return undefined
+
+    const handleMouseMove = (event: MouseEvent): void => {
+      if (!gridRef.current) return
+
+      const columns = Array.from(gridRef.current.querySelectorAll('[data-day-column]'))
+      const col = columns[dragResize.dayIndex]
+      if (!col) return
+
+      const rect = col.getBoundingClientRect()
+      const offset = event.clientY - rect.top
+      const clamped = clamp(offset, 0, rect.height - 1)
+      const pointerSlot = clamp(Math.floor(clamped / SLOT_HEIGHT_PX), 0, SLOT_COUNT - 1)
+
+      setDragResize((prev) => {
+        if (!prev) return prev
+        if (prev.edge === 'top') {
+          // Dragging top edge - adjust startSlot, keep endSlot fixed
+          const newStartSlot = Math.min(pointerSlot, prev.endSlot)
+          return { ...prev, startSlot: newStartSlot }
+        } else {
+          // Dragging bottom edge - adjust endSlot, keep startSlot fixed
+          const newEndSlot = Math.max(pointerSlot, prev.startSlot)
+          return { ...prev, endSlot: newEndSlot }
+        }
+      })
+    }
+
+    const handleMouseUp = (): void => {
+      if (!dragResize) return
+      const { dayIndex, startSlot, endSlot } = dragResize
+      const baseDate = addDays(activeBase, viewMode === 'day' ? 0 : dayIndex)
+      const startDate = dateForSlot(baseDate, startSlot)
+      const endDate = dateForSlot(baseDate, endSlot + 1)
+      onChange({ startAt: startDate.toISOString(), endAt: endDate.toISOString() })
+      setDragResize(null)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [dragResize, activeBase, viewMode, onChange])
+
+  const handleResizeMouseDown = (
+    event: React.MouseEvent<HTMLDivElement>,
+    selection: DragSelection,
+    edge: 'top' | 'bottom'
+  ): void => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    setDragResize({
+      dayIndex: selection.dayIndex,
+      startSlot: selection.startSlot,
+      endSlot: selection.endSlot,
+      edge
+    })
+  }
+
+  const handleSelectionMouseDown = (
+    event: React.MouseEvent<HTMLDivElement>,
+    selection: DragSelection
+  ): void => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    const rect = event.currentTarget.getBoundingClientRect()
+    const offsetY = event.clientY - rect.top
+    const offsetSlot = Math.floor(offsetY / SLOT_HEIGHT_PX)
+    const duration = selection.endSlot - selection.startSlot + 1
+
+    setDragMove({
+      dayIndex: selection.dayIndex,
+      startSlot: selection.startSlot,
+      duration,
+      offsetSlot
+    })
+  }
+
   const handleColumnMouseDown = (
     event: React.MouseEvent<HTMLDivElement>,
     dayIndex: number
@@ -183,7 +338,17 @@ export const TaskTimeRangePicker: React.FC<TaskTimeRangePickerProps> = ({
     return getSelectionFromRange(startAt, endAt, base)
   }, [startAt, endAt, viewMode, dayStart, weekStart])
 
-  const selectionToRender = dragSelection ?? derivedSelection
+  // Convert dragMove to selection format for rendering
+  const dragMoveAsSelection: DragSelection | null = dragMove
+    ? {
+        dayIndex: dragMove.dayIndex,
+        startSlot: dragMove.startSlot,
+        endSlot: dragMove.startSlot + dragMove.duration - 1
+      }
+    : null
+
+  const selectionToRender = dragResize ?? dragMoveAsSelection ?? dragSelection ?? derivedSelection
+  const isDragging = dragMove !== null || dragResize !== null
 
   const dayLabels = viewMode === 'day'
     ? [formatDayLabel(dayStart)]
@@ -298,6 +463,7 @@ export const TaskTimeRangePicker: React.FC<TaskTimeRangePickerProps> = ({
             </div>
           </div>
           <div
+            ref={gridRef}
             className={cn('relative grid flex-1', viewMode === 'day' ? 'grid-cols-1' : 'grid-cols-7')}
             style={{ height: totalHeight }}
           >
@@ -314,6 +480,7 @@ export const TaskTimeRangePicker: React.FC<TaskTimeRangePickerProps> = ({
               return (
                 <div
                   key={`day-${dayIndex}`}
+                  data-day-column
                   className="relative border-l first:border-l-0"
                   onMouseDown={(event) => handleColumnMouseDown(event, dayIndex)}
                 >
@@ -327,10 +494,27 @@ export const TaskTimeRangePicker: React.FC<TaskTimeRangePickerProps> = ({
                   {selection && (
                     <div
                       className={cn(
-                        'absolute left-2 right-2 rounded-md bg-primary/20 outline outline-1 outline-primary/40'
+                        'absolute left-2 right-2 rounded-md bg-primary/20 outline outline-1 outline-primary/40',
+                        isDragging && 'opacity-70'
                       )}
                       style={{ top: selectionTop, height: selectionHeight }}
-                    />
+                    >
+                      {/* Top resize handle */}
+                      <div
+                        className="absolute left-0 right-0 top-0 h-2 cursor-ns-resize hover:bg-primary/30 rounded-t-md"
+                        onMouseDown={(event) => handleResizeMouseDown(event, selection, 'top')}
+                      />
+                      {/* Center area for move */}
+                      <div
+                        className="absolute left-0 right-0 top-2 bottom-2 cursor-move"
+                        onMouseDown={(event) => handleSelectionMouseDown(event, selection)}
+                      />
+                      {/* Bottom resize handle */}
+                      <div
+                        className="absolute left-0 right-0 bottom-0 h-2 cursor-ns-resize hover:bg-primary/30 rounded-b-md"
+                        onMouseDown={(event) => handleResizeMouseDown(event, selection, 'bottom')}
+                      />
+                    </div>
                   )}
                 </div>
               )
@@ -339,7 +523,7 @@ export const TaskTimeRangePicker: React.FC<TaskTimeRangePickerProps> = ({
         </div>
       </div>
       <div className="text-xs text-muted-foreground">
-        Drag to set a time range in 15-minute increments.
+        Drag to select, move the block, or resize by dragging edges.
       </div>
     </div>
   )

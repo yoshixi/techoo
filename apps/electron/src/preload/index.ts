@@ -1,11 +1,33 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
+// Timer state type (supports multiple timers)
+interface TimerState {
+  timerId: string
+  taskId: string
+  taskTitle: string
+  startTime: string
+}
+
 // Custom APIs for renderer
 const api = {
   openFloatingTaskWindow: (payload: { taskId: string; title?: string }) =>
     ipcRenderer.invoke('floating-task:open', payload),
-  closeFloatingTaskWindow: (taskId: string) => ipcRenderer.invoke('floating-task:close', taskId)
+  closeFloatingTaskWindow: (taskId: string) => ipcRenderer.invoke('floating-task:close', taskId),
+  // Update all active timer states for tray display
+  updateTimerStates: (timers: TimerState[]): void => {
+    ipcRenderer.send('timer:states-change', timers)
+  },
+  // Listen for show task detail request from tray menu (receives taskId)
+  onShowTaskDetail: (callback: (taskId: string) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, taskId: string): void => {
+      callback(taskId)
+    }
+    ipcRenderer.on('tray:show-task-detail', handler)
+    return () => {
+      ipcRenderer.removeListener('tray:show-task-detail', handler)
+    }
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

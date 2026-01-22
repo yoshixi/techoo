@@ -285,7 +285,6 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
                         setLocalTask((prev) =>
                           prev ? { ...prev, startAt, endAt } : prev
                         )
-                        setIsScheduleOpen(false)
                       }}
                     />
                   </div>
