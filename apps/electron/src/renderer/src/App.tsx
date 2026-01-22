@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Clock4, Plus, Play, Square, CheckCircle, Maximize2, ArrowUpDown } from 'lucide-react'
+import { Plus, Play, Square, CheckCircle, Maximize2, ArrowUpDown } from 'lucide-react'
 
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card'
@@ -354,7 +354,6 @@ function App(): React.JSX.Element {
     if (activeTimer) {
       // Stop the timer - move task from active to inactive list optimistically
       setCurrentTime(Date.now())
-      window.api.closeFloatingTaskWindow(task.id)
 
       // Optimistic update: move task from active to inactive list
       mutateActiveTasks(
@@ -394,7 +393,6 @@ function App(): React.JSX.Element {
     } else {
       // Start the timer - move task from inactive to active list optimistically
       setCurrentTime(Date.now())
-      window.api.openFloatingTaskWindow({ taskId: task.id, title: task.title })
 
       // Optimistic update: move task from inactive to active list
       mutateInactiveTasks(
@@ -548,11 +546,6 @@ function App(): React.JSX.Element {
     setIsAddingTask(false)
   }
 
-  function handleOpenFloatingWindow(taskId: string): void {
-    const task = allTasks.find(t => t.id === taskId)
-    window.api.openFloatingTaskWindow({ taskId, title: task?.title })
-  }
-
   function handleStartEditing(taskId: string, field: 'title' | 'description' | 'startAt', currentValue: string): void {
     setEditingCell({ taskId, field })
     setEditingValue(currentValue || '')
@@ -662,7 +655,6 @@ function App(): React.JSX.Element {
 
     // UI first (optimistic) - move task from inactive to active
     setCurrentTime(Date.now())
-    window.api.openFloatingTaskWindow({ taskId, title: task?.title })
 
     // Optimistic update: move task from inactive to active list
     mutateInactiveTasks(
@@ -709,7 +701,6 @@ function App(): React.JSX.Element {
 
     // UI first (optimistic) - move task from active to inactive
     setCurrentTime(Date.now())
-    window.api.closeFloatingTaskWindow(taskId)
 
     // Optimistic update: move task from active to inactive list
     mutateActiveTasks(
@@ -813,13 +804,6 @@ function App(): React.JSX.Element {
       >
         <TableCell onClick={(e) => { e.stopPropagation(); setEditingTagsTaskId(null) }}>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleOpenFloatingWindow(task.id)}
-              className="p-1 rounded hover:bg-muted transition-colors"
-              title="Open floating window"
-            >
-              <Clock4 className="h-4 w-4" />
-            </button>
             <span className="text-sm min-w-[3rem]">
               {getTotalTimeDisplay(task.id)}
             </span>
@@ -1106,45 +1090,7 @@ function App(): React.JSX.Element {
                 </div>
               )}
 
-              {/* In Progress Section */}
-              <Card className="shrink-0">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
-                    In Progress
-                  </CardTitle>
-                  <CardDescription>
-                    {activeTasks.length} task{activeTasks.length === 1 ? '' : 's'} with timer running
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    {renderTableHeader()}
-                    <TableBody>
-                      {tasksLoading && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground">
-                            Loading tasks...
-                          </TableCell>
-                        </TableRow>
-                      )}
-                      {!tasksLoading && activeTasks.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground">
-                            No tasks in progress
-                          </TableCell>
-                        </TableRow>
-                      )}
-                      {!tasksLoading && activeTasks.map(renderTaskRow)}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-
-              {/* Upcoming Tasks Section */}
+              {/* Tasks Section */}
               <Card className="flex flex-col min-h-0 flex-1">
                 <CardHeader className="shrink-0">
                   <div className="flex items-center justify-between">

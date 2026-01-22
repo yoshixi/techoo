@@ -27,8 +27,8 @@ interface AppSidebarProps {
 }
 
 const menuItems = [
-  { id: 'tasks' as const, label: 'Tasks', icon: ListTodo },
   { id: 'calendar' as const, label: 'Calendar', icon: CalendarDays },
+  { id: 'tasks' as const, label: 'Tasks', icon: ListTodo },
   { id: 'settings' as const, label: 'Settings', icon: Settings }
 ]
 

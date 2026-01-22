@@ -345,6 +345,7 @@ export class NotificationScheduler {
       title: 'Task Starting Soon',
       body: `"${task.title}" is about to start`,
       silent: false,
+      timeoutType: 'never',
       actions: [
         { type: 'button', text: 'Start Timer' },
         { type: 'button', text: 'Snooze 5m' },
@@ -386,6 +387,7 @@ export class NotificationScheduler {
       title: 'Task Ending Soon',
       body: `"${task.title}" is about to end`,
       silent: false,
+      timeoutType: 'never',
       actions: [
         { type: 'button', text: 'Stop Timer' },
         { type: 'button', text: 'Snooze 5m' },
@@ -431,6 +433,7 @@ export class NotificationScheduler {
       title: 'Task Ending Soon',
       body: `"${currentTask.title}" ending. Next: "${nextTask.title}"`,
       silent: false,
+      timeoutType: 'never',
       actions: [
         { type: 'button', text: 'Stop Only' },
         { type: 'button', text: 'Stop & Start Next' },

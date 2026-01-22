@@ -167,14 +167,6 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
 
   if (!task) return null
 
-  const handleTimerStarted = (): void => {
-    window.api?.openFloatingTaskWindow?.({ taskId: task.id, title: task.title })
-  }
-
-  const handleTimerStopped = (): void => {
-    window.api?.closeFloatingTaskWindow?.(task.id)
-  }
-
   const handleToggleCompletion = async (): Promise<void> => {
     if (!currentTask) return
     setIsCompleting(true)
@@ -224,8 +216,6 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
               <TimerManager
                 taskId={task.id}
                 mode="compact"
-                onTimerStarted={handleTimerStarted}
-                onTimerStopped={handleTimerStopped}
                 onActivityRecorded={() => activitiesQuery.mutate?.()}
                 isCompleted={isCompleted}
                 onToggleCompletion={handleToggleCompletion}

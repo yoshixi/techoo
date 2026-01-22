@@ -120,10 +120,4 @@
   body {
     @apply bg-background text-foreground;
   }
-  body.floating-window {
-    @apply bg-transparent;
-  }
-  body.floating-window #root {
-    @apply bg-transparent;
-  }
 }
