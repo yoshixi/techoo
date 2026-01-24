@@ -175,11 +175,16 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
     if (!currentTask) return
     setIsCompleting(true)
     try {
+      const isCompletingTask = !currentTask.completedAt
       const response = await putApiTasksId(currentTask.id, {
         completedAt: currentTask.completedAt ? null : new Date().toISOString()
       })
       setLocalTask(response.task)
       onTaskUpdated?.(response.task)
+      // Close the detail view when completing a task
+      if (isCompletingTask) {
+        onClose()
+      }
     } catch (error) {
       console.error('Failed to update completion status:', error)
     } finally {

@@ -1,6 +1,8 @@
 import { Tray, Menu, app, BrowserWindow, nativeImage } from 'electron'
 import { join } from 'path'
 
+const API_URL = import.meta.env.MAIN_VITE_API_URL || 'http://localhost:3000'
+
 interface TimerState {
   timerId: string
   taskId: string
@@ -8,10 +10,18 @@ interface TimerState {
   startTime: string
 }
 
+interface ScheduledTask {
+  id: string
+  title: string
+  startAt: string
+}
+
 export class TrayManager {
   private tray: Tray | null = null
   private timerInterval: NodeJS.Timeout | null = null
+  private nextTaskInterval: NodeJS.Timeout | null = null
   private activeTimers: TimerState[] = []
+  private nextTask: ScheduledTask | null = null
   private onShowTaskDetail: ((taskId: string) => void) | null = null
 
   constructor(private getMainWindow: () => BrowserWindow | null) {}
@@ -33,6 +43,44 @@ export class TrayManager {
       this.tray.on('mouse-enter', () => {
         this.tray?.popUpContextMenu()
       })
+    }
+
+    // Start fetching next scheduled task
+    this.fetchNextTask()
+    this.nextTaskInterval = setInterval(() => {
+      this.fetchNextTask()
+    }, 60 * 1000) // Refresh every minute
+  }
+
+  private async fetchNextTask(): Promise<void> {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/tasks?completed=false&scheduled=true&sortBy=startAt&order=asc`
+      )
+      if (!response.ok) {
+        this.nextTask = null
+        return
+      }
+      const data = (await response.json()) as { tasks: ScheduledTask[] }
+      const tasks = data.tasks || []
+
+      // Find the next upcoming task (startAt in the future)
+      const now = Date.now()
+      const activeTaskIds = new Set(this.activeTimers.map((t) => t.taskId))
+
+      const upcomingTask = tasks.find((task) => {
+        if (!task.startAt) return false
+        if (activeTaskIds.has(task.id)) return false // Skip tasks with active timers
+        const startTime = new Date(task.startAt).getTime()
+        return startTime > now
+      })
+
+      this.nextTask = upcomingTask || null
+      this.updateDisplay()
+      this.updateContextMenu()
+    } catch (error) {
+      console.error('Failed to fetch next task for tray:', error)
+      this.nextTask = null
     }
   }
 
@@ -75,7 +123,7 @@ export class TrayManager {
         const title = this.truncateTitle(timer.taskTitle, 25)
 
         menuItems.push({
-          label: `${title}  ${timeString}`,
+          label: `▶ ${title}  ${timeString}`,
           click: () => {
             this.showMainWindow()
             this.onShowTaskDetail?.(timer.taskId)
@@ -88,6 +136,25 @@ export class TrayManager {
       menuItems.push({
         label: 'No active timers',
         enabled: false
+      })
+      menuItems.push({ type: 'separator' })
+    }
+
+    // Show next scheduled task
+    if (this.nextTask) {
+      const startTime = new Date(this.nextTask.startAt)
+      const timeString = startTime.toLocaleTimeString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+      const title = this.truncateTitle(this.nextTask.title, 25)
+
+      menuItems.push({
+        label: `Next: ${title} at ${timeString}`,
+        click: () => {
+          this.showMainWindow()
+          this.onShowTaskDetail?.(this.nextTask!.id)
+        }
       })
       menuItems.push({ type: 'separator' })
     }
@@ -115,6 +182,9 @@ export class TrayManager {
       clearInterval(this.timerInterval)
       this.timerInterval = null
     }
+
+    // Refresh next task when timer states change
+    this.fetchNextTask()
 
     if (timers.length > 0) {
       this.updateDisplay()
@@ -217,6 +287,10 @@ export class TrayManager {
     if (this.timerInterval) {
       clearInterval(this.timerInterval)
       this.timerInterval = null
+    }
+    if (this.nextTaskInterval) {
+      clearInterval(this.nextTaskInterval)
+      this.nextTaskInterval = null
     }
     this.tray?.destroy()
     this.tray = null
