@@ -25,7 +25,10 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git rev-parse:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(pnpm --filter electron list:*)",
+      "Bash(pnpm --filter electron exec npm view:*)",
+      "Bash(git restore:*)"
     ]
   }
 }
