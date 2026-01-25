@@ -8,6 +8,8 @@ Shuchu is a task management application built as a monorepo with a Next.js backe
 
 ## Agent Notes
 - Always run `pnpm run check-types` after making edits to ensure we keep the repo type-safe. Keep this as part of your default workflow.
+- Put the implementation plans to agents/plans
+- Put the general specifications to docs. The docs should work as guides for new developers. So it doesn't have to have too specific things. Ideal way is the developer should check docs first, then to nail down the specifications, they should find out the history from the agents/plans and codes.
 
 ## Development Environment
 
