@@ -43,6 +43,7 @@ import { Dialog, DialogContent } from './components/ui/dialog'
 import { formatDateTimeInput, normalizeDueDate, normalizeDateTime, getTodayRange, formatTimeRangeShort } from './lib/time'
 import { CalendarView, type ViewMode } from './components/CalendarView'
 import { TaskTimeRangePicker } from './components/TaskTimeRangePicker'
+import { useIsNarrow } from './hooks/use-mobile'
 
 type View = 'tasks' | 'calendar' | 'settings'
 
@@ -151,9 +152,22 @@ function App(): React.JSX.Element {
   const [currentView, setCurrentView] = useState<View>('calendar')
   const [showCompleted, setShowCompleted] = useState(false)
   const [showTodayOnly, setShowTodayOnly] = useState(true)
+  // "Unscheduled" toggle - controls visibility and ordering of unscheduled tasks
+  // When ON:  Shows all tasks, with scheduled tasks first (sorted by startAt asc), then unscheduled last
+  // When OFF: Only shows scheduled tasks (hides unscheduled)
+  //
+  // Interaction with "Today" filter:
+  // | Today | Unscheduled | Result |
+  // |-------|-------------|--------|
+  // | ON    | ON          | Today's scheduled tasks + all unscheduled (scheduled first) |
+  // | ON    | OFF         | Only today's scheduled tasks |
+  // | OFF   | ON          | All tasks (scheduled first, then unscheduled) |
+  // | OFF   | OFF         | Only scheduled tasks |
+  const [showUnscheduled, setShowUnscheduled] = useState(true)
   const [filterTagIds, setFilterTagIds] = useState<string[]>([])
   const [sortBy, setSortBy] = useState<'createdAt' | 'startAt'>('startAt')
   const [calendarViewMode, setCalendarViewMode] = useState<ViewMode>('day')
+  const [currentTime, setCurrentTime] = useState(Date.now())
   const [calendarDraft, setCalendarDraft] = useState<{
     title: string
     description: string
@@ -164,8 +178,17 @@ function App(): React.JSX.Element {
   const [isCreatingCalendarTask, setIsCreatingCalendarTask] = useState(false)
   const [calendarCreateError, setCalendarCreateError] = useState<string | null>(null)
 
+  // Sidebar state controlled by window width
+  const isNarrow = useIsNarrow()
+  const [sidebarOpen, setSidebarOpen] = useState(!isNarrow)
+
+  // Auto-collapse sidebar when window becomes narrow
+  useEffect(() => {
+    setSidebarOpen(!isNarrow)
+  }, [isNarrow])
+
   // Calculate today's date range for "Today" filter
-  const todayRange = useMemo(() => getTodayRange(), [])
+  const todayRange = useMemo(() => getTodayRange(), [currentTime])
 
   // Query for tasks with active timers (filtered by current view settings)
   const activeTaskQuery = useMemo(
@@ -184,19 +207,27 @@ function App(): React.JSX.Element {
         }
       }
 
-      // For tasks view: showTodayOnly filter shows today's tasks OR unscheduled
+      // For tasks view:
+      // - showUnscheduled=false: only show scheduled tasks
+      // - showUnscheduled=true + showTodayOnly=true: show today's scheduled + all unscheduled (uses OR logic)
+      // - showUnscheduled=true + showTodayOnly=false: show all tasks
+      const scheduledFilter = showUnscheduled
+        ? (showTodayOnly ? ('false' as const) : undefined) // 'false' triggers OR logic with date range
+        : ('true' as const) // only scheduled tasks
+
       return {
         completed: showCompleted ? undefined : ('false' as const),
         hasActiveTimer: 'true' as const,
-        scheduled: showTodayOnly ? ('false' as const) : undefined,
+        scheduled: scheduledFilter,
         startAtFrom: showTodayOnly ? todayRange.startAt : undefined,
         startAtTo: showTodayOnly ? todayRange.endAt : undefined,
         sortBy,
         order: 'asc' as const,
+        nullsLast: showUnscheduled && sortBy === 'startAt' ? ('true' as const) : undefined,
         tags: filterTagIds.length ? filterTagIds : undefined
       }
     },
-    [showCompleted, showTodayOnly, sortBy, filterTagIds, currentView, todayRange]
+    [showCompleted, showTodayOnly, showUnscheduled, sortBy, filterTagIds, currentView, todayRange]
   )
   const {
     data: activeTasksResponse,
@@ -238,19 +269,27 @@ function App(): React.JSX.Element {
         }
       }
 
-      // For tasks view: showTodayOnly filter shows today's tasks OR unscheduled
+      // For tasks view:
+      // - showUnscheduled=false: only show scheduled tasks
+      // - showUnscheduled=true + showTodayOnly=true: show today's scheduled + all unscheduled (uses OR logic)
+      // - showUnscheduled=true + showTodayOnly=false: show all tasks
+      const scheduledFilter = showUnscheduled
+        ? (showTodayOnly ? ('false' as const) : undefined) // 'false' triggers OR logic with date range
+        : ('true' as const) // only scheduled tasks
+
       return {
         completed: showCompleted ? undefined : ('false' as const),
         hasActiveTimer: 'false' as const,
-        scheduled: showTodayOnly ? ('false' as const) : undefined,
+        scheduled: scheduledFilter,
         startAtFrom: showTodayOnly ? todayRange.startAt : undefined,
         startAtTo: showTodayOnly ? todayRange.endAt : undefined,
         sortBy,
         order: 'asc' as const,
+        nullsLast: showUnscheduled && sortBy === 'startAt' ? ('true' as const) : undefined,
         tags: filterTagIds.length ? filterTagIds : undefined
       }
     },
-    [showCompleted, showTodayOnly, sortBy, filterTagIds, currentView, todayRange]
+    [showCompleted, showTodayOnly, showUnscheduled, sortBy, filterTagIds, currentView, todayRange]
   )
   const {
     data: inactiveTasksResponse,
@@ -259,6 +298,10 @@ function App(): React.JSX.Element {
     mutate: mutateInactiveTasks
   } = useGetApiTasks(inactiveTaskQuery)
   const inactiveTasks = inactiveTasksResponse?.tasks ?? []
+
+  const displayTasks = useMemo(() => {
+    return [...activeTasks, ...inactiveTasks]
+  }, [activeTasks, inactiveTasks])
 
   // Combined tasks for operations that need to find a task
   const allTasks = useMemo(() => {
@@ -293,7 +336,6 @@ function App(): React.JSX.Element {
   const [scheduleEditingTask, setScheduleEditingTask] = useState<Task | null>(null)
   const [isSchedulePickerOpen, setIsSchedulePickerOpen] = useState(false)
 
-  const [currentTime, setCurrentTime] = useState(Date.now())
   const taskIds = useMemo(() => allTasks.map((task) => task.id), [allTasks])
 
   const shouldFetchTimer = useMemo(() => taskIds.length > 0, [taskIds])
@@ -339,8 +381,8 @@ function App(): React.JSX.Element {
 
   // Combined list for keyboard navigation (active tasks first, then inactive)
   const allTasksForNavigation = useMemo(() => {
-    return [...activeTasks, ...inactiveTasks]
-  }, [activeTasks, inactiveTasks])
+    return displayTasks
+  }, [displayTasks])
 
   // Get the focused task
   const focusedTask = useMemo(() => {
@@ -1159,7 +1201,7 @@ function App(): React.JSX.Element {
   }
 
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
       <KeyboardShortcuts
         currentView={currentView}
         onNewTask={startAddingTask}
@@ -1217,7 +1259,7 @@ function App(): React.JSX.Element {
               {!tasksLoading && !tasksError && (
                 <CalendarView
                   className="flex-1 min-h-0"
-                  tasks={allTasks}
+                  tasks={displayTasks}
                   viewMode={calendarViewMode}
                   onViewModeChange={setCalendarViewMode}
                   onTaskSelect={(task) => {
@@ -1250,7 +1292,7 @@ function App(): React.JSX.Element {
             </main>
           </div>
         ) : (
-          <div className="flex flex-1 min-h-0 flex-col p-8">
+          <div className="flex flex-1 min-h-0 flex-col p-4 sm:p-6 lg:p-8">
             <main className="mx-auto max-w-6xl w-full flex flex-col min-h-0 flex-1 gap-6">
               {timersError && shouldFetchTimer && (
                 <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
@@ -1267,7 +1309,7 @@ function App(): React.JSX.Element {
                       <CardDescription>
                         {tasksLoading
                           ? 'Loading tasks...'
-                          : `${allTasks.length} task${allTasks.length === 1 ? '' : 's'}`}
+                          : `${displayTasks.length} task${displayTasks.length === 1 ? '' : 's'}`}
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-3">
@@ -1306,6 +1348,18 @@ function App(): React.JSX.Element {
                         />
                       </div>
 
+                      <div className="flex items-center justify-between w-[150px] h-8 rounded-md border border-input px-3">
+                        <Label htmlFor="show-unscheduled" className="text-sm cursor-pointer">
+                          Unscheduled
+                        </Label>
+                        <Switch
+                          id="show-unscheduled"
+                          checked={showUnscheduled}
+                          onCheckedChange={setShowUnscheduled}
+                          className="scale-75"
+                        />
+                      </div>
+
                       <TagCombobox
                         selectedTagIds={filterTagIds}
                         onSelectionChange={setFilterTagIds}
@@ -1322,7 +1376,8 @@ function App(): React.JSX.Element {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-1 min-h-0 overflow-y-auto">
+                <CardContent className="flex-1 min-h-0 overflow-auto">
+                  <div className="overflow-x-auto min-w-0">
                   <Table>
                     {renderTableHeader()}
                     <TableBody>
@@ -1423,16 +1478,17 @@ function App(): React.JSX.Element {
                           </TableCell>
                         </TableRow>
                       )}
-                      {!tasksLoading && !tasksError && inactiveTasks.length === 0 && !isAddingTask && (
+                      {!tasksLoading && !tasksError && displayTasks.length === 0 && !isAddingTask && (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center text-muted-foreground">
                             No tasks found
                           </TableCell>
                         </TableRow>
                       )}
-                      {!tasksLoading && !tasksError && allTasks.map(renderTaskRow)}
+                      {!tasksLoading && !tasksError && displayTasks.map(renderTaskRow)}
                     </TableBody>
                   </Table>
+                  </div>
                 </CardContent>
               </Card>
             </main>
