@@ -27,15 +27,21 @@ export function CreateTaskSheet({
   const { mutate } = useSWRConfig();
   const [title, setTitle] = useState('');
   const [startAt, setStartAt] = useState<Date | null>(null);
+  const [endAt, setEndAt] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const { trigger: createTask, isMutating } = usePostApiTasks();
 
-  // Update startAt when initialStartAt changes
+  // Update startAt and endAt when initial values change
   useEffect(() => {
-    if (visible && initialStartAt) {
-      setStartAt(initialStartAt);
+    if (visible) {
+      if (initialStartAt) {
+        setStartAt(initialStartAt);
+      }
+      if (initialEndAt) {
+        setEndAt(initialEndAt);
+      }
     }
-  }, [visible, initialStartAt]);
+  }, [visible, initialStartAt, initialEndAt]);
 
   const handleCreate = useCallback(async () => {
     if (!title.trim()) return;
@@ -44,19 +50,22 @@ export function CreateTaskSheet({
       await createTask({
         title: title.trim(),
         startAt: startAt?.toISOString(),
+        endAt: endAt?.toISOString(),
       });
       await mutate(getGetApiTasksKey());
       setTitle('');
       setStartAt(null);
+      setEndAt(null);
       onClose();
     } catch (error) {
       console.error('Failed to create task:', error);
     }
-  }, [title, startAt, createTask, mutate, onClose]);
+  }, [title, startAt, endAt, createTask, mutate, onClose]);
 
   const handleClose = useCallback(() => {
     setTitle('');
     setStartAt(null);
+    setEndAt(null);
     onClose();
   }, [onClose]);
 

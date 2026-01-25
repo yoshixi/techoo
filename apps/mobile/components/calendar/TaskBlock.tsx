@@ -7,6 +7,8 @@ export interface TaskBlockProps {
   top: number;
   height: number;
   width: number;
+  /** Left position for lane-based layout */
+  left?: number;
   isActive: boolean;
   isCompleted: boolean;
   onPress: () => void;
@@ -17,6 +19,7 @@ export function TaskBlock({
   top,
   height,
   width,
+  left = 2,
   isActive,
   isCompleted,
   onPress,
@@ -33,7 +36,7 @@ export function TaskBlock({
       style={{
         position: 'absolute',
         top,
-        left: 2,
+        left,
         height,
         width,
       }}

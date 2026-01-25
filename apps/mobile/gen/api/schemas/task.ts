@@ -29,6 +29,11 @@ export interface Task {
    */
   startAt?: string | null;
   /**
+   * End date for the task in ISO 8601 format
+   * @nullable
+   */
+  endAt?: string | null;
+  /**
    * Completion timestamp in ISO 8601 format
    * @nullable
    */

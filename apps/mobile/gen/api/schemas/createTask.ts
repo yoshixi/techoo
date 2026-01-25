@@ -19,6 +19,8 @@ export interface CreateTask {
   dueDate?: string;
   /** Start date for the task in ISO 8601 format */
   startAt?: string;
+  /** End date for the task in ISO 8601 format */
+  endAt?: string;
   /**
    * Completion timestamp. Use null to mark the task as incomplete
    * @nullable

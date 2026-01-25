@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -10,6 +10,7 @@ import type { Task } from '@/gen/api/schemas';
 import { Text } from '@/components/ui/text';
 import { TaskBlock } from './TaskBlock';
 import { isToday } from '@/lib/time';
+import { calculateTaskLayoutsForDay } from '@/lib/calendar-utils';
 
 export interface TimeRange {
   startAt: Date;
@@ -42,6 +43,12 @@ export function DayColumn({
 }: DayColumnProps) {
   const today = isToday(date);
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  // Calculate task layouts with lane assignments for overlapping tasks
+  const taskLayouts = useMemo(
+    () => calculateTaskLayoutsForDay(tasks, date, SLOT_MINUTES),
+    [tasks, date]
+  );
 
   // Shared values for drag selection
   const isDragging = useSharedValue(false);
@@ -178,16 +185,20 @@ export function DayColumn({
           {/* Selection preview */}
           <Animated.View style={selectionAnimatedStyle} pointerEvents="none" />
 
-          {/* Task blocks */}
-          {tasks.map((task) => {
-            if (!task.startAt) return null;
-            const startTime = new Date(task.startAt);
-            const startMinutes = startTime.getHours() * 60 + startTime.getMinutes();
+          {/* Task blocks with lane-based layout for overlapping tasks */}
+          {taskLayouts.map((layout) => {
+            const { task, startDate, endDate, lane, laneCount } = layout;
+            const startMinutes = startDate.getHours() * 60 + startDate.getMinutes();
             const top = (startMinutes / 60) * hourHeight;
-            const duration = 60; // Default 1 hour for display
+            const duration = (endDate.getTime() - startDate.getTime()) / 60000;
             const height = (duration / 60) * hourHeight;
             const isActive = activeTimerTaskIds.has(task.id);
             const isCompleted = !!task.completedAt;
+
+            // Calculate width and left position based on lane assignment
+            const availableWidth = columnWidth - 4; // 2px padding on each side
+            const laneWidth = availableWidth / laneCount;
+            const left = 2 + lane * laneWidth;
 
             return (
               <TaskBlock
@@ -195,7 +206,8 @@ export function DayColumn({
                 task={task}
                 top={top}
                 height={Math.max(height, 30)}
-                width={columnWidth - 4}
+                width={laneWidth - 2} // 2px gap between lanes
+                left={left}
                 isActive={isActive}
                 isCompleted={isCompleted}
                 onPress={() => onTaskPress(task)}
