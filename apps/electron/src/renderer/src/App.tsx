@@ -43,6 +43,7 @@ import { Dialog, DialogContent } from './components/ui/dialog'
 import { formatDateTimeInput, normalizeDueDate, normalizeDateTime, getTodayRange, formatTimeRangeShort } from './lib/time'
 import { CalendarView, type ViewMode } from './components/CalendarView'
 import { TaskTimeRangePicker } from './components/TaskTimeRangePicker'
+import { useIsNarrow } from './hooks/use-mobile'
 
 type View = 'tasks' | 'calendar' | 'settings'
 
@@ -151,6 +152,18 @@ function App(): React.JSX.Element {
   const [currentView, setCurrentView] = useState<View>('calendar')
   const [showCompleted, setShowCompleted] = useState(false)
   const [showTodayOnly, setShowTodayOnly] = useState(true)
+  // "Unscheduled" toggle - controls visibility and ordering of unscheduled tasks
+  // When ON:  Shows all tasks, with scheduled tasks first (sorted by startAt asc), then unscheduled last
+  // When OFF: Only shows scheduled tasks (hides unscheduled)
+  //
+  // Interaction with "Today" filter:
+  // | Today | Unscheduled | Result |
+  // |-------|-------------|--------|
+  // | ON    | ON          | Today's scheduled tasks + all unscheduled (scheduled first) |
+  // | ON    | OFF         | Only today's scheduled tasks |
+  // | OFF   | ON          | All tasks (scheduled first, then unscheduled) |
+  // | OFF   | OFF         | Only scheduled tasks |
+  const [showUnscheduled, setShowUnscheduled] = useState(true)
   const [filterTagIds, setFilterTagIds] = useState<string[]>([])
   const [sortBy, setSortBy] = useState<'createdAt' | 'startAt'>('startAt')
   const [calendarViewMode, setCalendarViewMode] = useState<ViewMode>('day')
@@ -164,6 +177,15 @@ function App(): React.JSX.Element {
   } | null>(null)
   const [isCreatingCalendarTask, setIsCreatingCalendarTask] = useState(false)
   const [calendarCreateError, setCalendarCreateError] = useState<string | null>(null)
+
+  // Sidebar state controlled by window width
+  const isNarrow = useIsNarrow()
+  const [sidebarOpen, setSidebarOpen] = useState(!isNarrow)
+
+  // Auto-collapse sidebar when window becomes narrow
+  useEffect(() => {
+    setSidebarOpen(!isNarrow)
+  }, [isNarrow])
 
   // Calculate today's date range for "Today" filter
   const todayRange = useMemo(() => getTodayRange(), [currentTime])
@@ -185,19 +207,27 @@ function App(): React.JSX.Element {
         }
       }
 
-      // For tasks view: showTodayOnly filter shows today's tasks OR unscheduled
+      // For tasks view:
+      // - showUnscheduled=false: only show scheduled tasks
+      // - showUnscheduled=true + showTodayOnly=true: show today's scheduled + all unscheduled (uses OR logic)
+      // - showUnscheduled=true + showTodayOnly=false: show all tasks
+      const scheduledFilter = showUnscheduled
+        ? (showTodayOnly ? ('false' as const) : undefined) // 'false' triggers OR logic with date range
+        : ('true' as const) // only scheduled tasks
+
       return {
         completed: showCompleted ? undefined : ('false' as const),
         hasActiveTimer: 'true' as const,
-        scheduled: showTodayOnly ? ('false' as const) : undefined,
+        scheduled: scheduledFilter,
         startAtFrom: showTodayOnly ? todayRange.startAt : undefined,
         startAtTo: showTodayOnly ? todayRange.endAt : undefined,
         sortBy,
         order: 'asc' as const,
+        nullsLast: showUnscheduled && sortBy === 'startAt' ? ('true' as const) : undefined,
         tags: filterTagIds.length ? filterTagIds : undefined
       }
     },
-    [showCompleted, showTodayOnly, sortBy, filterTagIds, currentView, todayRange]
+    [showCompleted, showTodayOnly, showUnscheduled, sortBy, filterTagIds, currentView, todayRange]
   )
   const {
     data: activeTasksResponse,
@@ -239,19 +269,27 @@ function App(): React.JSX.Element {
         }
       }
 
-      // For tasks view: showTodayOnly filter shows today's tasks OR unscheduled
+      // For tasks view:
+      // - showUnscheduled=false: only show scheduled tasks
+      // - showUnscheduled=true + showTodayOnly=true: show today's scheduled + all unscheduled (uses OR logic)
+      // - showUnscheduled=true + showTodayOnly=false: show all tasks
+      const scheduledFilter = showUnscheduled
+        ? (showTodayOnly ? ('false' as const) : undefined) // 'false' triggers OR logic with date range
+        : ('true' as const) // only scheduled tasks
+
       return {
         completed: showCompleted ? undefined : ('false' as const),
         hasActiveTimer: 'false' as const,
-        scheduled: showTodayOnly ? ('false' as const) : undefined,
+        scheduled: scheduledFilter,
         startAtFrom: showTodayOnly ? todayRange.startAt : undefined,
         startAtTo: showTodayOnly ? todayRange.endAt : undefined,
         sortBy,
         order: 'asc' as const,
+        nullsLast: showUnscheduled && sortBy === 'startAt' ? ('true' as const) : undefined,
         tags: filterTagIds.length ? filterTagIds : undefined
       }
     },
-    [showCompleted, showTodayOnly, sortBy, filterTagIds, currentView, todayRange]
+    [showCompleted, showTodayOnly, showUnscheduled, sortBy, filterTagIds, currentView, todayRange]
   )
   const {
     data: inactiveTasksResponse,
@@ -1163,7 +1201,7 @@ function App(): React.JSX.Element {
   }
 
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
       <KeyboardShortcuts
         currentView={currentView}
         onNewTask={startAddingTask}
@@ -1306,6 +1344,18 @@ function App(): React.JSX.Element {
                           id="show-today-only"
                           checked={showTodayOnly}
                           onCheckedChange={setShowTodayOnly}
+                          className="scale-75"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between w-[150px] h-8 rounded-md border border-input px-3">
+                        <Label htmlFor="show-unscheduled" className="text-sm cursor-pointer">
+                          Unscheduled
+                        </Label>
+                        <Switch
+                          id="show-unscheduled"
+                          checked={showUnscheduled}
+                          onCheckedChange={setShowUnscheduled}
                           className="scale-75"
                         />
                       </div>

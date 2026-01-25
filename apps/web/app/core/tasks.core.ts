@@ -174,6 +174,14 @@ export const TaskQueryParamsModel = z.object({
     description: 'Sort order: asc (ascending/oldest first) or desc (descending/newest first). Defaults to desc',
     example: 'asc'
   }),
+  // nullsLast parameter is used by the "Unscheduled" toggle in the task table view.
+  // When showUnscheduled=true, the frontend sets nullsLast=true to ensure:
+  // - Scheduled tasks (with startAt) appear first, sorted by startAt ascending
+  // - Unscheduled tasks (startAt is null) appear last
+  nullsLast: BooleanQueryParam.optional().openapi({
+    description: 'When true, tasks with null values for the sort field appear last. Useful for sorting by startAt to show scheduled tasks first, then unscheduled tasks',
+    example: true
+  }),
   tags: z.preprocess((value) => {
     if (typeof value === 'string') {
       return value.includes(',') ? value.split(',').map((item) => item.trim()) : [value]
