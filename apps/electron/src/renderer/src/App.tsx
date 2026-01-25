@@ -154,6 +154,7 @@ function App(): React.JSX.Element {
   const [filterTagIds, setFilterTagIds] = useState<string[]>([])
   const [sortBy, setSortBy] = useState<'createdAt' | 'startAt'>('startAt')
   const [calendarViewMode, setCalendarViewMode] = useState<ViewMode>('day')
+  const [currentTime, setCurrentTime] = useState(Date.now())
   const [calendarDraft, setCalendarDraft] = useState<{
     title: string
     description: string
@@ -165,7 +166,7 @@ function App(): React.JSX.Element {
   const [calendarCreateError, setCalendarCreateError] = useState<string | null>(null)
 
   // Calculate today's date range for "Today" filter
-  const todayRange = useMemo(() => getTodayRange(), [])
+  const todayRange = useMemo(() => getTodayRange(), [currentTime])
 
   // Query for tasks with active timers (filtered by current view settings)
   const activeTaskQuery = useMemo(
@@ -260,6 +261,10 @@ function App(): React.JSX.Element {
   } = useGetApiTasks(inactiveTaskQuery)
   const inactiveTasks = inactiveTasksResponse?.tasks ?? []
 
+  const displayTasks = useMemo(() => {
+    return [...activeTasks, ...inactiveTasks]
+  }, [activeTasks, inactiveTasks])
+
   // Combined tasks for operations that need to find a task
   const allTasks = useMemo(() => {
     // Merge activeTasks, inactiveTasks, and sidebarActiveTasks, removing duplicates
@@ -293,7 +298,6 @@ function App(): React.JSX.Element {
   const [scheduleEditingTask, setScheduleEditingTask] = useState<Task | null>(null)
   const [isSchedulePickerOpen, setIsSchedulePickerOpen] = useState(false)
 
-  const [currentTime, setCurrentTime] = useState(Date.now())
   const taskIds = useMemo(() => allTasks.map((task) => task.id), [allTasks])
 
   const shouldFetchTimer = useMemo(() => taskIds.length > 0, [taskIds])
@@ -339,8 +343,8 @@ function App(): React.JSX.Element {
 
   // Combined list for keyboard navigation (active tasks first, then inactive)
   const allTasksForNavigation = useMemo(() => {
-    return [...activeTasks, ...inactiveTasks]
-  }, [activeTasks, inactiveTasks])
+    return displayTasks
+  }, [displayTasks])
 
   // Get the focused task
   const focusedTask = useMemo(() => {
@@ -1217,7 +1221,7 @@ function App(): React.JSX.Element {
               {!tasksLoading && !tasksError && (
                 <CalendarView
                   className="flex-1 min-h-0"
-                  tasks={allTasks}
+                  tasks={displayTasks}
                   viewMode={calendarViewMode}
                   onViewModeChange={setCalendarViewMode}
                   onTaskSelect={(task) => {
@@ -1267,7 +1271,7 @@ function App(): React.JSX.Element {
                       <CardDescription>
                         {tasksLoading
                           ? 'Loading tasks...'
-                          : `${allTasks.length} task${allTasks.length === 1 ? '' : 's'}`}
+                          : `${displayTasks.length} task${displayTasks.length === 1 ? '' : 's'}`}
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-3">
@@ -1424,14 +1428,14 @@ function App(): React.JSX.Element {
                           </TableCell>
                         </TableRow>
                       )}
-                      {!tasksLoading && !tasksError && inactiveTasks.length === 0 && !isAddingTask && (
+                      {!tasksLoading && !tasksError && displayTasks.length === 0 && !isAddingTask && (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center text-muted-foreground">
                             No tasks found
                           </TableCell>
                         </TableRow>
                       )}
-                      {!tasksLoading && !tasksError && allTasks.map(renderTaskRow)}
+                      {!tasksLoading && !tasksError && displayTasks.map(renderTaskRow)}
                     </TableBody>
                   </Table>
                   </div>
