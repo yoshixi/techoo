@@ -1250,7 +1250,7 @@ function App(): React.JSX.Element {
             </main>
           </div>
         ) : (
-          <div className="flex flex-1 min-h-0 flex-col p-8">
+          <div className="flex flex-1 min-h-0 flex-col p-4 sm:p-6 lg:p-8">
             <main className="mx-auto max-w-6xl w-full flex flex-col min-h-0 flex-1 gap-6">
               {timersError && shouldFetchTimer && (
                 <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
@@ -1322,7 +1322,8 @@ function App(): React.JSX.Element {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-1 min-h-0 overflow-y-auto">
+                <CardContent className="flex-1 min-h-0 overflow-auto">
+                  <div className="overflow-x-auto min-w-0">
                   <Table>
                     {renderTableHeader()}
                     <TableBody>
@@ -1433,6 +1434,7 @@ function App(): React.JSX.Element {
                       {!tasksLoading && !tasksError && allTasks.map(renderTaskRow)}
                     </TableBody>
                   </Table>
+                  </div>
                 </CardContent>
               </Card>
             </main>

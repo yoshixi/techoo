@@ -24,6 +24,7 @@ import {
   formatTimeRange,
   dateForSlot,
   calculateTaskLayouts,
+  computeTaskEnd,
   type TaskLayout
 } from '../lib/calendar-utils'
 
@@ -70,10 +71,11 @@ const getSelectionFromRange = (
   slotMinutes?: number,
   slotCount?: number
 ): DragSelection | null => {
-  if (!startAt || !endAt || !dayStart || !slotMinutes || !slotCount) return null
+  if (!startAt || !dayStart || !slotMinutes || !slotCount) return null
   const startDate = new Date(startAt)
-  const endDate = new Date(endAt)
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return null
+  if (Number.isNaN(startDate.getTime())) return null
+  // Compute default endAt if missing using computeTaskEnd (30 min default duration)
+  const endDate = computeTaskEnd(startDate, endAt)
   const base = startOfDay(dayStart).getTime()
   const startDayOffset = startOfDay(startDate).getTime() - base
   const endDayOffset = startOfDay(endDate).getTime() - base

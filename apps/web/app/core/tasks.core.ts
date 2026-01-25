@@ -75,7 +75,15 @@ export const CreateTaskModel = z.object({
     description: 'Array of tag IDs to associate with the task',
     example: []
   })
-}).openapi('CreateTask')
+}).refine(
+  (data) => {
+    if (data.startAt && data.endAt) {
+      return new Date(data.startAt) <= new Date(data.endAt)
+    }
+    return true
+  },
+  { message: 'Start time must be before or equal to end time', path: ['endAt'] }
+).openapi('CreateTask')
 
 // Update task input model
 export const UpdateTaskModel = z.object({
@@ -107,7 +115,15 @@ export const UpdateTaskModel = z.object({
     description: 'Array of tag IDs to associate with the task. Replaces all existing tags',
     example: []
   })
-}).openapi('UpdateTask')
+}).refine(
+  (data) => {
+    if (data.startAt && data.endAt) {
+      return new Date(data.startAt) <= new Date(data.endAt)
+    }
+    return true
+  },
+  { message: 'Start time must be before or equal to end time', path: ['endAt'] }
+).openapi('UpdateTask')
 
 // Task list response model
 export const TaskListResponseModel = z.object({
