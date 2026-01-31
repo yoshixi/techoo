@@ -164,6 +164,7 @@ type TaskFilterOptions = {
   startAtTo?: string
   sortBy?: 'createdAt' | 'startAt' | 'dueDate'
   order?: 'asc' | 'desc'
+  nullsLast?: boolean
   tags?: string[]
 }
 
@@ -285,11 +286,34 @@ export async function getAllTasks(db: DB, userId: string, filters?: TaskFilterOp
   }
 
   // Execute query with all conditions
-  dbTasks = await db
-    .select()
-    .from(tasksTable)
-    .where(and(...baseConditions))
-    .orderBy(sortOrder(orderByField))
+  //
+  // NULLS LAST Sorting (nullsLast parameter):
+  // Used by the "Unscheduled" toggle in the task table view to control task ordering.
+  //
+  // When nullsLast=true:
+  // - Adds `field IS NULL` as primary sort key (returns 0 for non-null, 1 for null)
+  // - Scheduled tasks (startAt not null) appear first, sorted by startAt ascending
+  // - Unscheduled tasks (startAt is null) appear last
+  //
+  // This enables the following behavior in the UI:
+  // | Unscheduled Toggle | Behavior |
+  // |--------------------|----------|
+  // | ON (default)       | Shows all tasks, scheduled first then unscheduled |
+  // | OFF                | Only shows scheduled tasks (uses scheduled='true' filter) |
+  //
+  if (filters?.nullsLast) {
+    dbTasks = await db
+      .select()
+      .from(tasksTable)
+      .where(and(...baseConditions))
+      .orderBy(sql`${orderByField} IS NULL`, sortOrder(orderByField))
+  } else {
+    dbTasks = await db
+      .select()
+      .from(tasksTable)
+      .where(and(...baseConditions))
+      .orderBy(sortOrder(orderByField))
+  }
 
   // Batch load tags for all tasks
   const taskIds = dbTasks.map(t => t.id.toString())

@@ -145,6 +145,9 @@ export class NotificationScheduler {
         detached: true,
         stdio: 'ignore'
       })
+      child.on('error', (error) => {
+        console.warn('Failed to open notification settings:', error)
+      })
       child.unref()
     }
   }

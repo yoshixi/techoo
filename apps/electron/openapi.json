@@ -783,6 +783,21 @@
           },
           {
             "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "When true, tasks with null values for the sort field appear last. Useful for sorting by startAt to show scheduled tasks first, then unscheduled tasks",
+              "example": true
+            },
+            "required": false,
+            "description": "When true, tasks with null values for the sort field appear last. Useful for sorting by startAt to show scheduled tasks first, then unscheduled tasks",
+            "name": "nullsLast",
+            "in": "query"
+          },
+          {
+            "schema": {
               "type": "array",
               "items": {
                 "type": "string"

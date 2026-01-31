@@ -75,7 +75,15 @@ export const CreateTaskModel = z.object({
     description: 'Array of tag IDs to associate with the task',
     example: []
   })
-}).openapi('CreateTask')
+}).refine(
+  (data) => {
+    if (data.startAt && data.endAt) {
+      return new Date(data.startAt) <= new Date(data.endAt)
+    }
+    return true
+  },
+  { message: 'Start time must be before or equal to end time', path: ['endAt'] }
+).openapi('CreateTask')
 
 // Update task input model
 export const UpdateTaskModel = z.object({
@@ -107,7 +115,15 @@ export const UpdateTaskModel = z.object({
     description: 'Array of tag IDs to associate with the task. Replaces all existing tags',
     example: []
   })
-}).openapi('UpdateTask')
+}).refine(
+  (data) => {
+    if (data.startAt && data.endAt) {
+      return new Date(data.startAt) <= new Date(data.endAt)
+    }
+    return true
+  },
+  { message: 'Start time must be before or equal to end time', path: ['endAt'] }
+).openapi('UpdateTask')
 
 // Task list response model
 export const TaskListResponseModel = z.object({
@@ -157,6 +173,14 @@ export const TaskQueryParamsModel = z.object({
   order: z.enum(['asc', 'desc']).optional().openapi({
     description: 'Sort order: asc (ascending/oldest first) or desc (descending/newest first). Defaults to desc',
     example: 'asc'
+  }),
+  // nullsLast parameter is used by the "Unscheduled" toggle in the task table view.
+  // When showUnscheduled=true, the frontend sets nullsLast=true to ensure:
+  // - Scheduled tasks (with startAt) appear first, sorted by startAt ascending
+  // - Unscheduled tasks (startAt is null) appear last
+  nullsLast: BooleanQueryParam.optional().openapi({
+    description: 'When true, tasks with null values for the sort field appear last. Useful for sorting by startAt to show scheduled tasks first, then unscheduled tasks',
+    example: true
   }),
   tags: z.preprocess((value) => {
     if (typeof value === 'string') {
