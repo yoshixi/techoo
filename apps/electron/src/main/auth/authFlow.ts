@@ -7,7 +7,7 @@ const CLERK_FRONTEND_API = import.meta.env.MAIN_VITE_CLERK_FRONTEND_API || ''
 
 // Custom protocol for OAuth callback
 const PROTOCOL = 'shuchu'
-const CALLBACK_PATH = 'oauth-callback'
+const CALLBACK_PATH = 'auth/callback'
 const REDIRECT_URI = `${PROTOCOL}://${CALLBACK_PATH}`
 
 // Auth state for PKCE flow
@@ -178,6 +178,7 @@ async function exchangeCodeForTokens(code: string): Promise<void> {
 
   const tokens: TokenData = {
     accessToken: data.access_token,
+    idToken: data.id_token, // OIDC ID token for backend verification
     refreshToken: data.refresh_token,
     expiresAt
   }
@@ -225,6 +226,7 @@ export async function refreshAccessToken(): Promise<boolean> {
 
     const newTokens: TokenData = {
       accessToken: data.access_token,
+      idToken: data.id_token || tokens.idToken,
       refreshToken: data.refresh_token || tokens.refreshToken,
       expiresAt
     }

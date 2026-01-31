@@ -3,12 +3,14 @@ import { safeStorage } from 'electron'
 
 export interface TokenData {
   accessToken: string
+  idToken?: string // OIDC ID token for backend verification
   refreshToken?: string
   expiresAt: number // Unix timestamp in milliseconds
 }
 
 interface StoredTokenData {
   encryptedAccessToken: string
+  encryptedIdToken?: string
   encryptedRefreshToken?: string
   expiresAt: number
 }
@@ -34,6 +36,10 @@ export function setTokens(tokens: TokenData): void {
     expiresAt: tokens.expiresAt
   }
 
+  if (tokens.idToken) {
+    storedData.encryptedIdToken = encryptToken(tokens.idToken)
+  }
+
   if (tokens.refreshToken) {
     storedData.encryptedRefreshToken = encryptToken(tokens.refreshToken)
   }
@@ -55,6 +61,10 @@ export function getTokens(): TokenData | null {
     const tokens: TokenData = {
       accessToken: decryptToken(storedData.encryptedAccessToken),
       expiresAt: storedData.expiresAt
+    }
+
+    if (storedData.encryptedIdToken) {
+      tokens.idToken = decryptToken(storedData.encryptedIdToken)
     }
 
     if (storedData.encryptedRefreshToken) {

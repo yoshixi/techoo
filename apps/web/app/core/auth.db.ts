@@ -11,13 +11,25 @@ export interface AuthProviderInfo {
   imageUrl?: string      // Profile image URL
 }
 
+// In-memory cache for user lookups (TTL: 5 minutes)
+// Key: `${provider}:${providerId}`
+const userCache = new Map<string, { user: SelectUser; expiresAt: number }>()
+const CACHE_TTL_MS = 5 * 60 * 1000
+
+function getCacheKey(provider: string, providerId: string): string {
+  return `${provider}:${providerId}`
+}
+
 /**
  * Find or create a user by their auth provider credentials.
  *
  * This function:
- * 1. Looks up the user_auth_providers table by (provider, providerId)
- * 2. If found, returns the linked user (optionally updating provider data)
- * 3. If not found, creates a new user and auth provider record
+ * 1. Checks in-memory cache first
+ * 2. Looks up the user_auth_providers table by (provider, providerId)
+ * 3. If found, returns the linked user (optionally updating provider data)
+ * 4. If not found, creates a new user and auth provider record
+ *
+ * Handles race conditions when multiple requests try to create the same user.
  *
  * @param db - Database instance
  * @param providerInfo - Authentication provider information
@@ -28,6 +40,14 @@ export async function findOrCreateUserByProvider(
   providerInfo: AuthProviderInfo
 ): Promise<SelectUser> {
   const { provider, providerId, email, name, imageUrl } = providerInfo
+  const cacheKey = getCacheKey(provider, providerId)
+  const now = Date.now()
+
+  // Check cache first
+  const cached = userCache.get(cacheKey)
+  if (cached && cached.expiresAt > now) {
+    return cached.user
+  }
 
   // First, try to find existing auth provider record
   const existingAuthProvider = await db
@@ -56,65 +76,105 @@ export async function findOrCreateUserByProvider(
       authProvider.providerData !== providerData
 
     if (shouldUpdate) {
-      const now = getCurrentUnixTimestamp()
+      const timestamp = getCurrentUnixTimestamp()
       await db
         .update(userAuthProvidersTable)
         .set({
           email,
           providerData,
-          updatedAt: now
+          updatedAt: timestamp
         })
         .where(eq(userAuthProvidersTable.id, authProvider.id))
     }
 
     // Update user name if provided and different
+    let resultUser = user
     if (name && user.name !== name) {
-      const now = getCurrentUnixTimestamp()
+      const timestamp = getCurrentUnixTimestamp()
       await db
         .update(usersTable)
-        .set({ name, updatedAt: now })
+        .set({ name, updatedAt: timestamp })
         .where(eq(usersTable.id, user.id))
 
-      return { ...user, name }
+      resultUser = { ...user, name }
     }
 
-    return user
+    // Cache the result
+    userCache.set(cacheKey, { user: resultUser, expiresAt: now + CACHE_TTL_MS })
+    return resultUser
   }
 
   // No existing auth provider - create new user and link auth provider
-  const now = getCurrentUnixTimestamp()
+  const timestamp = getCurrentUnixTimestamp()
   const userId = createId()
   const authProviderId = createId()
 
-  // Create user
-  const [newUser] = await db
-    .insert(usersTable)
-    .values({
-      id: userId,
-      name: name || email || 'User',
-      createdAt: now,
-      updatedAt: now
+  try {
+    // Create user
+    const [newUser] = await db
+      .insert(usersTable)
+      .values({
+        id: userId,
+        name: name || email || 'User',
+        createdAt: timestamp,
+        updatedAt: timestamp
+      })
+      .returning()
+
+    if (!newUser) {
+      throw new Error('Failed to create user')
+    }
+
+    // Create auth provider link
+    const providerData = imageUrl ? JSON.stringify({ imageUrl }) : null
+    await db.insert(userAuthProvidersTable).values({
+      id: authProviderId,
+      userId: userId,
+      provider,
+      providerId,
+      email,
+      providerData,
+      createdAt: timestamp,
+      updatedAt: timestamp
     })
-    .returning()
 
-  if (!newUser) {
-    throw new Error('Failed to create user')
+    // Cache the result
+    userCache.set(cacheKey, { user: newUser, expiresAt: now + CACHE_TTL_MS })
+    return newUser
+  } catch (error) {
+    // Handle race condition: another request may have created the identity
+    if (error instanceof Error && error.message.includes('UNIQUE constraint')) {
+      // Retry the lookup
+      const [raceResult] = await db
+        .select({
+          authProvider: userAuthProvidersTable,
+          user: usersTable
+        })
+        .from(userAuthProvidersTable)
+        .innerJoin(usersTable, eq(userAuthProvidersTable.userId, usersTable.id))
+        .where(
+          and(
+            eq(userAuthProvidersTable.provider, provider),
+            eq(userAuthProvidersTable.providerId, providerId)
+          )
+        )
+        .limit(1)
+
+      if (raceResult) {
+        userCache.set(cacheKey, { user: raceResult.user, expiresAt: now + CACHE_TTL_MS })
+        return raceResult.user
+      }
+    }
+    throw error
   }
+}
 
-  // Create auth provider link
-  const providerData = imageUrl ? JSON.stringify({ imageUrl }) : null
-  await db.insert(userAuthProvidersTable).values({
-    id: authProviderId,
-    userId: userId,
-    provider,
-    providerId,
-    email,
-    providerData,
-    createdAt: now,
-    updatedAt: now
-  })
-
-  return newUser
+/**
+ * Invalidate the user cache for a specific provider/providerId.
+ * Call this when user data is modified outside of findOrCreateUserByProvider.
+ */
+export function invalidateUserCache(provider: string, providerId: string): void {
+  userCache.delete(getCacheKey(provider, providerId))
 }
 
 /**
