@@ -28,7 +28,6 @@ import { getTaskActivitiesHandler } from './activities'
 import { createTimerRoute } from '../routes/timers'
 import { createTimerHandler } from './timers'
 import { authMiddleware } from '../middleware/auth'
-import { clearUserCache } from '../../../core/auth.db'
 import { createSqliteLibsqlTestContext, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils'
 
 type TestGlobal = typeof globalThis & { testDb?: SqliteLibsqlTestContext['db'] }
@@ -101,7 +100,6 @@ describe('Task comment handlers', () => {
   })
 
   beforeEach(async () => {
-    clearUserCache()
     await testContext.reset()
     // create base task for nested comment routes
     const res = await app.request(

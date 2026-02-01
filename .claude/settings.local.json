@@ -30,7 +30,8 @@
       "Bash(pnpm --filter electron exec npm view:*)",
       "Bash(git restore:*)",
       "WebFetch(domain:clerk.com)",
-      "Bash(pnpm --filter web add:*)"
+      "Bash(pnpm --filter web add:*)",
+      "Bash(find:*)"
     ]
   }
 }

@@ -11,23 +11,13 @@ export interface AuthProviderInfo {
   imageUrl?: string      // Profile image URL
 }
 
-// In-memory cache for user lookups (TTL: 5 minutes)
-// Key: `${provider}:${providerId}`
-const userCache = new Map<string, { user: SelectUser; expiresAt: number }>()
-const CACHE_TTL_MS = 5 * 60 * 1000
-
-function getCacheKey(provider: string, providerId: string): string {
-  return `${provider}:${providerId}`
-}
-
 /**
  * Find or create a user by their auth provider credentials.
  *
  * This function:
- * 1. Checks in-memory cache first
- * 2. Looks up the user_auth_providers table by (provider, providerId)
- * 3. If found, returns the linked user (optionally updating provider data)
- * 4. If not found, creates a new user and auth provider record
+ * 1. Looks up the user_auth_providers table by (provider, providerId)
+ * 2. If found, returns the linked user (optionally updating provider data)
+ * 3. If not found, creates a new user and auth provider record
  *
  * Handles race conditions when multiple requests try to create the same user.
  *
@@ -40,14 +30,6 @@ export async function findOrCreateUserByProvider(
   providerInfo: AuthProviderInfo
 ): Promise<SelectUser> {
   const { provider, providerId, email, name, imageUrl } = providerInfo
-  const cacheKey = getCacheKey(provider, providerId)
-  const now = Date.now()
-
-  // Check cache first
-  const cached = userCache.get(cacheKey)
-  if (cached && cached.expiresAt > now) {
-    return cached.user
-  }
 
   // First, try to find existing auth provider record
   const existingAuthProvider = await db
@@ -99,8 +81,6 @@ export async function findOrCreateUserByProvider(
       resultUser = { ...user, name }
     }
 
-    // Cache the result
-    userCache.set(cacheKey, { user: resultUser, expiresAt: now + CACHE_TTL_MS })
     return resultUser
   }
 
@@ -138,8 +118,6 @@ export async function findOrCreateUserByProvider(
       updatedAt: timestamp
     })
 
-    // Cache the result
-    userCache.set(cacheKey, { user: newUser, expiresAt: now + CACHE_TTL_MS })
     return newUser
   } catch (error) {
     // Handle race condition: another request may have created the identity
@@ -161,28 +139,11 @@ export async function findOrCreateUserByProvider(
         .limit(1)
 
       if (raceResult) {
-        userCache.set(cacheKey, { user: raceResult.user, expiresAt: now + CACHE_TTL_MS })
         return raceResult.user
       }
     }
     throw error
   }
-}
-
-/**
- * Invalidate the user cache for a specific provider/providerId.
- * Call this when user data is modified outside of findOrCreateUserByProvider.
- */
-export function invalidateUserCache(provider: string, providerId: string): void {
-  userCache.delete(getCacheKey(provider, providerId))
-}
-
-/**
- * Clear the entire user cache.
- * Useful for testing when the database is reset between tests.
- */
-export function clearUserCache(): void {
-  userCache.clear()
 }
 
 /**

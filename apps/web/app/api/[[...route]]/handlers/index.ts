@@ -7,6 +7,7 @@ export * from './timers'
 export * from './tags'
 export * from './comments'
 export * from './activities'
+export * from './oauth'
 
 // Health check handler  
 export const healthHandler: RouteHandler<typeof healthRoute> = (c) => {

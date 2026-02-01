@@ -26,7 +26,6 @@ import {
   updateTaskHandler
 } from './tasks';
 import { authMiddleware } from '../middleware/auth';
-import { clearUserCache } from '../../../core/auth.db';
 import { createSqliteLibsqlTestContext, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
 
 type TestGlobal = typeof globalThis & { testDb?: SqliteLibsqlTestContext['db'] };
@@ -106,7 +105,6 @@ describe('Tag Handlers', () => {
   });
 
   beforeEach(async () => {
-    clearUserCache();
     await testContext.reset();
   });
 

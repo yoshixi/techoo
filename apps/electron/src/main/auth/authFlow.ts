@@ -1,18 +1,17 @@
 import { shell, app } from 'electron'
 import { setTokens, getTokens, clearTokens, isTokenExpired, type TokenData } from './tokenStorage'
 
-// Clerk configuration from environment
-const CLERK_PUBLISHABLE_KEY = import.meta.env.MAIN_VITE_CLERK_PUBLISHABLE_KEY || ''
-const CLERK_FRONTEND_API = import.meta.env.MAIN_VITE_CLERK_FRONTEND_API || ''
+// API URL from environment
+const API_URL = import.meta.env.MAIN_VITE_API_URL || 'http://localhost:3000'
 
 // Custom protocol for OAuth callback
 const PROTOCOL = 'shuchu'
 const CALLBACK_PATH = 'auth/callback'
 const REDIRECT_URI = `${PROTOCOL}://${CALLBACK_PATH}`
 
-// Auth state for PKCE flow
-let authState: string | null = null
-let codeVerifier: string | null = null
+// Session ID from last login attempt
+let pendingSessionId: string | null = null
+let pendingState: string | null = null
 
 // Callback to notify renderer of auth state changes
 let onAuthStateChange: ((authenticated: boolean) => void) | null = null
@@ -22,41 +21,6 @@ let onAuthStateChange: ((authenticated: boolean) => void) | null = null
  */
 export function setAuthStateChangeCallback(callback: (authenticated: boolean) => void): void {
   onAuthStateChange = callback
-}
-
-/**
- * Generate a random string for PKCE.
- */
-function generateRandomString(length: number): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~'
-  let result = ''
-  const randomValues = new Uint8Array(length)
-  crypto.getRandomValues(randomValues)
-  for (let i = 0; i < length; i++) {
-    result += chars[randomValues[i] % chars.length]
-  }
-  return result
-}
-
-/**
- * Generate SHA256 hash for PKCE code challenge.
- */
-async function sha256(message: string): Promise<ArrayBuffer> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(message)
-  return crypto.subtle.digest('SHA-256', data)
-}
-
-/**
- * Base64 URL encode for PKCE.
- */
-function base64UrlEncode(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer)
-  let binary = ''
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i])
-  }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
 /**
@@ -92,22 +56,30 @@ export async function handleOAuthCallback(url: string): Promise<boolean> {
 
     if (error) {
       console.error('OAuth error:', error, urlObj.searchParams.get('error_description'))
+      pendingSessionId = null
+      pendingState = null
       onAuthStateChange?.(false)
       return true
     }
 
-    if (!code || !state || state !== authState) {
-      console.error('Invalid OAuth callback: missing code or state mismatch')
+    if (!code || !state || !pendingSessionId) {
+      console.error('Invalid OAuth callback: missing code, state, or sessionId')
+      pendingSessionId = null
+      pendingState = null
       onAuthStateChange?.(false)
       return true
     }
 
-    // Exchange code for tokens
-    await exchangeCodeForTokens(code)
+    // Exchange code for tokens via backend
+    await exchangeCodeForTokens(code, state, pendingSessionId)
+    pendingSessionId = null
+    pendingState = null
     onAuthStateChange?.(true)
     return true
   } catch (error) {
     console.error('Failed to handle OAuth callback:', error)
+    pendingSessionId = null
+    pendingState = null
     onAuthStateChange?.(false)
     return true
   }
@@ -115,54 +87,40 @@ export async function handleOAuthCallback(url: string): Promise<boolean> {
 
 /**
  * Initiate the OAuth login flow.
- * Opens Clerk's hosted sign-in page in the system browser.
+ * Requests auth URL from backend and opens it in the system browser.
  */
 export async function login(): Promise<void> {
-  if (!CLERK_FRONTEND_API || !CLERK_PUBLISHABLE_KEY) {
-    throw new Error('Clerk configuration is missing. Set MAIN_VITE_CLERK_FRONTEND_API and MAIN_VITE_CLERK_PUBLISHABLE_KEY.')
+  // Get auth URL from backend
+  const response = await fetch(`${API_URL}/api/auth/url?redirect_uri=${encodeURIComponent(REDIRECT_URI)}`)
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`Failed to get auth URL: ${error}`)
   }
 
-  // Generate PKCE values
-  authState = generateRandomString(32)
-  codeVerifier = generateRandomString(64)
-  const codeChallenge = base64UrlEncode(await sha256(codeVerifier))
+  const { authUrl, sessionId } = (await response.json()) as { authUrl: string; sessionId: string }
 
-  // Build Clerk authorization URL
-  const authUrl = new URL(`https://${CLERK_FRONTEND_API}/oauth/authorize`)
-  authUrl.searchParams.set('client_id', CLERK_PUBLISHABLE_KEY)
-  authUrl.searchParams.set('redirect_uri', REDIRECT_URI)
-  authUrl.searchParams.set('response_type', 'code')
-  authUrl.searchParams.set('state', authState)
-  authUrl.searchParams.set('code_challenge', codeChallenge)
-  authUrl.searchParams.set('code_challenge_method', 'S256')
-  authUrl.searchParams.set('scope', 'openid profile email')
+  // Store session ID for callback
+  pendingSessionId = sessionId
 
   // Open in system browser
-  await shell.openExternal(authUrl.toString())
+  await shell.openExternal(authUrl)
 }
 
 /**
- * Exchange authorization code for tokens.
+ * Exchange authorization code for tokens via backend.
  */
-async function exchangeCodeForTokens(code: string): Promise<void> {
-  if (!codeVerifier) {
-    throw new Error('No code verifier available')
-  }
-
-  const tokenUrl = `https://${CLERK_FRONTEND_API}/oauth/token`
-
-  const response = await fetch(tokenUrl, {
+async function exchangeCodeForTokens(
+  code: string,
+  state: string,
+  sessionId: string
+): Promise<void> {
+  const response = await fetch(`${API_URL}/api/auth/token`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
+      'Content-Type': 'application/json'
     },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
-      client_id: CLERK_PUBLISHABLE_KEY,
-      code,
-      redirect_uri: REDIRECT_URI,
-      code_verifier: codeVerifier
-    })
+    body: JSON.stringify({ code, state, sessionId })
   })
 
   if (!response.ok) {
@@ -170,28 +128,30 @@ async function exchangeCodeForTokens(code: string): Promise<void> {
     throw new Error(`Token exchange failed: ${error}`)
   }
 
-  const data = await response.json()
+  const data = (await response.json()) as {
+    accessToken: string
+    idToken?: string
+    refreshToken?: string
+    expiresIn: number
+  }
 
   // Calculate expiry time
-  const expiresIn = data.expires_in || 3600 // Default to 1 hour
-  const expiresAt = Date.now() + expiresIn * 1000
+  const expiresAt = Date.now() + data.expiresIn * 1000
 
   const tokens: TokenData = {
-    accessToken: data.access_token,
-    idToken: data.id_token, // OIDC ID token for backend verification
-    refreshToken: data.refresh_token,
+    accessToken: data.accessToken,
+    idToken: data.idToken,
+    refreshToken: data.refreshToken,
     expiresAt
   }
 
   setTokens(tokens)
-
-  // Clear PKCE values
-  authState = null
-  codeVerifier = null
 }
 
 /**
  * Refresh the access token using the refresh token.
+ * NOTE: Token refresh currently requires re-login.
+ * A future enhancement could add a backend refresh endpoint.
  */
 export async function refreshAccessToken(): Promise<boolean> {
   const tokens = getTokens()
@@ -199,44 +159,11 @@ export async function refreshAccessToken(): Promise<boolean> {
     return false
   }
 
-  try {
-    const tokenUrl = `https://${CLERK_FRONTEND_API}/oauth/token`
-
-    const response = await fetch(tokenUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        client_id: CLERK_PUBLISHABLE_KEY,
-        refresh_token: tokens.refreshToken
-      })
-    })
-
-    if (!response.ok) {
-      console.error('Token refresh failed:', await response.text())
-      return false
-    }
-
-    const data = await response.json()
-
-    const expiresIn = data.expires_in || 3600
-    const expiresAt = Date.now() + expiresIn * 1000
-
-    const newTokens: TokenData = {
-      accessToken: data.access_token,
-      idToken: data.id_token || tokens.idToken,
-      refreshToken: data.refresh_token || tokens.refreshToken,
-      expiresAt
-    }
-
-    setTokens(newTokens)
-    return true
-  } catch (error) {
-    console.error('Failed to refresh token:', error)
-    return false
-  }
+  // For now, token refresh is not implemented via backend.
+  // User needs to re-login when token expires.
+  // TODO: Implement POST /auth/refresh endpoint on backend
+  console.warn('Token refresh not implemented, user needs to re-login')
+  return false
 }
 
 /**

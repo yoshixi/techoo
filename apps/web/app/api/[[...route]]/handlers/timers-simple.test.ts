@@ -20,7 +20,6 @@ import {
 import { createTaskRoute } from '../routes/tasks';
 import { createTaskHandler } from './tasks';
 import { authMiddleware } from '../middleware/auth';
-import { clearUserCache } from '../../../core/auth.db';
 import { createSqliteLibsqlTestContext, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
 
 type TestGlobal = typeof globalThis & { testDb?: SqliteLibsqlTestContext['db'] };
@@ -100,7 +99,6 @@ describe('Timer Handlers (Simplified)', () => {
   });
 
   beforeEach(async () => {
-    clearUserCache();
     await testContext.reset();
 
     // Create a sample task for timer tests

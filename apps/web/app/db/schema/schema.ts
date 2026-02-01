@@ -87,6 +87,18 @@ export const tagsUserIdIdx = index('tags_user_id_idx').on(tagsTable.userId);
 export const taskTagsTaskIdIdx = index('task_tags_task_id_idx').on(taskTagsTable.taskId);
 export const taskTagsTagIdIdx = index('task_tags_tag_id_idx').on(taskTagsTable.tagId);
 
+// OAuth Sessions table - stores PKCE sessions for OAuth flow
+export const oauthSessionsTable = sqliteTable('oauth_sessions', {
+  id: blob('id').primaryKey().$type<string>(), // UUID v7 (16 bytes)
+  state: text('state').notNull().unique(),     // Random string for CSRF protection
+  codeVerifier: text('code_verifier').notNull(), // PKCE code_verifier
+  redirectUri: text('redirect_uri').notNull(), // Client's callback URL
+  expiresAt: integer('expires_at', { mode: 'number' }).notNull(), // Unix timestamp
+  createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+});
+
+export const oauthSessionsStateIdx = index('oauth_sessions_state_idx').on(oauthSessionsTable.state);
+
 // Type exports
 export type InsertUser = typeof usersTable.$inferInsert;
 export type SelectUser = typeof usersTable.$inferSelect;
@@ -102,3 +114,5 @@ export type InsertTag = typeof tagsTable.$inferInsert;
 export type SelectTag = typeof tagsTable.$inferSelect;
 export type InsertTaskTag = typeof taskTagsTable.$inferInsert;
 export type SelectTaskTag = typeof taskTagsTable.$inferSelect;
+export type InsertOAuthSession = typeof oauthSessionsTable.$inferInsert;
+export type SelectOAuthSession = typeof oauthSessionsTable.$inferSelect;

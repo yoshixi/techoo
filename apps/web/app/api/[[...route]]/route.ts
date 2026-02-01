@@ -5,6 +5,8 @@ import { authMiddleware } from './middleware/auth'
 // Import route definitions from local routes directory
 import {
   healthRoute,
+  getAuthUrlRoute,
+  exchangeTokenRoute,
   listTasksRoute,
   getTaskRoute,
   createTaskRoute,
@@ -32,6 +34,8 @@ import {
 // Import handlers from local handlers directory
 import {
   healthHandler,
+  getAuthUrlHandler,
+  exchangeTokenHandler,
   listTasksHandler,
   getTaskHandler,
   createTaskHandler,
@@ -71,8 +75,10 @@ app.use('/*', async (c, next) => {
   await next()
 })
 
-// Register health check route (public - no auth required)
+// Register public routes (no auth required)
 app.openapi(healthRoute, healthHandler)
+app.openapi(getAuthUrlRoute, getAuthUrlHandler)
+app.openapi(exchangeTokenRoute, exchangeTokenHandler)
 
 // Apply auth middleware to all routes below this point
 app.use('/*', authMiddleware)
