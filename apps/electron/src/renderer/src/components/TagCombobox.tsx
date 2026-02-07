@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { X, Plus, Check, ChevronDown } from 'lucide-react'
 import { useGetApiTags, postApiTags } from '../gen/api'
 import { Badge } from './ui/badge'
+import { useErrorToast } from './ui/toast'
 import { cn } from '../lib/utils'
 
 interface TagComboboxProps {
@@ -24,6 +25,7 @@ export const TagCombobox: React.FC<TagComboboxProps> = ({
   const [isCreating, setIsCreating] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const showError = useErrorToast()
 
   const { data: tagsResponse, mutate: mutateTags } = useGetApiTags()
   const tags = tagsResponse?.tags ?? []
@@ -101,11 +103,11 @@ export const TagCombobox: React.FC<TagComboboxProps> = ({
       onSelectionChange([...selectedTagIds, response.tag.id])
       setSearchValue('')
     } catch (error) {
-      console.error('Failed to create tag:', error)
+      showError(error, 'Failed to create tag')
     } finally {
       setIsCreating(false)
     }
-  }, [searchValue, exactMatch, isCreating, selectedTagIds, onSelectionChange, mutateTags])
+  }, [searchValue, exactMatch, isCreating, selectedTagIds, onSelectionChange, mutateTags, showError])
 
   const handleKeyDown = (event: React.KeyboardEvent): void => {
     if (event.key === 'Escape') {

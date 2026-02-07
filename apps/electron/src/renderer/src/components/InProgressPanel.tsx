@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { ChevronDown, ChevronRight, Circle, Loader2, Maximize2, SendHorizonal, Square } from 'lucide-react'
 import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
+import { useErrorToast } from './ui/toast'
 import { cn } from '../lib/utils'
 import type { Task, TaskTimer } from '../gen/api'
 import { useTaskComments, createTaskComment, type TaskComment } from '../hooks/useTaskComments'
@@ -65,6 +66,7 @@ function TaskCard({ task, timer, onStopTimer, onOpenDetail, isCollapsed }: TaskC
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showAllComments, setShowAllComments] = useState(false)
   const { data: commentsData, mutate: mutateComments } = useTaskComments(task.id)
+  const showError = useErrorToast()
 
   const comments = commentsData?.comments ?? []
   const sortedComments = [...comments].sort(
@@ -91,11 +93,11 @@ function TaskCard({ task, timer, onStopTimer, onOpenDetail, isCollapsed }: TaskC
       setDraft('')
       mutateComments()
     } catch (error) {
-      console.error('Failed to add comment:', error)
+      showError(error, 'Failed to add comment')
     } finally {
       setIsSubmitting(false)
     }
-  }, [draft, isSubmitting, task.id, mutateComments])
+  }, [draft, isSubmitting, task.id, mutateComments, showError])
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {

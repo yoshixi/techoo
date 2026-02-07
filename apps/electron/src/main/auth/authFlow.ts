@@ -11,7 +11,6 @@ const REDIRECT_URI = `${PROTOCOL}://${CALLBACK_PATH}`
 
 // Session ID from last login attempt
 let pendingSessionId: string | null = null
-let pendingState: string | null = null
 
 // Callback to notify renderer of auth state changes
 let onAuthStateChange: ((authenticated: boolean) => void) | null = null
@@ -57,7 +56,6 @@ export async function handleOAuthCallback(url: string): Promise<boolean> {
     if (error) {
       console.error('OAuth error:', error, urlObj.searchParams.get('error_description'))
       pendingSessionId = null
-      pendingState = null
       onAuthStateChange?.(false)
       return true
     }
@@ -65,7 +63,6 @@ export async function handleOAuthCallback(url: string): Promise<boolean> {
     if (!code || !state || !pendingSessionId) {
       console.error('Invalid OAuth callback: missing code, state, or sessionId')
       pendingSessionId = null
-      pendingState = null
       onAuthStateChange?.(false)
       return true
     }
@@ -73,13 +70,11 @@ export async function handleOAuthCallback(url: string): Promise<boolean> {
     // Exchange code for tokens via backend
     await exchangeCodeForTokens(code, state, pendingSessionId)
     pendingSessionId = null
-    pendingState = null
     onAuthStateChange?.(true)
     return true
   } catch (error) {
     console.error('Failed to handle OAuth callback:', error)
     pendingSessionId = null
-    pendingState = null
     onAuthStateChange?.(false)
     return true
   }

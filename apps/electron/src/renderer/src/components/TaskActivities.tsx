@@ -4,6 +4,7 @@ import type { TaskActivityItem, TaskTimer, TaskComment } from '../gen/api'
 import { putApiTimersId } from '../gen/api'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
+import { useErrorToast } from './ui/toast'
 import { formatDateTimeInput } from '../lib/time'
 
 type TaskActivitiesProps = {
@@ -107,6 +108,7 @@ const ActivityRow: React.FC<ActivityRowProps> = ({ activity, onTimerUpdated }) =
   const [editStartTime, setEditStartTime] = useState('')
   const [editEndTime, setEditEndTime] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const showError = useErrorToast()
 
   if (isTimerActivity(activity)) {
     const duration = formatDuration(computeDurationSeconds(activity.data))
@@ -134,7 +136,7 @@ const ActivityRow: React.FC<ActivityRowProps> = ({ activity, onTimerUpdated }) =
         setIsEditing(false)
         onTimerUpdated?.()
       } catch (error) {
-        console.error('Failed to update timer:', error)
+        showError(error, 'Failed to update timer')
       } finally {
         setIsSaving(false)
       }

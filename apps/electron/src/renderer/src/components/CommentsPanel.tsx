@@ -3,6 +3,7 @@ import { Loader2, SendHorizonal } from 'lucide-react'
 import { Textarea } from './ui/textarea'
 import { Button } from './ui/button'
 import { Label } from './ui/label'
+import { useErrorToast } from './ui/toast'
 import { createTaskComment } from '../hooks/useTaskComments'
 
 type CommentsPanelProps = {
@@ -14,6 +15,7 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = ({ taskId, onCommentC
   const [draft, setDraft] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const isMacPlatform = typeof navigator !== 'undefined' && navigator.platform.includes('Mac')
+  const showError = useErrorToast()
 
   const handleSubmit = useCallback(async () => {
     const trimmed = draft.trim()
@@ -25,11 +27,11 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = ({ taskId, onCommentC
       setDraft('')
       onCommentCreated?.()
     } catch (error) {
-      console.error('Failed to add comment:', error)
+      showError(error, 'Failed to add comment')
     } finally {
       setIsSubmitting(false)
     }
-  }, [draft, isSubmitting, onCommentCreated, taskId])
+  }, [draft, isSubmitting, onCommentCreated, taskId, showError])
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {

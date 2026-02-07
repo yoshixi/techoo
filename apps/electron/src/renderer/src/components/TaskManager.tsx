@@ -11,13 +11,8 @@ import {
   type TaskTimer
 } from '../gen/api'
 import { TaskSideMenu } from './TaskSideMenu'
+import { useErrorToast, getErrorMessage } from './ui/toast'
 import { normalizeDueDate, normalizeDateTime } from '../lib/time'
-
-const getErrorMessage = (error: unknown): string => {
-  if (error instanceof Error) return error.message
-  if (typeof error === 'string') return error
-  return 'Unknown error'
-}
 
 /**
  * Task Management Component
@@ -35,6 +30,7 @@ export const TaskManager: React.FC = () => {
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const showError = useErrorToast()
 
   // Fetch all tasks
   const {
@@ -99,7 +95,7 @@ export const TaskManager: React.FC = () => {
       setNewTask({ title: '', description: '', dueDate: '', startAt: '' })
       mutateTasks() // Refresh the tasks list
     } catch (error) {
-      console.error('Failed to create task:', error)
+      showError(error, 'Failed to create task')
     }
   }
 
@@ -111,7 +107,7 @@ export const TaskManager: React.FC = () => {
       await deleteApiTasksId(taskId)
       mutateTasks() // Refresh the tasks list
     } catch (error) {
-      console.error('Failed to delete task:', error)
+      showError(error, 'Failed to delete task')
     } finally {
       setDeletingTaskId(null)
     }
@@ -125,7 +121,7 @@ export const TaskManager: React.FC = () => {
       })
       await mutateTimers()
     } catch (error) {
-      console.error('Failed to start timer:', error)
+      showError(error, 'Failed to start timer')
     }
   }
 
@@ -138,7 +134,7 @@ export const TaskManager: React.FC = () => {
       await mutateTasks()
       setSelectedTask((prev) => (prev?.id === task.id ? response.task : prev))
     } catch (error) {
-      console.error('Failed to update task completion:', error)
+      showError(error, 'Failed to update task')
     } finally {
       setCompletingTaskId(null)
     }
@@ -151,7 +147,7 @@ export const TaskManager: React.FC = () => {
       })
       await mutateTimers()
     } catch (error) {
-      console.error('Failed to stop timer:', error)
+      showError(error, 'Failed to stop timer')
     }
   }
 

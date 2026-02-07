@@ -6,6 +6,7 @@ import {
   putApiTimersId,
   type TaskTimer
 } from '../gen/api'
+import { useErrorToast } from './ui/toast'
 
 interface TimerManagerProps {
   taskId: string
@@ -41,6 +42,7 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
   const [editingStartTime, setEditingStartTime] = useState<string>('')
   const [editingEndTime, setEditingEndTime] = useState<string>('')
   const [isUpdating, setIsUpdating] = useState(false)
+  const showError = useErrorToast()
 
   const timers = useMemo(() => timersResponse?.timers ?? [], [timersResponse?.timers])
 
@@ -82,7 +84,7 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
       onTimerStarted?.()
       onActivityRecorded?.()
     } catch (error) {
-      console.error('Failed to start timer:', error)
+      showError(error, 'Failed to start timer')
     }
   }
 
@@ -97,7 +99,7 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
       onTimerStopped?.()
       onActivityRecorded?.()
     } catch (error) {
-      console.error('Failed to stop timer:', error)
+      showError(error, 'Failed to stop timer')
     }
   }
 
@@ -132,7 +134,7 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
       setEditingStartTime('')
       setEditingEndTime('')
     } catch (error) {
-      console.error('Failed to update timer:', error)
+      showError(error, 'Failed to update timer')
     } finally {
       setIsUpdating(false)
     }

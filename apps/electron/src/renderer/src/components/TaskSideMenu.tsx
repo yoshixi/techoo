@@ -5,6 +5,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { Textarea } from './ui/textarea'
+import { useErrorToast } from './ui/toast'
 import { TimerManager } from './TimerManager'
 import { TagCombobox } from './TagCombobox'
 import { formatDateTimeInput, normalizeDateTime } from '../lib/time'
@@ -50,6 +51,7 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
   const savedIndicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Track the last saved state to compare against
   const lastSavedTaskRef = useRef<Task | null>(task)
+  const showError = useErrorToast()
   const activitiesQuery = useGetApiTasksIdActivities(task?.id ?? '', {
     swr: { enabled: Boolean(task?.id) }
   })
@@ -124,11 +126,11 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
         setShowSaved(false)
       }, 2000)
     } catch (error) {
-      console.error('Failed to update task:', error)
+      showError(error, 'Failed to save task')
     } finally {
       setIsSaving(false)
     }
-  }, [onTaskUpdated])
+  }, [onTaskUpdated, showError])
 
   // Debounced auto-save effect - only triggers when there are actual changes
   useEffect(() => {
@@ -186,7 +188,7 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
         onClose()
       }
     } catch (error) {
-      console.error('Failed to update completion status:', error)
+      showError(error, 'Failed to update task')
     } finally {
       setIsCompleting(false)
     }
@@ -200,7 +202,7 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
       lastSavedTaskRef.current = response.task
       onTaskUpdated?.(response.task)
     } catch (error) {
-      console.error('Failed to update tags:', error)
+      showError(error, 'Failed to update tags')
     }
   }
 

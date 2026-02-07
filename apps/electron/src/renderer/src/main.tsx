@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { LoginScreen } from './components/LoginScreen'
+import { ToastProvider } from './components/ui/toast'
 
 function AppWithAuth(): React.JSX.Element {
   const { isAuthenticated, isLoading } = useAuth()
@@ -28,7 +29,9 @@ const root = createRoot(document.getElementById('root')!)
 root.render(
   <StrictMode>
     <AuthProvider>
-      <AppWithAuth />
+      <ToastProvider>
+        <AppWithAuth />
+      </ToastProvider>
     </AuthProvider>
   </StrictMode>
 )

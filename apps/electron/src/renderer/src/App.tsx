@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Plus, Play, Square, CheckCircle, Maximize2, ArrowUpDown, CalendarDays } from 'lucide-react'
 
 import { Button } from './components/ui/button'
+import { useErrorToast, getErrorMessage } from './components/ui/toast'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card'
 import { Input } from './components/ui/input'
 import { Textarea } from './components/ui/textarea'
@@ -177,6 +178,9 @@ function App(): React.JSX.Element {
   } | null>(null)
   const [isCreatingCalendarTask, setIsCreatingCalendarTask] = useState(false)
   const [calendarCreateError, setCalendarCreateError] = useState<string | null>(null)
+
+  // Toast for error notifications
+  const showError = useErrorToast()
 
   // Sidebar state controlled by window width
   const isNarrow = useIsNarrow()
@@ -517,7 +521,7 @@ function App(): React.JSX.Element {
           mutateBothTaskLists()
         })
         .catch((error) => {
-          console.error('Failed to stop timer:', error)
+          showError(error, 'Failed to stop timer')
           mutateBothTaskLists() // Revert on error
         })
     } else {
@@ -557,11 +561,11 @@ function App(): React.JSX.Element {
           mutateBothTaskLists()
         })
         .catch((error) => {
-          console.error('Failed to start timer:', error)
+          showError(error, 'Failed to start timer')
           mutateBothTaskLists() // Revert on error
         })
     }
-  }, [activeTimersByTaskId, mutateTimers, mutateActiveTasks, mutateInactiveTasks, mutateBothTaskLists])
+  }, [activeTimersByTaskId, mutateTimers, mutateActiveTasks, mutateInactiveTasks, mutateBothTaskLists, showError])
 
   // Handle keyboard timer toggle
   const handleKeyboardToggleTimer = useCallback(() => {
@@ -655,7 +659,7 @@ function App(): React.JSX.Element {
         )
       })
       .catch((error) => {
-        console.error('Failed to create task:', error)
+        showError(error, 'Failed to create task')
         // Remove optimistic task on error (no full revalidation)
         mutateInactiveTasks(
           (currentData) => {
@@ -706,8 +710,7 @@ function App(): React.JSX.Element {
     })
       .then(() => mutateBothTaskLists())
       .catch((error) => {
-        console.error('Failed to update task:', error)
-        // Could show a toast notification here to inform user of failure
+        showError(error, 'Failed to update task')
       })
   }
 
@@ -723,7 +726,7 @@ function App(): React.JSX.Element {
       }
       await mutateBothTaskLists()
     } catch (error) {
-      console.error('Failed to update schedule:', error)
+      showError(error, 'Failed to update schedule')
     }
   }
 
@@ -738,7 +741,7 @@ function App(): React.JSX.Element {
       })
       await mutateBothTaskLists()
     } catch (error) {
-      console.error('Failed to update task time range:', error)
+      showError(error, 'Failed to update task time')
     }
   }
 
@@ -760,7 +763,7 @@ function App(): React.JSX.Element {
       setCalendarCreateError(null)
       await mutateBothTaskLists()
     } catch (error) {
-      console.error('Failed to create task:', error)
+      showError(error, 'Failed to create task')
       setCalendarCreateError(getErrorMessage(error))
     } finally {
       setIsCreatingCalendarTask(false)
@@ -771,7 +774,7 @@ function App(): React.JSX.Element {
     putApiTasksId(taskId, { tagIds })
       .then(() => mutateBothTaskLists())
       .catch((error) => {
-        console.error('Failed to update task tags:', error)
+        showError(error, 'Failed to update tags')
       })
   }
 
@@ -785,7 +788,7 @@ function App(): React.JSX.Element {
       }
       await mutateBothTaskLists()
     } catch (error) {
-      console.error('Failed to delete task:', error)
+      showError(error, 'Failed to delete task')
     }
   }
 
@@ -830,7 +833,7 @@ function App(): React.JSX.Element {
         mutateBothTaskLists()
       })
       .catch((error) => {
-        console.error('Failed to start timer:', error)
+        showError(error, 'Failed to start timer')
         mutateBothTaskLists() // Revert on error
       })
   }
@@ -875,7 +878,7 @@ function App(): React.JSX.Element {
         mutateBothTaskLists()
       })
       .catch((error) => {
-        console.error('Failed to stop timer:', error)
+        showError(error, 'Failed to stop timer')
         mutateBothTaskLists() // Revert on error
       })
   }
@@ -923,7 +926,7 @@ function App(): React.JSX.Element {
     putApiTasksId(task.id, { completedAt: newCompletedAt })
       .then(() => mutateBothTaskLists()) // Revalidate after success
       .catch((error) => {
-        console.error('Failed to update task completion:', error)
+        showError(error, 'Failed to update task')
         mutateBothTaskLists() // Revalidate to revert on error
       })
   }
@@ -1666,30 +1669,6 @@ function App(): React.JSX.Element {
       </Dialog>
     </SidebarProvider>
   )
-}
-
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    const httpMatch = error.message.match(/^HTTP\s+\d+:\s*(.*)$/i)
-    if (httpMatch) {
-      const rawMessage = httpMatch[1].trim()
-      if (rawMessage) {
-        try {
-          const parsed = JSON.parse(rawMessage) as { error?: string; message?: string }
-          if (parsed.error) return parsed.error
-          if (parsed.message) return parsed.message
-        } catch {
-          return rawMessage
-        }
-      }
-    }
-    return error.message
-  }
-  if (error && typeof error === 'object' && 'error' in error) {
-    const message = (error as { error?: string }).error
-    if (message) return message
-  }
-  return 'Please try again.'
 }
 
 export default App
