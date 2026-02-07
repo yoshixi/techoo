@@ -9,7 +9,8 @@ import {
   registerProtocolHandler,
   handleOAuthCallback,
   setMainWindow,
-  openAuthUrl
+  openAuthUrl,
+  REDIRECT_URI
 } from './auth/authFlow'
 
 // Register protocol handler before app is ready
@@ -246,9 +247,13 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  // Auth IPC handler - open OAuth URL in system browser
+  // Auth IPC handlers
   ipcMain.handle('auth:open-url', async (_event, url: string) => {
     await openAuthUrl(url)
+  })
+
+  ipcMain.handle('auth:get-redirect-uri', () => {
+    return REDIRECT_URI
   })
 
   // Notification permission handlers

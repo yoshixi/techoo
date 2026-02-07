@@ -18,6 +18,8 @@ const api = {
   auth: {
     // Open OAuth URL in system browser
     openAuthUrl: (url: string): Promise<void> => ipcRenderer.invoke('auth:open-url', url),
+    // Get the OAuth redirect URI (different in dev vs prod to avoid conflicts)
+    getRedirectUri: (): Promise<string> => ipcRenderer.invoke('auth:get-redirect-uri'),
     // Listen for OAuth callback URL from main process
     onCallbackUrl: (callback: (url: string) => void): (() => void) => {
       const handler = (_event: Electron.IpcRendererEvent, url: string): void => {

@@ -11,6 +11,7 @@ type NotificationPermissionStatus = 'granted' | 'denied' | 'not-determined'
 
 interface AuthAPI {
   openAuthUrl: (url: string) => Promise<void>
+  getRedirectUri: () => Promise<string>
   onCallbackUrl: (callback: (url: string) => void) => () => void
 }
 

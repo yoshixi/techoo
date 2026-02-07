@@ -85,8 +85,8 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
   const login = useCallback(async (): Promise<void> => {
     setIsLoading(true)
     try {
-      // Build the OAuth URL using Clerk
-      const redirectUrl = 'shuchu://auth/callback'
+      // Get redirect URI from main process (different in dev vs prod)
+      const redirectUrl = await window.api.auth.getRedirectUri()
 
       // Create a sign-in attempt with OAuth
       const signIn = clerk.client?.signIn
