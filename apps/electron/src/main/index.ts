@@ -18,19 +18,26 @@ registerProtocolHandler()
 function setupContentSecurityPolicy(): void {
   const apiUrl = import.meta.env.MAIN_VITE_API_URL || 'http://localhost:3000'
 
-  // Build connect-src directive with configured API URL
-  const connectSrc = `'self' ${apiUrl}`
+  // Clerk SDK domains for authentication
+  const clerkDomains = 'https://*.clerk.accounts.dev https://clerk.accounts.dev'
+
+  // Build connect-src directive with configured API URL and Clerk domains
+  const connectSrc = `'self' ${apiUrl} ${clerkDomains}`
 
   // In development, Vite's HMR requires unsafe-inline and unsafe-eval for scripts
   // In production, we use strict CSP
   const scriptSrc = is.dev ? "'self' 'unsafe-inline' 'unsafe-eval'" : "'self'"
 
+  // Worker source for Clerk SDK (uses blob: for web workers)
+  const workerSrc = "'self' blob:"
+
   const csp = [
     "default-src 'self'",
     `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data:",
-    `connect-src ${connectSrc}`
+    "img-src 'self' data: https://*.clerk.com",
+    `connect-src ${connectSrc}`,
+    `worker-src ${workerSrc}`
   ].join('; ')
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
