@@ -1,4 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain, session, Menu, globalShortcut } from 'electron'
+import { createServer, type Server } from 'node:http'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -63,6 +64,67 @@ function resolvePreloadPath(): string {
   return join(__dirname, '../preload/index.js')
 }
 
+interface OAuthCallbackServer {
+  port: number
+  waitForToken: () => Promise<string | null>
+  close: () => void
+}
+
+function startOAuthCallbackServer(): Promise<OAuthCallbackServer> {
+  return new Promise((resolveSetup) => {
+    let resolveToken: ((token: string | null) => void) | null = null
+    const tokenPromise = new Promise<string | null>((resolve) => {
+      resolveToken = resolve
+    })
+
+    // Timeout: resolve with null after 5 minutes
+    const timeout = setTimeout(() => {
+      if (resolveToken) {
+        resolveToken(null)
+        resolveToken = null
+      }
+    }, 5 * 60 * 1000)
+
+    const server: Server = createServer((req, res) => {
+      if (!req.url?.startsWith('/callback')) {
+        res.writeHead(404)
+        res.end()
+        return
+      }
+
+      // Extract session token from query parameter (set by desktop-callback endpoint)
+      const url = new URL(req.url, `http://localhost`)
+      const sessionToken = url.searchParams.get('session_token')
+
+      res.writeHead(200, { 'Content-Type': 'text/html' })
+      res.end(
+        sessionToken
+          ? '<html><body style="font-family:system-ui;text-align:center;padding:3rem"><h1>Signed in successfully</h1><p>You can close this window and return to the app.</p></body></html>'
+          : '<html><body style="font-family:system-ui;text-align:center;padding:3rem"><h1>Authentication failed</h1><p>Please close this window and try again.</p></body></html>'
+      )
+
+      clearTimeout(timeout)
+      if (resolveToken) {
+        resolveToken(sessionToken)
+        resolveToken = null
+      }
+    })
+
+    server.listen(0, '127.0.0.1', () => {
+      const addr = server.address()
+      const port = typeof addr === 'object' && addr ? addr.port : 0
+      resolveSetup({
+        port,
+        waitForToken: () => tokenPromise,
+        close: () => {
+          clearTimeout(timeout)
+          server.close()
+        },
+      })
+    })
+  })
+}
+
 let mainWindow: BrowserWindow | null = null
 let trayManager: TrayManager | null = null
 let notificationScheduler: NotificationScheduler | null = null
@@ -79,21 +141,21 @@ function createApplicationMenu(): void {
     // App menu (macOS only)
     ...(isMac
       ? [
-          {
-            label: app.name,
-            submenu: [
-              { role: 'about' as const },
-              { type: 'separator' as const },
-              { role: 'services' as const },
-              { type: 'separator' as const },
-              { role: 'hide' as const },
-              { role: 'hideOthers' as const },
-              { role: 'unhide' as const },
-              { type: 'separator' as const },
-              { role: 'quit' as const }
-            ]
-          }
-        ]
+        {
+          label: app.name,
+          submenu: [
+            { role: 'about' as const },
+            { type: 'separator' as const },
+            { role: 'services' as const },
+            { type: 'separator' as const },
+            { role: 'hide' as const },
+            { role: 'hideOthers' as const },
+            { role: 'unhide' as const },
+            { type: 'separator' as const },
+            { role: 'quit' as const }
+          ]
+        }
+      ]
       : []),
     // Edit menu
     {
@@ -107,10 +169,10 @@ function createApplicationMenu(): void {
         { role: 'paste' },
         ...(isMac
           ? [
-              { role: 'pasteAndMatchStyle' as const },
-              { role: 'delete' as const },
-              { role: 'selectAll' as const }
-            ]
+            { role: 'pasteAndMatchStyle' as const },
+            { role: 'delete' as const },
+            { role: 'selectAll' as const }
+          ]
           : [{ role: 'delete' as const }, { type: 'separator' as const }, { role: 'selectAll' as const }])
       ]
     },
@@ -250,6 +312,37 @@ app.whenReady().then(() => {
   })
   ipcMain.handle('notification:open-settings', () => {
     NotificationScheduler.openNotificationSettings()
+  })
+
+  // OAuth social sign-in via system browser
+  // Opens the default browser for OAuth (supports passkeys, biometrics, etc.)
+  // and uses a temporary loopback HTTP server to receive the callback.
+  // The entire OAuth flow happens in the browser so state cookies are consistent.
+  ipcMain.handle('auth:social-sign-in', async (_event, provider: string) => {
+    const apiUrl = import.meta.env.MAIN_VITE_API_URL || 'http://localhost:3000/api'
+
+    // Start a temporary local server to receive the OAuth callback
+    const callbackServer = await startOAuthCallbackServer()
+
+    // Open system browser to the server's desktop-oauth endpoint.
+    // The server initiates the OAuth flow so the browser has the state cookie.
+    const oauthInitUrl =
+      `${apiUrl}/desktop-oauth?provider=${encodeURIComponent(provider)}&port=${callbackServer.port}`
+    shell.openExternal(oauthInitUrl)
+
+    // Bring Electron back to front so user sees loading state
+    setTimeout(() => {
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore()
+        mainWindow.focus()
+      }
+    }, 1000)
+
+    try {
+      return await callbackServer.waitForToken()
+    } finally {
+      callbackServer.close()
+    }
   })
 
   // Timer states updates from renderer for tray display (supports multiple timers)

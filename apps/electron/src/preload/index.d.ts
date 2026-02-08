@@ -21,6 +21,7 @@ declare global {
       getNotificationPermission: () => Promise<NotificationPermissionStatus>
       requestNotificationPermission: () => Promise<NotificationPermissionStatus>
       openNotificationSettings: () => Promise<void>
+      signInWithOAuth: (provider: string) => Promise<string | null>
     }
   }
 }

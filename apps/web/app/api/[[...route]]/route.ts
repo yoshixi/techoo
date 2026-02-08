@@ -91,12 +91,91 @@ app.post('/token', async (c) => {
   return c.json({ token: jwt })
 })
 
+// Desktop app OAuth initiation: the browser navigates here directly so that
+// better-auth's state cookie is set in the browser's cookie jar (not in
+// Electron's net.fetch, which has a separate cookie store).
+app.get('/desktop-oauth', async (c) => {
+  const provider = c.req.query('provider')
+  const port = c.req.query('port')
+  if (!provider || !port) {
+    return c.text('Missing provider or port parameter', 400)
+  }
+
+  const url = new URL(c.req.url)
+  const baseUrl = url.origin
+  const callbackURL = `${baseUrl}/api/desktop-callback?port=${port}`
+
+  // Call better-auth internally to get the OAuth URL + state cookie
+  const authResponse = await auth.handler(
+    new Request(`${baseUrl}/api/auth/sign-in/social`, {
+      method: 'POST',
+      headers: new Headers({
+        'Content-Type': 'application/json',
+        Origin: baseUrl,
+      }),
+      body: JSON.stringify({ provider, callbackURL }),
+    })
+  )
+
+  // Extract Set-Cookie headers (contains the OAuth state cookie)
+  const setCookies = authResponse.headers.getSetCookie()
+
+  // Get the OAuth provider URL from better-auth's response
+  let oauthUrl: string | null = null
+  if (authResponse.status >= 300 && authResponse.status < 400) {
+    oauthUrl = authResponse.headers.get('location')
+  } else if (authResponse.ok) {
+    const data = (await authResponse.json()) as { url?: string }
+    oauthUrl = data?.url ?? null
+  }
+
+  if (!oauthUrl) {
+    return c.text('Failed to initiate OAuth', 500)
+  }
+
+  // Redirect browser to the OAuth provider, forwarding the state cookies
+  const response = new Response(null, {
+    status: 302,
+    headers: { Location: oauthUrl },
+  })
+  for (const cookie of setCookies) {
+    response.headers.append('Set-Cookie', cookie)
+  }
+  return response
+})
+
+// Desktop app OAuth callback: reads the session cookie set by better-auth and
+// redirects to the Electron loopback server with the token as a query parameter.
+app.get('/desktop-callback', async (c) => {
+  const port = c.req.query('port')
+  if (!port) {
+    return c.text('Missing port parameter', 400)
+  }
+
+  const cookies = c.req.header('cookie') || ''
+  const match = cookies.match(/better-auth\.session_token=([^;]+)/)
+  const sessionToken = match?.[1]
+
+  if (!sessionToken) {
+    return c.html(
+      '<html><body style="font-family:system-ui;text-align:center;padding:3rem"><h1>Authentication failed</h1><p>Session token not found. Please close this window and try again.</p></body></html>',
+      401
+    )
+  }
+
+  return c.redirect(
+    `http://127.0.0.1:${port}/callback?session_token=${encodeURIComponent(sessionToken)}`
+  )
+})
+
 // JWT auth middleware — skip public routes
 app.use('/*', async (c, next) => {
   const path = c.req.path
   if (
     path.startsWith('/api/auth') ||
     path === '/api/token' ||
+    path === '/api/desktop-oauth' ||
+    path === '/api/desktop-callback' ||
     path === '/api/health' ||
     path === '/api/doc'
   ) {

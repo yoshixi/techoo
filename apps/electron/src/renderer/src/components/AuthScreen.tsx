@@ -61,10 +61,30 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps): React.JSX.Elem
     provider: 'google' | 'github' | 'apple'
   ): Promise<void> => {
     setError(null)
+    setLoading(true)
     try {
-      await authClient.signIn.social({ provider })
+      // Opens popup BrowserWindow for OAuth via main process
+      const sessionToken = await window.api.signInWithOAuth(provider)
+      if (!sessionToken) {
+        setError('Sign in was cancelled or failed')
+        return
+      }
+
+      // Store the session token (same as email/password flow)
+      localStorage.setItem('session_token', sessionToken)
+
+      // Exchange session token for JWT
+      const jwt = await getJwt()
+      if (!jwt) {
+        setError('Failed to obtain access token')
+        return
+      }
+
+      onAuthenticated()
     } catch (err) {
       setError(err instanceof Error ? err.message : `${provider} sign in failed`)
+    } finally {
+      setLoading(false)
     }
   }
 

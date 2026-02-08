@@ -188,11 +188,13 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { bearer } from "better-auth/plugins";
 import { getDb } from "./common.db";
+import { usersTable, sessionsTable, accountsTable, verificationsTable } from "../db/schema/schema";
 
 export const auth = betterAuth({
   database: drizzleAdapter(getDb(), {
     provider: "sqlite",
-    usePlural: true,  // maps to "users", "sessions", "accounts", "verifications"
+    usePlural: true,
+    schema: { users: usersTable, sessions: sessionsTable, accounts: accountsTable, verifications: verificationsTable },
   }),
   emailAndPassword: { enabled: true },
   socialProviders: {
@@ -200,12 +202,15 @@ export const auth = betterAuth({
     github:  { clientId: process.env.GITHUB_CLIENT_ID!, clientSecret: process.env.GITHUB_CLIENT_SECRET! },
     apple:   { clientId: process.env.APPLE_CLIENT_ID!, clientSecret: process.env.APPLE_CLIENT_SECRET! },
   },
+  trustedOrigins: (process.env.TRUSTED_ORIGINS || "http://localhost:5173").split(","),
   plugins: [bearer()],
   advanced: {
     database: { generateId: false },  // use DB auto-increment for user IDs
   },
 });
 ```
+
+**Note:** `trustedOrigins` is required for CSRF protection — better-auth rejects POST requests whose `Origin` header is not in this list. The Electron renderer's Vite dev server runs on `http://localhost:5173`.
 
 ### 1.6 Create custom JWT utility
 
@@ -284,35 +289,31 @@ app.post('/token', async (c) => {
 **File:** `apps/web/app/api/[[...route]]/route.ts`
 
 1. Define `AppBindings` type with `user` context variable
-2. Mount better-auth catch-all: `app.on(["POST", "GET"], "/auth/**", (c) => auth.handler(c.req.raw))`
-3. Mount token exchange endpoint: `app.post('/token', ...)`
-4. Add JWT auth middleware using `verifyJwt()` from `jwt.ts`:
+2. CORS middleware (reflect origin, expose `set-auth-token`, credentials: true)
+3. Mount better-auth catch-all: `app.on(["POST", "GET"], "/auth/**", (c) => auth.handler(c.req.raw))`
+4. Mount token exchange endpoint: `app.post('/token', ...)`
+5. Mount desktop OAuth endpoints (see Phase 3.8 below): `GET /desktop-oauth`, `GET /desktop-callback`
+6. Add JWT auth middleware — skips public routes:
 
 ```ts
-import { verifyJwt } from '../../../core/jwt';
-
-// Skip public routes, verify JWT on all data routes
+// JWT auth middleware — skip public routes
 app.use('/*', async (c, next) => {
   const path = c.req.path;
-  if (path.startsWith('/api/auth') || path === '/api/token'
-      || path === '/api/health' || path === '/api/doc') {
+  if (
+    path.startsWith('/api/auth') ||
+    path === '/api/token' ||
+    path === '/api/desktop-oauth' ||
+    path === '/api/desktop-callback' ||
+    path === '/api/health' ||
+    path === '/api/doc'
+  ) {
     return next();
   }
-
-  const authHeader = c.req.header('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-
-  try {
-    const payload = await verifyJwt(authHeader.slice(7));
-    c.set('user', { id: Number(payload.sub), email: payload.email, name: payload.name });
-    await next();
-  } catch {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
+  // ... verify JWT Bearer token, set c.set('user', ...) ...
 });
 ```
+
+**Important routing constraint:** Do NOT register specific routes (e.g. `app.get('/auth/desktop-callback')`) under the `/auth/` prefix. Hono's trie router treats this as a conflict with the `app.on(['POST','GET'], '/auth/**', ...)` catch-all and stops matching other auth routes (causes 404 on `/auth/sign-in/social`). Use paths outside `/auth/` (e.g. `/desktop-oauth`, `/desktop-callback`).
 
 **Per-request cost:** One `HS256` signature verification (~microseconds). Zero DB queries.
 
@@ -494,12 +495,103 @@ The main process (TrayManager, NotificationScheduler) makes `fetch()` calls that
 
 **Update** `tray.ts` and `notificationScheduler.ts`: Include `Authorization: Bearer <token>` in all `fetch()` calls.
 
-### 3.8 OAuth popup flow for Electron
+### 3.8 OAuth via system browser (passkey-compatible)
 
-For social login in Electron:
-- Open a new `BrowserWindow` pointing to the OAuth provider URL
-- Intercept the callback redirect to extract the session token
-- Add `auth:social-sign-in` IPC handler in main process
+Electron's embedded `BrowserWindow` doesn't support passkeys or platform authenticators. OAuth must use the **system browser** instead.
+
+**Key constraint:** `net.fetch` in Electron's main process and the system browser have **separate cookie jars**. better-auth stores the OAuth `state` in a cookie during the initial POST. If we use `net.fetch` to initiate the flow, the browser never receives the state cookie → `state_mismatch` error on callback. The solution is to have the browser navigate directly to a server endpoint that initiates the flow.
+
+#### Server-side: Two new endpoints
+
+**File:** `apps/web/app/api/[[...route]]/route.ts` — registered before the JWT middleware, outside `/auth/**`.
+
+**`GET /api/desktop-oauth?provider=google&port=54321`** — Initiates the OAuth flow:
+1. Calls `auth.handler()` internally with a constructed POST to `/api/auth/sign-in/social`
+2. Extracts Set-Cookie headers (OAuth state cookie) and the OAuth provider URL from the response
+3. Returns a 302 redirect to the provider URL with the state cookies forwarded
+
+```ts
+app.get('/desktop-oauth', async (c) => {
+  const provider = c.req.query('provider')
+  const port = c.req.query('port')
+  const baseUrl = new URL(c.req.url).origin
+  const callbackURL = `${baseUrl}/api/desktop-callback?port=${port}`
+
+  const authResponse = await auth.handler(
+    new Request(`${baseUrl}/api/auth/sign-in/social`, {
+      method: 'POST',
+      headers: new Headers({ 'Content-Type': 'application/json', Origin: baseUrl }),
+      body: JSON.stringify({ provider, callbackURL }),
+    })
+  )
+
+  // Forward state cookies + redirect to OAuth provider
+  const setCookies = authResponse.headers.getSetCookie()
+  const oauthUrl = /* extract from redirect Location or JSON body */
+  const response = new Response(null, { status: 302, headers: { Location: oauthUrl } })
+  for (const cookie of setCookies) response.headers.append('Set-Cookie', cookie)
+  return response
+})
+```
+
+**`GET /api/desktop-callback?port=54321`** — After OAuth completes:
+1. Reads the `better-auth.session_token` cookie (set by better-auth on the callback response)
+2. Redirects to `http://127.0.0.1:<port>/callback?session_token=<token>`
+
+```ts
+app.get('/desktop-callback', async (c) => {
+  const port = c.req.query('port')
+  const cookies = c.req.header('cookie') || ''
+  const match = cookies.match(/better-auth\.session_token=([^;]+)/)
+  const sessionToken = match?.[1]
+  return c.redirect(`http://127.0.0.1:${port}/callback?session_token=${encodeURIComponent(sessionToken)}`)
+})
+```
+
+#### Electron-side: Loopback server + `shell.openExternal()`
+
+**File:** `apps/electron/src/main/index.ts`
+
+1. `startOAuthCallbackServer()` — creates a temporary `node:http` server on `127.0.0.1` with a random port. Listens for `GET /callback?session_token=...`, responds with success HTML, and resolves a promise with the token. Times out after 5 minutes.
+
+2. `ipcMain.handle('auth:social-sign-in', ...)`:
+   - Starts the loopback server
+   - Opens the system browser to `${apiUrl}/desktop-oauth?provider=google&port=<port>` via `shell.openExternal()`
+   - Waits for the loopback server to receive the token
+   - Returns the session token to the renderer
+
+**Preload:** `signInWithOAuth(provider)` → `ipcRenderer.invoke('auth:social-sign-in', provider)`
+
+**Renderer (`AuthScreen.tsx`):** `handleSocialSignIn()` calls `window.api.signInWithOAuth(provider)`, stores the session token in `localStorage`, exchanges for JWT via `getJwt()`, and calls `onAuthenticated()`.
+
+#### Full flow diagram
+
+```
+Electron renderer                 Electron main                  API server                    System browser
+     |                                 |                              |                              |
+     |-- signInWithOAuth('google') --> |                              |                              |
+     |                                 |-- start loopback :54321      |                              |
+     |                                 |-- shell.openExternal() ------+----------------------------> |
+     |                                 |                              |   GET /api/desktop-oauth     |
+     |                                 |                              |<------------------------------|
+     |                                 |                              |-- auth.handler() internally   |
+     |                                 |                              |-- 302 + Set-Cookie(state) --> |
+     |                                 |                              |                     Google OAuth page
+     |                                 |                              |                     (passkeys work!)
+     |                                 |                              |                              |
+     |                                 |                              |<--- callback /auth/callback --|
+     |                                 |                              |-- create session + cookie     |
+     |                                 |                              |-- 302 → /desktop-callback --> |
+     |                                 |                              |   read cookie, extract token  |
+     |                                 |                              |-- 302 → 127.0.0.1:54321 ---> |
+     |                                 |<-- GET /callback?token=... --|                              |
+     |                                 |-- resolve promise            |                              |
+     |<-- session token ---------------|                              |                              |
+     |-- localStorage.set()           |                              |                              |
+     |-- POST /api/token (JWT) ------>|                              |                              |
+     |<-- JWT                          |                              |                              |
+     |-- onAuthenticated()             |                              |                              |
+```
 
 ### 3.9 Update CSP
 
@@ -528,17 +620,18 @@ img-src: 'self' data: https://*.googleusercontent.com https://avatars.githubuser
 |------|---------|
 | `apps/web/app/db/schema/schema.ts` | Extend usersTable, add 3 auth tables (sessions, accounts, verifications) |
 | `apps/web/app/core/common.db.ts` | Make getDb() singleton |
-| `apps/web/app/core/auth.ts` | **NEW** — better-auth config |
+| `apps/web/app/core/auth.ts` | **NEW** — better-auth config with trustedOrigins, bearer plugin, Drizzle schema mapping |
 | `apps/web/app/core/jwt.ts` | **NEW** — JWT sign/verify using `jose` + `JWT_SECRET` env var |
-| `apps/web/app/api/[[...route]]/route.ts` | Mount auth handler, add JWT middleware, add token exchange endpoint |
+| `apps/web/app/api/[[...route]]/route.ts` | Mount auth handler, CORS middleware, JWT middleware, token exchange, desktop OAuth endpoints |
 | `apps/web/app/api/[[...route]]/handlers/*.ts` | Replace ensureDefaultUser → c.get('user') |
 | `apps/web/app/core/tasks.db.ts` | Delete ensureDefaultUser |
-| `apps/electron/src/renderer/src/lib/auth.ts` | **NEW** — auth client + JWT token manager |
+| `apps/electron/src/renderer/src/lib/auth.ts` | **NEW** — auth client + JWT token manager + clearAuthState |
 | `apps/electron/src/renderer/src/lib/api/mutator.ts` | Add JWT Bearer token header |
-| `apps/electron/src/renderer/src/components/AuthScreen.tsx` | **NEW** — login/signup UI |
+| `apps/electron/src/renderer/src/components/AuthScreen.tsx` | **NEW** — login/signup UI + OAuth via IPC |
 | `apps/electron/src/renderer/src/hooks/useAuth.ts` | **NEW** — auth state hook |
-| `apps/electron/src/preload/index.ts` | Add auth token IPC |
-| `apps/electron/src/main/index.ts` | Auth token IPC handler, CSP update |
+| `apps/electron/src/preload/index.ts` | Add auth token IPC + signInWithOAuth IPC |
+| `apps/electron/src/preload/index.d.ts` | Add signInWithOAuth type declaration |
+| `apps/electron/src/main/index.ts` | Auth token IPC, CSP update, OAuth loopback server + shell.openExternal |
 | `apps/electron/src/main/tray.ts` | Add auth headers to fetch |
 | `apps/electron/src/main/notificationScheduler.ts` | Add auth headers to fetch |
 
@@ -549,6 +642,8 @@ img-src: 'self' data: https://*.googleusercontent.com https://avatars.githubuser
 1. **Server auth flow**: `POST /api/auth/sign-up/email` → returns session token → `POST /api/token` with `Authorization: Bearer <session-token>` → returns JWT → `GET /api/tasks` with `Authorization: Bearer <jwt>` → 200 OK
 2. **Unauthorized access**: `GET /api/tasks` without JWT → 401
 3. **JWT expiry**: Wait 15+ min → API request fails → client auto-refreshes JWT via `POST /api/token` using session token → works again
-4. **Electron flow**: Launch app → auth screen → sign up → JWT auto-obtained → main app loads → tasks/timers work → close/reopen → session persists (JWT refreshed from session token)
-5. **Main process**: Tray and notifications continue working with JWT forwarded via IPC
-6. Run `pnpm run check-types` and `pnpm run test`
+4. **Electron email flow**: Launch app → auth screen → sign up → JWT auto-obtained → main app loads → tasks/timers work → close/reopen → session persists (JWT refreshed from session token)
+5. **Electron OAuth flow**: Click "Sign in with Google" → system browser opens → complete Google sign-in (with passkey) → browser shows "Signed in successfully" → Electron receives session token → exchanges for JWT → main app loads
+6. **OAuth cancellation**: User closes browser tab before completing OAuth → Electron shows "Sign in was cancelled or failed" → no crash
+7. **Main process**: Tray and notifications continue working with JWT forwarded via IPC
+8. Run `pnpm run check-types` and `pnpm run test`

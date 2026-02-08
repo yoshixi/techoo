@@ -14,7 +14,7 @@ export const usersTable = sqliteTable('users', {
 
 // Sessions table (better-auth)
 export const sessionsTable = sqliteTable('sessions', {
-  id: text('id').primaryKey(),
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
   expiresAt: integer('expires_at', { mode: 'number' }).notNull(),
   token: text('token').notNull().unique(),
   ipAddress: text('ip_address'),
@@ -27,7 +27,7 @@ export const sessionsTable = sqliteTable('sessions', {
 
 // Accounts table (better-auth)
 export const accountsTable = sqliteTable('accounts', {
-  id: text('id').primaryKey(),
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
   accountId: text('account_id').notNull(),
   providerId: text('provider_id').notNull(),
   userId: integer('user_id', { mode: 'number' }).notNull()
@@ -45,7 +45,7 @@ export const accountsTable = sqliteTable('accounts', {
 
 // Verifications table (better-auth)
 export const verificationsTable = sqliteTable('verifications', {
-  id: text('id').primaryKey(),
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
   identifier: text('identifier').notNull(),
   value: text('value').notNull(),
   expiresAt: integer('expires_at', { mode: 'number' }).notNull(),

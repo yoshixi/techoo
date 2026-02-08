@@ -58,7 +58,10 @@ const api = {
   requestNotificationPermission: (): Promise<NotificationPermissionStatus> =>
     ipcRenderer.invoke('notification:request-permission'),
   openNotificationSettings: (): Promise<void> =>
-    ipcRenderer.invoke('notification:open-settings')
+    ipcRenderer.invoke('notification:open-settings'),
+  // OAuth social sign-in via popup BrowserWindow
+  signInWithOAuth: (provider: string): Promise<string | null> =>
+    ipcRenderer.invoke('auth:social-sign-in', provider)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
