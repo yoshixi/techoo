@@ -23,8 +23,21 @@ export class TrayManager {
   private activeTimers: TimerState[] = []
   private nextTask: ScheduledTask | null = null
   private onShowTaskDetail: ((taskId: number) => void) | null = null
+  private authToken: string | null = null
 
   constructor(private getMainWindow: () => BrowserWindow | null) {}
+
+  setAuthToken(token: string | null): void {
+    this.authToken = token
+  }
+
+  private getAuthHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {}
+    if (this.authToken) {
+      headers['Authorization'] = `Bearer ${this.authToken}`
+    }
+    return headers
+  }
 
   init(): void {
     const iconPath = this.getIconPath()
@@ -55,7 +68,8 @@ export class TrayManager {
   private async fetchNextTask(): Promise<void> {
     try {
       const response = await fetch(
-        `${API_URL}/api/tasks?completed=false&scheduled=true&sortBy=startAt&order=asc`
+        `${API_URL}/api/tasks?completed=false&scheduled=true&sortBy=startAt&order=asc`,
+        { headers: this.getAuthHeaders() }
       )
       if (!response.ok) {
         this.nextTask = null

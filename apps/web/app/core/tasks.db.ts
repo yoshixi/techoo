@@ -1,5 +1,5 @@
 import { eq, and, desc, asc, inArray, isNull, notInArray, exists, notExists, sql, or, gte, lt, type SQL } from 'drizzle-orm'
-import { tasksTable, usersTable, taskTagsTable, tagsTable, taskTimersTable, type InsertTask, type SelectTask, type SelectUser, type InsertTaskTag } from '../db/schema/schema'
+import { tasksTable, taskTagsTable, tagsTable, taskTimersTable, type InsertTask, type SelectTask, type InsertTaskTag } from '../db/schema/schema'
 import { type DB } from './common.db'
 import { formatTimestamp, parseISOToUnixTimestamp, getCurrentUnixTimestamp, validateRequiredString } from './common.core'
 import { convertDbTagToApi, type Tag } from './tags.db'
@@ -129,28 +129,6 @@ export function convertDbTaskToApi(dbTask: SelectTask, tags: Tag[] = []): Task {
     createdAt: formatTimestamp(dbTask.createdAt),
     updatedAt: formatTimestamp(dbTask.updatedAt)
   }
-}
-
-// Task database functions
-export async function ensureDefaultUser(db: DB): Promise<SelectUser> {
-  const existingUsers = await db.select().from(usersTable).limit(1)
-
-  if (existingUsers.length === 0) {
-    const result = await db.insert(usersTable).values({
-      name: 'Default User'
-    }).returning()
-    const user = result[0]
-    if (!user) {
-      throw new Error('Failed to create default user')
-    }
-    return user
-  }
-
-  const user = existingUsers[0]
-  if (!user) {
-    throw new Error('No user found and failed to create default user')
-  }
-  return user
 }
 
 type TaskFilterOptions = {

@@ -27,7 +27,8 @@ export async function ensureDefaultUser(db: DB): Promise<SelectUser> {
 
   if (existingUsers.length === 0) {
     const result = await db.insert(usersTable).values({
-      name: 'Default User'
+      name: 'Default User',
+      email: 'default@example.com',
     }).returning()
     const user = result[0]
     if (!user) {

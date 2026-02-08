@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, beforeAll, afterAll, vi } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import type { AppBindings } from '../types';
 import {
   listTagsRoute,
   getTagRoute,
@@ -24,9 +25,9 @@ import {
   createTaskHandler,
   updateTaskHandler
 } from './tasks';
-import { createSqliteLibsqlTestContext, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
+import { createSqliteLibsqlTestContext, createTestUser, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
 
-type TestGlobal = typeof globalThis & { testDb?: SqliteLibsqlTestContext['db'] };
+type TestGlobal = typeof globalThis & { testDb?: SqliteLibsqlTestContext['db']; testUser?: { id: number; email: string; name: string } };
 
 // Mock the database connection
 vi.mock('../../../core/common.db', () => ({
@@ -35,7 +36,7 @@ vi.mock('../../../core/common.db', () => ({
 
 // Create a test app with tag and task routes
 const createTestApp = () => {
-  const app = new OpenAPIHono();
+  const app = new OpenAPIHono<AppBindings>();
 
   // Add CORS middleware like in the main app
   app.use('/*', async (c, next) => {
@@ -47,6 +48,12 @@ const createTestApp = () => {
       return c.text('', 200);
     }
 
+    await next();
+  });
+
+  // Inject test user context (simulates JWT auth middleware)
+  app.use('/*', async (c, next) => {
+    c.set('user', (globalThis as TestGlobal).testUser!);
     await next();
   });
 
@@ -67,7 +74,7 @@ const createTestApp = () => {
 
 describe('Tag Handlers', () => {
   let testContext: SqliteLibsqlTestContext;
-  let app: OpenAPIHono;
+  let app: OpenAPIHono<AppBindings>;
 
   beforeAll(async () => {
     testContext = await createSqliteLibsqlTestContext();
@@ -78,6 +85,8 @@ describe('Tag Handlers', () => {
 
   beforeEach(async () => {
     await testContext.reset();
+    const user = await createTestUser(testContext.db);
+    (globalThis as TestGlobal).testUser = { id: user.id, email: user.email, name: user.name };
   });
 
   afterAll(async () => {

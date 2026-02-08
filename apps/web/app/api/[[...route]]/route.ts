@@ -1,5 +1,8 @@
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { handle } from 'hono/vercel'
+import { auth } from '../../core/auth'
+import { signJwt, verifyJwt } from '../../core/jwt'
+import type { AppBindings } from './types'
 
 // Import route definitions from local routes directory
 import {
@@ -55,19 +58,68 @@ import {
   deleteTagHandler
 } from './handlers'
 
-const app = new OpenAPIHono().basePath('/api')
+const app = new OpenAPIHono<AppBindings>().basePath('/api')
 
 // Simple CORS headers middleware
 app.use('/*', async (c, next) => {
   c.header('Access-Control-Allow-Origin', '*')
   c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
   c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-  
+
   if (c.req.method === 'OPTIONS') {
     return c.text('', 200)
   }
-  
+
   await next()
+})
+
+// Mount better-auth handler (sign-up, sign-in, sign-out, OAuth callbacks, etc.)
+app.on(['POST', 'GET'], '/auth/**', (c) => {
+  return auth.handler(c.req.raw)
+})
+
+// Token exchange endpoint: session token → short-lived JWT
+app.post('/token', async (c) => {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  if (!session) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+  const jwt = await signJwt({
+    id: Number(session.user.id),
+    email: session.user.email,
+    name: session.user.name,
+  })
+  return c.json({ token: jwt })
+})
+
+// JWT auth middleware — skip public routes
+app.use('/*', async (c, next) => {
+  const path = c.req.path
+  if (
+    path.startsWith('/api/auth') ||
+    path === '/api/token' ||
+    path === '/api/health' ||
+    path === '/api/doc'
+  ) {
+    return next()
+  }
+
+  const authHeader = c.req.header('Authorization')
+  if (!authHeader?.startsWith('Bearer ')) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+
+  try {
+    const payload = await verifyJwt(authHeader.slice(7))
+    c.set('user', {
+      id: Number(payload.sub),
+      email: payload.email,
+      name: payload.name,
+    })
+    await next()
+  } catch {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
 })
 
 // Register health check route

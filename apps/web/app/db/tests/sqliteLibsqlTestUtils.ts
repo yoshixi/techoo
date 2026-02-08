@@ -12,6 +12,15 @@ export type SqliteLibsqlTestContext = {
   reset: () => Promise<void>;
 };
 
+/**
+ * Creates a test user with email (required after auth schema migration).
+ * Returns the created user row.
+ */
+export async function createTestUser(db: DB, name = 'Test User', email = 'test@example.com') {
+  const [user] = await db.insert(schema.usersTable).values({ name, email }).returning();
+  return user!;
+}
+
 const IN_MEMORY_URL = 'file::memory:?cache=shared';
 
 const ensureDirectoryForUrl = (url: string) => {
@@ -58,8 +67,12 @@ export async function createSqliteLibsqlTestContext(): Promise<SqliteLibsqlTestC
     // Delete in order to respect foreign key constraints
     await db.delete(schema.taskTagsTable)
     await db.delete(schema.taskTimersTable)
+    await db.delete(schema.taskCommentsTable)
     await db.delete(schema.tasksTable)
     await db.delete(schema.tagsTable)
+    await db.delete(schema.verificationsTable)
+    await db.delete(schema.accountsTable)
+    await db.delete(schema.sessionsTable)
     await db.delete(schema.usersTable)
   };
 

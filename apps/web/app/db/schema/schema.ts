@@ -5,6 +5,52 @@ import { sql } from 'drizzle-orm';
 export const usersTable = sqliteTable('users', {
   id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
+  email: text('email').notNull().unique(),
+  emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
+  image: text('image'),
+  createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+});
+
+// Sessions table (better-auth)
+export const sessionsTable = sqliteTable('sessions', {
+  id: text('id').primaryKey(),
+  expiresAt: integer('expires_at', { mode: 'number' }).notNull(),
+  token: text('token').notNull().unique(),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  userId: integer('user_id', { mode: 'number' }).notNull()
+    .references(() => usersTable.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+});
+
+// Accounts table (better-auth)
+export const accountsTable = sqliteTable('accounts', {
+  id: text('id').primaryKey(),
+  accountId: text('account_id').notNull(),
+  providerId: text('provider_id').notNull(),
+  userId: integer('user_id', { mode: 'number' }).notNull()
+    .references(() => usersTable.id, { onDelete: 'cascade' }),
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
+  idToken: text('id_token'),
+  accessTokenExpiresAt: integer('access_token_expires_at', { mode: 'number' }),
+  refreshTokenExpiresAt: integer('refresh_token_expires_at', { mode: 'number' }),
+  scope: text('scope'),
+  password: text('password'),
+  createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+});
+
+// Verifications table (better-auth)
+export const verificationsTable = sqliteTable('verifications', {
+  id: text('id').primaryKey(),
+  identifier: text('identifier').notNull(),
+  value: text('value').notNull(),
+  expiresAt: integer('expires_at', { mode: 'number' }).notNull(),
+  createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
 });
 
 // Tasks table
@@ -83,3 +129,9 @@ export type InsertTag = typeof tagsTable.$inferInsert;
 export type SelectTag = typeof tagsTable.$inferSelect;
 export type InsertTaskTag = typeof taskTagsTable.$inferInsert;
 export type SelectTaskTag = typeof taskTagsTable.$inferSelect;
+export type InsertSession = typeof sessionsTable.$inferInsert;
+export type SelectSession = typeof sessionsTable.$inferSelect;
+export type InsertAccount = typeof accountsTable.$inferInsert;
+export type SelectAccount = typeof accountsTable.$inferSelect;
+export type InsertVerification = typeof verificationsTable.$inferInsert;
+export type SelectVerification = typeof verificationsTable.$inferSelect;

@@ -9,8 +9,8 @@ import { NotificationScheduler, type NotificationPermissionStatus } from './noti
 function setupContentSecurityPolicy(): void {
   const apiUrl = import.meta.env.MAIN_VITE_API_URL || 'http://localhost:3000'
 
-  // Build connect-src directive with configured API URL
-  const connectSrc = `'self' ${apiUrl}`
+  // Build connect-src directive with configured API URL and OAuth providers
+  const connectSrc = `'self' ${apiUrl} https://accounts.google.com https://github.com https://appleid.apple.com`
 
   // In development, Vite's HMR requires unsafe-inline and unsafe-eval for scripts
   // In production, we use strict CSP
@@ -20,7 +20,7 @@ function setupContentSecurityPolicy(): void {
     "default-src 'self'",
     `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data:",
+    "img-src 'self' data: https://*.googleusercontent.com https://avatars.githubusercontent.com",
     `connect-src ${connectSrc}`
   ].join('; ')
 
@@ -66,6 +66,11 @@ function resolvePreloadPath(): string {
 let mainWindow: BrowserWindow | null = null
 let trayManager: TrayManager | null = null
 let notificationScheduler: NotificationScheduler | null = null
+let authToken: string | null = null
+
+export function getAuthToken(): string | null {
+  return authToken
+}
 
 function createApplicationMenu(): void {
   const isMac = process.platform === 'darwin'
@@ -228,6 +233,13 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+
+  // Auth token IPC — renderer sends JWT for main process use (tray, notifications)
+  ipcMain.on('auth:token-update', (_event, token: string | null) => {
+    authToken = token
+    trayManager?.setAuthToken(token)
+    notificationScheduler?.setAuthToken(token)
+  })
 
   // Notification permission handlers
   ipcMain.handle('notification:get-permission', (): NotificationPermissionStatus => {

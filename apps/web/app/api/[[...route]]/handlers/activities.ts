@@ -1,13 +1,13 @@
 import type { RouteHandler } from '@hono/zod-openapi'
+import type { AppBindings } from '../types'
 import { getTaskActivitiesRoute } from '../routes/activities'
 import { getDb } from '../../../core/common.db'
-import { ensureDefaultUser } from '../../../core/tasks.db'
 import { getTaskActivities } from '../../../core/activities.db'
 
-export const getTaskActivitiesHandler: RouteHandler<typeof getTaskActivitiesRoute> = async (c) => {
+export const getTaskActivitiesHandler: RouteHandler<typeof getTaskActivitiesRoute, AppBindings> = async (c) => {
   try {
     const db = getDb()
-    const user = await ensureDefaultUser(db)
+    const user = c.get('user')
     const { id } = c.req.valid('param')
 
     const activities = await getTaskActivities(db, user.id, id)

@@ -14,6 +14,10 @@ type NotificationPermissionStatus = 'granted' | 'denied' | 'not-determined'
 
 // Custom APIs for renderer
 const api = {
+  // Auth token management
+  updateAuthToken: (token: string | null): void => {
+    ipcRenderer.send('auth:token-update', token)
+  },
   // Update all active timer states for tray display
   updateTimerStates: (timers: TimerState[]): void => {
     ipcRenderer.send('timer:states-change', timers)
