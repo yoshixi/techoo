@@ -47,8 +47,9 @@ export async function getJwt(): Promise<string | null> {
     window.api.updateAuthToken(jwtToken)
     return jwtToken
   } catch {
-    // Session expired — need to re-authenticate
-    jwtToken = null
+    // Session expired — clear all auth state so stale tokens don't
+    // cause repeated 401s from tray/notification requests
+    clearAuthState()
     return null
   }
 }
