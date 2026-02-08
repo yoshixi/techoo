@@ -1,5 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { handle } from 'hono/vercel'
+import { cors } from 'hono/cors'
 import { auth } from '../../core/auth'
 import { signJwt, verifyJwt } from '../../core/jwt'
 import type { AppBindings } from './types'
@@ -60,34 +61,20 @@ import {
 
 const app = new OpenAPIHono<AppBindings>().basePath('/api')
 
-// CORS middleware — echo back the request origin so credentials mode
-// 'include' (used by better-auth for cookies) is permitted by browsers.
-app.use('/*', async (c, next) => {
-  const origin = c.req.header('Origin')
-  c.header('Access-Control-Allow-Origin', origin || '*')
-  c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-  c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-  c.header('Access-Control-Allow-Credentials', 'true')
-  c.header('Access-Control-Expose-Headers', 'set-auth-token')
-
-  if (c.req.method === 'OPTIONS') {
-    return c.text('', 200)
-  }
-
-  await next()
-})
+// Hono's CORS middleware sets headers on c.res after await next(),
+// so it correctly applies to all responses including raw Response
+// objects returned by auth.handler().
+app.use('/*', cors({
+  origin: (origin) => origin,
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+  exposeHeaders: ['set-auth-token'],
+  credentials: true,
+}))
 
 // Mount better-auth handler (sign-up, sign-in, sign-out, OAuth callbacks, etc.)
-// auth.handler returns a raw Response that bypasses Hono's response building,
-// so CORS headers from the middleware above are not applied. We copy them onto
-// the response manually.
-app.on(['POST', 'GET'], '/auth/**', async (c) => {
-  const response = await auth.handler(c.req.raw)
-  const origin = c.req.header('Origin')
-  response.headers.set('Access-Control-Allow-Origin', origin || '*')
-  response.headers.set('Access-Control-Allow-Credentials', 'true')
-  response.headers.set('Access-Control-Expose-Headers', 'set-auth-token')
-  return response
+app.on(['POST', 'GET'], '/auth/**', (c) => {
+  return auth.handler(c.req.raw)
 })
 
 // Token exchange endpoint: session token → short-lived JWT
