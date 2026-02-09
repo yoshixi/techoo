@@ -92,7 +92,7 @@ function startOAuthCallbackServer(): Promise<OAuthCallbackServer> {
         return
       }
 
-      // Extract session token from query parameter (set by desktop-callback endpoint)
+      // Extract session token from query parameter (set by desktop-auth-callback endpoint)
       const url = new URL(req.url, `http://localhost`)
       const sessionToken = url.searchParams.get('session_token')
 

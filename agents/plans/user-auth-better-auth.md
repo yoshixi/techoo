@@ -292,7 +292,7 @@ app.post('/token', async (c) => {
 2. CORS middleware (reflect origin, expose `set-auth-token`, credentials: true)
 3. Mount better-auth catch-all: `app.on(["POST", "GET"], "/auth/**", (c) => auth.handler(c.req.raw))`
 4. Mount token exchange endpoint: `app.post('/token', ...)`
-5. Mount desktop OAuth endpoints (see Phase 3.8 below): `GET /desktop-oauth`, `GET /desktop-callback`
+5. Mount desktop OAuth endpoints (see Phase 3.8 below): `GET /desktop-oauth`, `GET /desktop-auth-callback`
 6. Add JWT auth middleware — skips public routes:
 
 ```ts
@@ -303,7 +303,7 @@ app.use('/*', async (c, next) => {
     path.startsWith('/api/auth') ||
     path === '/api/token' ||
     path === '/api/desktop-oauth' ||
-    path === '/api/desktop-callback' ||
+    path === '/api/desktop-auth-callback' ||
     path === '/api/health' ||
     path === '/api/doc'
   ) {
@@ -313,7 +313,7 @@ app.use('/*', async (c, next) => {
 });
 ```
 
-**Important routing constraint:** Do NOT register specific routes (e.g. `app.get('/auth/desktop-callback')`) under the `/auth/` prefix. Hono's trie router treats this as a conflict with the `app.on(['POST','GET'], '/auth/**', ...)` catch-all and stops matching other auth routes (causes 404 on `/auth/sign-in/social`). Use paths outside `/auth/` (e.g. `/desktop-oauth`, `/desktop-callback`).
+**Important routing constraint:** Do NOT register specific routes (e.g. `app.get('/auth/desktop-auth-callback')`) under the `/auth/` prefix. Hono's trie router treats this as a conflict with the `app.on(['POST','GET'], '/auth/**', ...)` catch-all and stops matching other auth routes (causes 404 on `/auth/sign-in/social`). Use paths outside `/auth/` (e.g. `/desktop-oauth`, `/desktop-auth-callback`).
 
 **Per-request cost:** One `HS256` signature verification (~microseconds). Zero DB queries.
 
@@ -515,7 +515,7 @@ app.get('/desktop-oauth', async (c) => {
   const provider = c.req.query('provider')
   const port = c.req.query('port')
   const baseUrl = new URL(c.req.url).origin
-  const callbackURL = `${baseUrl}/api/desktop-callback?port=${port}`
+  const callbackURL = `${baseUrl}/api/desktop-auth-callback?port=${port}`
 
   const authResponse = await auth.handler(
     new Request(`${baseUrl}/api/auth/sign-in/social`, {
@@ -534,12 +534,12 @@ app.get('/desktop-oauth', async (c) => {
 })
 ```
 
-**`GET /api/desktop-callback?port=54321`** — After OAuth completes:
+**`GET /api/desktop-auth-callback?port=54321`** — After OAuth completes:
 1. Reads the `better-auth.session_token` cookie (set by better-auth on the callback response)
 2. Redirects to `http://127.0.0.1:<port>/callback?session_token=<token>`
 
 ```ts
-app.get('/desktop-callback', async (c) => {
+app.get('/desktop-auth-callback', async (c) => {
   const port = c.req.query('port')
   const cookies = c.req.header('cookie') || ''
   const match = cookies.match(/better-auth\.session_token=([^;]+)/)
@@ -581,7 +581,7 @@ Electron renderer                 Electron main                  API server     
      |                                 |                              |                              |
      |                                 |                              |<--- callback /auth/callback --|
      |                                 |                              |-- create session + cookie     |
-     |                                 |                              |-- 302 → /desktop-callback --> |
+     |                                 |                              |-- 302 → /desktop-auth-callback --> |
      |                                 |                              |   read cookie, extract token  |
      |                                 |                              |-- 302 → 127.0.0.1:54321 ---> |
      |                                 |<-- GET /callback?token=... --|                              |

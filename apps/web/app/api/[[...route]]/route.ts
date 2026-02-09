@@ -103,7 +103,7 @@ app.get('/desktop-oauth', async (c) => {
 
   const url = new URL(c.req.url)
   const baseUrl = url.origin
-  const callbackURL = `${baseUrl}/api/desktop-callback?port=${port}`
+  const callbackURL = `${baseUrl}/api/desktop-auth-callback?port=${port}`
 
   // Call better-auth internally to get the OAuth URL + state cookie
   const authResponse = await auth.handler(
@@ -146,7 +146,7 @@ app.get('/desktop-oauth', async (c) => {
 
 // Desktop app OAuth callback: reads the session cookie set by better-auth and
 // redirects to the Electron loopback server with the token as a query parameter.
-app.get('/desktop-callback', async (c) => {
+app.get('/desktop-auth-callback', async (c) => {
   const port = c.req.query('port')
   if (!port) {
     return c.text('Missing port parameter', 400)
@@ -175,7 +175,7 @@ app.use('/*', async (c, next) => {
     path.startsWith('/api/auth') ||
     path === '/api/token' ||
     path === '/api/desktop-oauth' ||
-    path === '/api/desktop-callback' ||
+    path === '/api/desktop-auth-callback' ||
     path === '/api/health' ||
     path === '/api/doc'
   ) {
