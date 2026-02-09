@@ -7,12 +7,24 @@
  */
 
 export interface TaskComment {
-  /** Unique identifier for the comment */
-  id: string
-  /** Task ID associated with this comment */
-  taskId: string
-  /** Author (user) ID of the comment */
-  authorId: string
+  /**
+   * Unique identifier for the comment
+   * @minimum 0
+   * @exclusiveMinimum
+   */
+  id: number
+  /**
+   * Task ID associated with this comment
+   * @minimum 0
+   * @exclusiveMinimum
+   */
+  taskId: number
+  /**
+   * Author (user) ID of the comment
+   * @minimum 0
+   * @exclusiveMinimum
+   */
+  authorId: number
   /**
    * Comment text content (1-2000 chars)
    * @minLength 1

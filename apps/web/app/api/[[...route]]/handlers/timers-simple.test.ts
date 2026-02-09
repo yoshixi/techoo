@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, beforeAll, afterAll, vi } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { v7 as uuidv7 } from 'uuid';
+import type { AppBindings } from '../types';
 import {
   listTimersRoute,
   getTaskTimersRoute,
@@ -19,21 +19,18 @@ import {
 } from './timers';
 import { createTaskRoute } from '../routes/tasks';
 import { createTaskHandler } from './tasks';
-import { createSqliteLibsqlTestContext, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
+import { createSqliteLibsqlTestContext, createTestUser, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
 
-type TestGlobal = typeof globalThis & { testDb?: SqliteLibsqlTestContext['db'] };
+type TestGlobal = typeof globalThis & { testDb?: SqliteLibsqlTestContext['db']; testUser?: { id: number; email: string; name: string } };
 
 // Mock the database connection
 vi.mock('../../../core/common.db', () => ({
-  getDb: () => (globalThis as TestGlobal).testDb!,
-  createId: () => {
-    return uuidv7();
-  }
+  getDb: () => (globalThis as TestGlobal).testDb!
 }));
 
 // Create a test app with timer and task routes
 const createTestApp = () => {
-  const app = new OpenAPIHono();
+  const app = new OpenAPIHono<AppBindings>();
 
   // Add CORS middleware like in the main app
   app.use('/*', async (c, next) => {
@@ -45,6 +42,12 @@ const createTestApp = () => {
       return c.text('', 200);
     }
     
+    await next();
+  });
+
+  // Inject test user context (simulates JWT auth middleware)
+  app.use('/*', async (c, next) => {
+    c.set('user', (globalThis as TestGlobal).testUser!);
     await next();
   });
 
@@ -64,8 +67,8 @@ const createTestApp = () => {
 
 describe('Timer Handlers (Simplified)', () => {
   let testContext: SqliteLibsqlTestContext;
-  let app: OpenAPIHono;
-  let sampleTaskId: string;
+  let app: OpenAPIHono<AppBindings>;
+  let sampleTaskId: number;
 
   beforeAll(async () => {
     testContext = await createSqliteLibsqlTestContext();
@@ -76,7 +79,9 @@ describe('Timer Handlers (Simplified)', () => {
 
   beforeEach(async () => {
     await testContext.reset();
-    
+    const user = await createTestUser(testContext.db);
+    (globalThis as TestGlobal).testUser = { id: user.id, email: user.email, name: user.name };
+
     // Create a sample task for timer tests
     const createTaskReq = new Request('http://localhost/tasks', {
       method: 'POST',
@@ -143,7 +148,7 @@ describe('Timer Handlers (Simplified)', () => {
       await app.request(createTimerReqA);
       await app.request(createTimerReqB);
 
-      const query = new URLSearchParams([['taskIds', sampleTaskId]]);
+      const query = new URLSearchParams([['taskIds', String(sampleTaskId)]]);
       const req = new Request(`http://localhost/timers?${query.toString()}`);
       const res = await app.request(req);
 
@@ -187,8 +192,8 @@ describe('Timer Handlers (Simplified)', () => {
       );
 
       const query = new URLSearchParams([
-        ['taskIds', sampleTaskId],
-        ['taskIds', secondTaskId]
+        ['taskIds', String(sampleTaskId)],
+        ['taskIds', String(secondTaskId)]
       ]);
       const req = new Request(`http://localhost/timers?${query.toString()}`);
       const res = await app.request(req);
@@ -196,7 +201,7 @@ describe('Timer Handlers (Simplified)', () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.timers).toHaveLength(2);
-      const taskIds = data.timers.map((timer: { taskId: string }) => timer.taskId);
+      const taskIds = data.timers.map((timer: { taskId: number }) => timer.taskId);
       expect(taskIds).toContain(sampleTaskId);
       expect(taskIds).toContain(secondTaskId);
     });
@@ -232,7 +237,7 @@ describe('Timer Handlers (Simplified)', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          taskId: '01916b3e-1234-7890-abcd-ef1234567890',  // Valid UUID v7 format
+          taskId: 999999,
           startTime: '2024-01-01T10:00:00.000Z'
         })
       });
@@ -283,7 +288,7 @@ describe('Timer Handlers (Simplified)', () => {
     });
 
     it('should return 404 for non-existent task', async () => {
-      const req = new Request('http://localhost/tasks/01916b3e-1234-7890-abcd-ef1234567890/timers');  // Valid UUID v7 format
+      const req = new Request('http://localhost/tasks/999999/timers');
       const res = await app.request(req);
 
       expect(res.status).toBe(404);

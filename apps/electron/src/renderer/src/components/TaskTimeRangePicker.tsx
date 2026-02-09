@@ -57,7 +57,7 @@ type TaskTimeRangePickerProps = {
   /** All tasks to display on the calendar */
   tasks?: Task[]
   /** The ID of the current task being edited (for highlighting) */
-  currentTaskId?: string
+  currentTaskId?: number
   className?: string
 }
 

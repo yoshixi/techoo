@@ -1,6 +1,6 @@
 import { eq, and } from 'drizzle-orm'
 import { calendarsTable, type InsertCalendar, type SelectCalendar } from '../db/schema/schema'
-import { createId, type DB } from './common.db'
+import { type DB } from './common.db'
 import { formatTimestamp, getCurrentUnixTimestamp } from './common.core'
 import type { ProviderType } from './oauth.core'
 import type { Calendar, CreateCalendar, UpdateCalendar } from './calendars.core'
@@ -26,7 +26,7 @@ export function convertDbCalendarToApi(dbCalendar: SelectCalendar): Calendar {
 // Get all calendars for a user
 export async function getAllCalendars(
   db: DB,
-  userId: string,
+  userId: number,
   providerType?: ProviderType
 ): Promise<Calendar[]> {
   let query = db.select().from(calendarsTable)
@@ -48,7 +48,7 @@ export async function getAllCalendars(
 // Get all enabled calendars for a user
 export async function getEnabledCalendars(
   db: DB,
-  userId: string,
+  userId: number,
   providerType?: ProviderType
 ): Promise<Calendar[]> {
   if (providerType) {
@@ -77,8 +77,8 @@ export async function getEnabledCalendars(
 // Get calendar by ID
 export async function getCalendarById(
   db: DB,
-  userId: string,
-  calendarId: string
+  userId: number,
+  calendarId: number
 ): Promise<Calendar | null> {
   const [dbCalendar] = await db
     .select()
@@ -94,7 +94,7 @@ export async function getCalendarById(
 // Get calendar by provider calendar ID
 export async function getCalendarByProviderId(
   db: DB,
-  userId: string,
+  userId: number,
   providerType: ProviderType,
   providerCalendarId: string
 ): Promise<Calendar | null> {
@@ -116,7 +116,7 @@ export async function getCalendarByProviderId(
 // Create a calendar
 export async function createCalendar(
   db: DB,
-  userId: string,
+  userId: number,
   providerType: ProviderType,
   data: CreateCalendar,
   providerName: string,
@@ -124,8 +124,8 @@ export async function createCalendar(
 ): Promise<Calendar> {
   const now = getCurrentUnixTimestamp()
 
-  const calendarData: InsertCalendar = {
-    id: createId(),
+  // id is auto-incremented
+  const calendarData: Omit<InsertCalendar, 'id'> = {
     userId,
     providerType,
     providerCalendarId: data.providerCalendarId,
@@ -152,8 +152,8 @@ export async function createCalendar(
 // Update a calendar
 export async function updateCalendar(
   db: DB,
-  userId: string,
-  calendarId: string,
+  userId: number,
+  calendarId: number,
   data: UpdateCalendar
 ): Promise<Calendar | null> {
   const [existingCalendar] = await db
@@ -186,7 +186,7 @@ export async function updateCalendar(
 // Update lastSyncedAt timestamp
 export async function updateCalendarLastSynced(
   db: DB,
-  calendarId: string
+  calendarId: number
 ): Promise<void> {
   const now = getCurrentUnixTimestamp()
   await db
@@ -198,8 +198,8 @@ export async function updateCalendarLastSynced(
 // Delete a calendar
 export async function deleteCalendar(
   db: DB,
-  userId: string,
-  calendarId: string
+  userId: number,
+  calendarId: number
 ): Promise<Calendar | null> {
   const [existingCalendar] = await db
     .select()
@@ -222,7 +222,7 @@ export async function deleteCalendar(
 // Delete all calendars for a user and provider
 export async function deleteAllCalendarsForProvider(
   db: DB,
-  userId: string,
+  userId: number,
   providerType: ProviderType
 ): Promise<number> {
   const result = await db
@@ -241,7 +241,7 @@ export async function deleteAllCalendarsForProvider(
 // Get calendar by ID only (without user constraint, for webhooks)
 export async function getCalendarByIdOnly(
   db: DB,
-  calendarId: string
+  calendarId: number
 ): Promise<Calendar | null> {
   const [dbCalendar] = await db
     .select()
@@ -255,13 +255,13 @@ export async function getCalendarByIdOnly(
 // Get user ID by calendar ID (for webhooks)
 export async function getUserIdByCalendarId(
   db: DB,
-  calendarId: string
-): Promise<string | null> {
+  calendarId: number
+): Promise<number | null> {
   const [calendar] = await db
     .select({ userId: calendarsTable.userId })
     .from(calendarsTable)
     .where(eq(calendarsTable.id, calendarId))
 
   if (!calendar) return null
-  return calendar.userId.toString()
+  return calendar.userId
 }

@@ -37,10 +37,11 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
             "description": "Unique identifier for the tag",
-            "example": "01234567-89ab-cdef-0123-456789abcdef"
+            "example": 1
           },
           "name": {
             "type": "string",
@@ -73,10 +74,11 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
             "description": "Unique identifier for the task",
-            "example": "01234567-89ab-cdef-0123-456789abcdef"
+            "example": 1
           },
           "title": {
             "type": "string",
@@ -243,10 +245,11 @@
           "tagIds": {
             "type": "array",
             "items": {
-              "type": "string",
-              "format": "uuid",
-              "description": "UUID format",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "description": "Numeric ID",
+              "example": 1
             },
             "description": "Array of tag IDs to associate with the task",
             "example": []
@@ -302,10 +305,11 @@
           "tagIds": {
             "type": "array",
             "items": {
-              "type": "string",
-              "format": "uuid",
-              "description": "UUID format",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "description": "Numeric ID",
+              "example": 1
             },
             "description": "Array of tag IDs to associate with the task. Replaces all existing tags",
             "example": []
@@ -316,22 +320,25 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
             "description": "Unique identifier for the comment",
-            "example": "01234567-89ab-cdef-0123-456789abcdef"
+            "example": 1
           },
           "taskId": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
             "description": "Task ID associated with this comment",
-            "example": "01234567-89ab-cdef-0123-456789abcdef"
+            "example": 1
           },
           "authorId": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
             "description": "Author (user) ID of the comment",
-            "example": "01234567-89ab-cdef-0123-456789abcdef"
+            "example": 1
           },
           "body": {
             "type": "string",
@@ -422,16 +429,18 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
             "description": "Unique identifier for the timer",
-            "example": "01234567-89ab-cdef-0123-456789abcdef"
+            "example": 1
           },
           "taskId": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
             "description": "ID of the associated task",
-            "example": "01234567-89ab-cdef-0123-456789abcdef"
+            "example": 1
           },
           "startTime": {
             "type": "string",
@@ -559,10 +568,11 @@
         "type": "object",
         "properties": {
           "taskId": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
             "description": "ID of the task to start timer for",
-            "example": "01234567-89ab-cdef-0123-456789abcdef"
+            "example": 1
           },
           "startTime": {
             "type": "string",
@@ -800,10 +810,14 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "integer",
+                "minimum": 0,
+                "exclusiveMinimum": true,
+                "description": "Numeric ID",
+                "example": 1
               },
               "description": "Filter tasks by tag IDs (comma-separated). Returns tasks with ANY of the specified tags (OR logic)",
-              "example": "01234567-89ab-cdef-0123-456789abcdef,98765432-10ab-cdef-0123-456789abcdef"
+              "example": "1,2"
             },
             "required": false,
             "description": "Filter tasks by tag IDs (comma-separated). Returns tasks with ANY of the specified tags (OR logic)",
@@ -887,10 +901,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID",
@@ -937,10 +952,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID",
@@ -1006,10 +1022,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID",
@@ -1057,10 +1074,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID for comment operations",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID for comment operations",
@@ -1106,10 +1124,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID for comment operations",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID for comment operations",
@@ -1176,10 +1195,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID for comment operations",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID for comment operations",
@@ -1188,10 +1208,11 @@
           },
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Comment ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Comment ID",
@@ -1237,10 +1258,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID for comment operations",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID for comment operations",
@@ -1249,10 +1271,11 @@
           },
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Comment ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Comment ID",
@@ -1317,10 +1340,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID for comment operations",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID for comment operations",
@@ -1329,10 +1353,11 @@
           },
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Comment ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Comment ID",
@@ -1380,10 +1405,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID",
@@ -1434,15 +1460,16 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string",
-                "format": "uuid",
-                "description": "UUID format",
-                "example": "01234567-89ab-cdef-0123-456789abcdef"
+                "type": "integer",
+                "minimum": 0,
+                "exclusiveMinimum": true,
+                "description": "Numeric ID",
+                "example": 1
               },
               "description": "IDs of the tasks to get timers for",
               "example": [
-                "01234567-89ab-cdef-0123-456789abcdef",
-                "01234567-89ab-cdef-0123-456789abcdef"
+                1,
+                2
               ]
             },
             "required": false,
@@ -1537,10 +1564,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID for timer operations",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID for timer operations",
@@ -1589,10 +1617,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Timer ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Timer ID",
@@ -1639,10 +1668,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Timer ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Timer ID",
@@ -1698,10 +1728,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Timer ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Timer ID",
@@ -1823,10 +1854,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Tag ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Tag ID",
@@ -1873,10 +1905,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Tag ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Tag ID",
@@ -1942,10 +1975,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Tag ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Tag ID",

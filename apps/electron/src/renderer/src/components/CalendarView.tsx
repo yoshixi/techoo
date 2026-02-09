@@ -69,11 +69,11 @@ type CalendarViewProps = {
   /** Callback when a task is dragged to a new time/day */
   onTaskMove?: (task: Task, range: { startAt: string; endAt: string }) => void
   /** Map of task IDs to their active timers (for showing timer state) */
-  activeTimersByTaskId?: Map<string, TaskTimer>
+  activeTimersByTaskId?: Map<number, TaskTimer>
   /** Callback to start a timer for a task */
-  onTaskStartTimer?: (taskId: string) => void
+  onTaskStartTimer?: (taskId: number) => void
   /** Callback to stop a timer for a task */
-  onTaskStopTimer?: (taskId: string, timerId: string) => void
+  onTaskStopTimer?: (taskId: number, timerId: number) => void
   /** Callback when user drags to create a new time range */
   onCreateRange?: (range: { startAt: string; endAt: string }) => void
   /** Additional CSS classes */

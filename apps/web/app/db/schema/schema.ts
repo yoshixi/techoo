@@ -1,16 +1,62 @@
-import { sqliteTable, text, integer, blob, index, unique } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 // Users table
 export const usersTable = sqliteTable('users', {
-  id: blob('id').primaryKey().$type<string>(), // UUID v7 (16 bytes)
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
+  email: text('email').notNull().unique(),
+  emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
+  image: text('image'),
+  createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+});
+
+// Sessions table (better-auth)
+export const sessionsTable = sqliteTable('sessions', {
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  expiresAt: integer('expires_at', { mode: 'number' }).notNull(),
+  token: text('token').notNull().unique(),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  userId: integer('user_id', { mode: 'number' }).notNull()
+    .references(() => usersTable.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+});
+
+// Accounts table (better-auth)
+export const accountsTable = sqliteTable('accounts', {
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  accountId: text('account_id').notNull(),
+  providerId: text('provider_id').notNull(),
+  userId: integer('user_id', { mode: 'number' }).notNull()
+    .references(() => usersTable.id, { onDelete: 'cascade' }),
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
+  idToken: text('id_token'),
+  accessTokenExpiresAt: integer('access_token_expires_at', { mode: 'number' }),
+  refreshTokenExpiresAt: integer('refresh_token_expires_at', { mode: 'number' }),
+  scope: text('scope'),
+  password: text('password'),
+  createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+});
+
+// Verifications table (better-auth)
+export const verificationsTable = sqliteTable('verifications', {
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  identifier: text('identifier').notNull(),
+  value: text('value').notNull(),
+  expiresAt: integer('expires_at', { mode: 'number' }).notNull(),
+  createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
 });
 
 // Tasks table
 export const tasksTable = sqliteTable('tasks', {
-  id: blob('id').primaryKey().$type<string>(), // UUID v7 (16 bytes)
-  userId: blob('user_id').notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  userId: integer('user_id', { mode: 'number' }).notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description'),
   dueAt: integer('due_at', { mode: 'number' }), // Unix timestamp
@@ -23,8 +69,8 @@ export const tasksTable = sqliteTable('tasks', {
 
 // TaskTimers table
 export const taskTimersTable = sqliteTable('task_timers', {
-  id: blob('id').primaryKey().$type<string>(), // UUID v7 (16 bytes)
-  taskId: blob('task_id').notNull().references(() => tasksTable.id, { onDelete: 'cascade' }).$type<string>(),
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  taskId: integer('task_id', { mode: 'number' }).notNull().references(() => tasksTable.id, { onDelete: 'cascade' }),
   startTime: integer('start_time', { mode: 'number' }).notNull(), // Unix timestamp (seconds)
   endTime: integer('end_time', { mode: 'number' }), // Unix timestamp (seconds, optional)
   createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
@@ -33,9 +79,9 @@ export const taskTimersTable = sqliteTable('task_timers', {
 
 // TaskComments table
 export const taskCommentsTable = sqliteTable('task_comments', {
-  id: blob('id').primaryKey().$type<string>(), // UUID v7 (16 bytes)
-  taskId: blob('task_id').notNull().references(() => tasksTable.id, { onDelete: 'cascade' }).$type<string>(),
-  authorId: blob('author_id').notNull().references(() => usersTable.id, { onDelete: 'cascade' }).$type<string>(),
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  taskId: integer('task_id', { mode: 'number' }).notNull().references(() => tasksTable.id, { onDelete: 'cascade' }),
+  authorId: integer('author_id', { mode: 'number' }).notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
   body: text('body').notNull(),
   createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
   updatedAt: integer('updated_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
@@ -43,8 +89,8 @@ export const taskCommentsTable = sqliteTable('task_comments', {
 
 // Tags table (user-scoped tags)
 export const tagsTable = sqliteTable('tags', {
-  id: blob('id').primaryKey().$type<string>(), // UUID v7 (16 bytes)
-  userId: blob('user_id').notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  userId: integer('user_id', { mode: 'number' }).notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
   updatedAt: integer('updated_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
@@ -54,18 +100,18 @@ export const tagsTable = sqliteTable('tags', {
 
 // TaskTags junction table (many-to-many relationship between tasks and tags)
 export const taskTagsTable = sqliteTable('task_tags', {
-  id: blob('id').primaryKey().$type<string>(), // UUID v7 (16 bytes)
-  taskId: blob('task_id').notNull().references(() => tasksTable.id, { onDelete: 'cascade' }).$type<string>(),
-  tagId: blob('tag_id').notNull().references(() => tagsTable.id, { onDelete: 'cascade' }).$type<string>(),
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  taskId: integer('task_id', { mode: 'number' }).notNull().references(() => tasksTable.id, { onDelete: 'cascade' }),
+  tagId: integer('tag_id', { mode: 'number' }).notNull().references(() => tagsTable.id, { onDelete: 'cascade' }),
   createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
 }, (table) => ({
   uniqueTaskTag: unique().on(table.taskId, table.tagId),
 }));
 
-// OAuth Tokens table (provider-agnostic)
+// OAuth Tokens table (for Calendar API access - separate from better-auth accounts)
 export const oauthTokensTable = sqliteTable('oauth_tokens', {
-  id: blob('id').primaryKey().$type<string>(), // UUID v7 (16 bytes)
-  userId: blob('user_id').notNull().references(() => usersTable.id, { onDelete: 'cascade' }).$type<string>(),
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  userId: integer('user_id', { mode: 'number' }).notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
   providerType: text('provider_type').notNull(), // 'google' | 'outlook' | 'apple'
   accessToken: text('access_token').notNull(),
   refreshToken: text('refresh_token').notNull(),
@@ -79,8 +125,8 @@ export const oauthTokensTable = sqliteTable('oauth_tokens', {
 
 // Calendars table (provider-agnostic)
 export const calendarsTable = sqliteTable('calendars', {
-  id: blob('id').primaryKey().$type<string>(), // UUID v7 (16 bytes)
-  userId: blob('user_id').notNull().references(() => usersTable.id, { onDelete: 'cascade' }).$type<string>(),
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  userId: integer('user_id', { mode: 'number' }).notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
   providerType: text('provider_type').notNull(), // 'google' | 'outlook' | 'apple'
   providerCalendarId: text('provider_calendar_id').notNull(), // Provider's calendar ID
   name: text('name').notNull(), // Display name
@@ -95,8 +141,8 @@ export const calendarsTable = sqliteTable('calendars', {
 
 // Calendar Events table (provider-agnostic)
 export const calendarEventsTable = sqliteTable('calendar_events', {
-  id: blob('id').primaryKey().$type<string>(), // UUID v7 (16 bytes)
-  calendarId: blob('calendar_id').notNull().references(() => calendarsTable.id, { onDelete: 'cascade' }).$type<string>(),
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  calendarId: integer('calendar_id', { mode: 'number' }).notNull().references(() => calendarsTable.id, { onDelete: 'cascade' }),
   providerType: text('provider_type').notNull(), // 'google' | 'outlook' | 'apple' (denormalized for queries)
   providerEventId: text('provider_event_id').notNull(), // Provider's event ID
   title: text('title').notNull(),
@@ -113,8 +159,8 @@ export const calendarEventsTable = sqliteTable('calendar_events', {
 
 // Calendar Watch Channels table (for push notifications)
 export const calendarWatchChannelsTable = sqliteTable('calendar_watch_channels', {
-  id: blob('id').primaryKey().$type<string>(), // UUID v7 (16 bytes)
-  calendarId: blob('calendar_id').notNull().references(() => calendarsTable.id, { onDelete: 'cascade' }).$type<string>(),
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  calendarId: integer('calendar_id', { mode: 'number' }).notNull().references(() => calendarsTable.id, { onDelete: 'cascade' }),
   channelId: text('channel_id').notNull(), // UUID sent to Google for identifying the channel
   resourceId: text('resource_id').notNull(), // Resource ID returned by Google
   providerType: text('provider_type').notNull(), // 'google' | 'outlook' | 'apple'
@@ -155,6 +201,12 @@ export type InsertTag = typeof tagsTable.$inferInsert;
 export type SelectTag = typeof tagsTable.$inferSelect;
 export type InsertTaskTag = typeof taskTagsTable.$inferInsert;
 export type SelectTaskTag = typeof taskTagsTable.$inferSelect;
+export type InsertSession = typeof sessionsTable.$inferInsert;
+export type SelectSession = typeof sessionsTable.$inferSelect;
+export type InsertAccount = typeof accountsTable.$inferInsert;
+export type SelectAccount = typeof accountsTable.$inferSelect;
+export type InsertVerification = typeof verificationsTable.$inferInsert;
+export type SelectVerification = typeof verificationsTable.$inferSelect;
 export type InsertOauthToken = typeof oauthTokensTable.$inferInsert;
 export type SelectOauthToken = typeof oauthTokensTable.$inferSelect;
 export type InsertCalendar = typeof calendarsTable.$inferInsert;

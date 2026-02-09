@@ -9,8 +9,8 @@ import { useSidebar } from './ui/sidebar'
 
 interface InProgressPanelProps {
   tasks: Task[]
-  activeTimersByTaskId: Map<string, TaskTimer>
-  onStopTimer: (taskId: string, timerId: string) => void
+  activeTimersByTaskId: Map<number, TaskTimer>
+  onStopTimer: (taskId: number, timerId: number) => void
   onOpenTaskDetail: (task: Task) => void
 }
 

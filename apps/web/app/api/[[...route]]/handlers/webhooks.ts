@@ -1,10 +1,10 @@
 import type { RouteHandler } from '@hono/zod-openapi'
+import type { AppBindings } from '../types'
 import { googleCalendarWebhookRoute } from '../routes/webhooks'
 import { getDb } from '../../../core/common.db'
 import { getWatchChannelByChannelId } from '../../../core/watch-channels.db'
 import {
   getCalendarByIdOnly,
-  getUserIdByCalendarId,
   updateCalendarLastSynced
 } from '../../../core/calendars.db'
 import { importEventsForCalendar } from '../../../core/events.db'
@@ -17,7 +17,8 @@ import type { ProviderTokens } from '../../../core/calendar-providers/types'
 
 // POST /webhooks/google-calendar - Handle Google Calendar push notifications
 export const googleCalendarWebhookHandler: RouteHandler<
-  typeof googleCalendarWebhookRoute
+  typeof googleCalendarWebhookRoute,
+  AppBindings
 > = async (c) => {
   try {
     // Google sends these headers with notifications
@@ -76,10 +77,10 @@ export const googleCalendarWebhookHandler: RouteHandler<
       return c.json({}, 200)
     }
 
-    // Get user ID from calendar
-    const userId = calendar.userId
-    if (!userId) {
-      console.warn('User not found for calendar:', calendar.id)
+    // Get user ID from calendar (stored as string in API model)
+    const userId = parseInt(calendar.userId, 10)
+    if (isNaN(userId)) {
+      console.warn('Invalid user ID for calendar:', calendar.id)
       return c.json({}, 200)
     }
 
@@ -121,15 +122,16 @@ export const googleCalendarWebhookHandler: RouteHandler<
         endDate
       )
 
+      const calendarId = parseInt(calendar.id, 10)
       const eventsCount = await importEventsForCalendar(
         db,
-        calendar.id,
+        calendarId,
         'google',
         events
       )
 
       // Update last synced timestamp
-      await updateCalendarLastSynced(db, calendar.id)
+      await updateCalendarLastSynced(db, calendarId)
 
       console.log(
         `Webhook sync completed for calendar ${calendar.id}: ${eventsCount} events`

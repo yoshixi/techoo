@@ -29,7 +29,7 @@ Added `hasActiveTimer` query parameter to the tasks API to filter tasks by wheth
    - Added optimistic UI updates for timer start/stop (moves tasks between lists)
    - Updated all task mutations to use appropriate mutators
 
-## Bug Fix: Blob Comparison Issue
+## Bug Fix: Blob Comparison Issue (Historical)
 
 ### Problem
 Initial implementation used `inArray`/`notInArray` with task IDs fetched from a separate query:
@@ -44,7 +44,7 @@ activeTimerTaskIds = activeTimerTasks.map(row => row.taskId)
 // Then used: inArray(tasksTable.id, activeTimerTaskIds)
 ```
 
-This didn't work because SQLite blob values from different queries weren't being compared correctly by Drizzle ORM.
+This didn't work because SQLite blob values from different queries weren't being compared correctly by Drizzle ORM. This applied when IDs were stored as UUID blobs.
 
 ### Solution
 Used EXISTS/NOT EXISTS subqueries instead, letting SQLite handle the blob comparison internally:
@@ -68,11 +68,11 @@ if (filters.hasActiveTimer === true) {
 ```
 
 ### Key Insight
-When using Drizzle ORM with SQLite blob types (used for UUID storage), avoid fetching IDs and comparing them in JavaScript. Instead, use SQL subqueries (EXISTS, IN with subquery, JOINs) to let the database handle the comparison.
+When IDs were stored as SQLite blobs (UUIDs), avoid fetching IDs and comparing them in JavaScript. Instead, use SQL subqueries (EXISTS, IN with subquery, JOINs) to let the database handle the comparison. With integer IDs, this specific blob mismatch is no longer a concern, but the subquery approach remains a good pattern.
 
 ### Why the Broken Pattern Fails
 
-SQLite stores UUIDs as blobs. When Drizzle fetches these blob values and you pass them back into another query, the comparison doesn't work correctly - the blob representations don't match even though they represent the same UUID.
+SQLite stored UUIDs as blobs. When Drizzle fetched these blob values and you passed them back into another query, the comparison didn't work correctly - the blob representations didn't match even though they represented the same UUID.
 
 ```typescript
 // BROKEN: Fetching IDs in one query, then using them in another
@@ -81,10 +81,10 @@ const activeTimerTasks = await db
   .from(taskTimersTable)
   .where(isNull(taskTimersTable.endTime))
 
-// These IDs are blob values
+// These IDs were blob values
 const activeTimerTaskIds = activeTimerTasks.map(row => row.taskId)
 
-// This comparison fails - blob values don't match correctly
+// This comparison failed - blob values didn't match correctly
 const tasks = await db
   .select()
   .from(tasksTable)

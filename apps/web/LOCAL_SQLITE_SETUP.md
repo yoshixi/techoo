@@ -42,6 +42,10 @@ pnpm install
 # Setup local database schema
 pnpm drizzle:push
 
+# Fresh-start schema note
+# If you already have a local database file or an older schema, delete apps/web/tmp/local.db
+# and rerun the command above.
+
 # Start development server
 pnpm dev
 ```
@@ -65,6 +69,8 @@ pnpm start
 pnpm drizzle:push          # Apply schema to local SQLite
 pnpm drizzle:generate      # Generate migrations
 ```
+
+The schema is treated as a fresh-start setup. If you have an existing local database from an older schema, delete `apps/web/tmp/local.db` before running `pnpm drizzle:push`.
 
 ### Production (Turso)
 ```bash

@@ -1,11 +1,11 @@
 import { eq, and, desc, inArray } from 'drizzle-orm'
 import { tagsTable, type InsertTag, type SelectTag } from '../db/schema/schema'
-import { createId, type DB } from './common.db'
+import { type DB } from './common.db'
 import { formatTimestamp, getCurrentUnixTimestamp, validateRequiredString } from './common.core'
 
 // Define API types without zod dependencies
 export interface Tag {
-  id: string
+  id: number
   name: string
   createdAt: string
   updatedAt: string
@@ -22,7 +22,7 @@ export interface UpdateTag {
 // Convert database tag to API tag
 export function convertDbTagToApi(dbTag: SelectTag): Tag {
   return {
-    id: dbTag.id.toString(),
+    id: dbTag.id,
     name: dbTag.name,
     createdAt: formatTimestamp(dbTag.createdAt),
     updatedAt: formatTimestamp(dbTag.updatedAt)
@@ -30,7 +30,7 @@ export function convertDbTagToApi(dbTag: SelectTag): Tag {
 }
 
 // Tag database functions
-export async function getAllTags(db: DB, userId: string): Promise<Tag[]> {
+export async function getAllTags(db: DB, userId: number): Promise<Tag[]> {
   const dbTags = await db
     .select()
     .from(tagsTable)
@@ -40,7 +40,7 @@ export async function getAllTags(db: DB, userId: string): Promise<Tag[]> {
   return dbTags.map(convertDbTagToApi)
 }
 
-export async function getTagById(db: DB, userId: string, tagId: string): Promise<Tag | null> {
+export async function getTagById(db: DB, userId: number, tagId: number): Promise<Tag | null> {
   const [dbTag] = await db
     .select()
     .from(tagsTable)
@@ -53,10 +53,9 @@ export async function getTagById(db: DB, userId: string, tagId: string): Promise
   return convertDbTagToApi(dbTag)
 }
 
-export async function createTag(db: DB, userId: string, data: CreateTag): Promise<Tag> {
+export async function createTag(db: DB, userId: number, data: CreateTag): Promise<Tag> {
   const now = getCurrentUnixTimestamp()
   const tagData: InsertTag = {
-    id: createId(),
     userId: userId,
     name: validateRequiredString(data.name, 'Tag name'),
     createdAt: now,
@@ -71,7 +70,7 @@ export async function createTag(db: DB, userId: string, data: CreateTag): Promis
   return convertDbTagToApi(dbTag)
 }
 
-export async function updateTag(db: DB, userId: string, tagId: string, data: UpdateTag): Promise<Tag | null> {
+export async function updateTag(db: DB, userId: number, tagId: number, data: UpdateTag): Promise<Tag | null> {
   // Check if tag exists and belongs to user
   const [existingTag] = await db
     .select()
@@ -105,7 +104,7 @@ export async function updateTag(db: DB, userId: string, tagId: string, data: Upd
   return convertDbTagToApi(updatedDbTag)
 }
 
-export async function deleteTag(db: DB, userId: string, tagId: string): Promise<Tag | null> {
+export async function deleteTag(db: DB, userId: number, tagId: number): Promise<Tag | null> {
   const [existingTag] = await db
     .select()
     .from(tagsTable)
@@ -130,7 +129,7 @@ export async function deleteTag(db: DB, userId: string, tagId: string): Promise<
 }
 
 // Helper function to get tags by IDs (for validation)
-export async function getTagsByIds(db: DB, userId: string, tagIds: string[]): Promise<Tag[]> {
+export async function getTagsByIds(db: DB, userId: number, tagIds: number[]): Promise<Tag[]> {
   if (tagIds.length === 0) return []
 
   const uniqueIds = Array.from(new Set(tagIds))
@@ -148,7 +147,7 @@ export async function getTagsByIds(db: DB, userId: string, tagIds: string[]): Pr
 }
 
 // Helper function to get tags by names (for filtering)
-export async function getTagsByNames(db: DB, userId: string, names: string[]): Promise<Tag[]> {
+export async function getTagsByNames(db: DB, userId: number, names: string[]): Promise<Tag[]> {
   if (names.length === 0) return []
 
   const uniqueNames = Array.from(new Set(names))

@@ -5,7 +5,7 @@ import {
   type InsertCalendarEvent,
   type SelectCalendarEvent
 } from '../db/schema/schema'
-import { createId, type DB } from './common.db'
+import { type DB } from './common.db'
 import { formatTimestamp, getCurrentUnixTimestamp, parseISOToUnixTimestamp } from './common.core'
 import type { ProviderType } from './oauth.core'
 import type { CalendarEvent } from './events.core'
@@ -31,7 +31,7 @@ export function convertDbEventToApi(dbEvent: SelectCalendarEvent): CalendarEvent
 
 // Query parameters for listing events
 export interface EventQueryParams {
-  calendarId?: string
+  calendarId?: number
   startDate?: string // ISO datetime string
   endDate?: string // ISO datetime string
 }
@@ -39,7 +39,7 @@ export interface EventQueryParams {
 // Get all events for a user with optional filters
 export async function getAllEvents(
   db: DB,
-  userId: string,
+  userId: number,
   params?: EventQueryParams
 ): Promise<CalendarEvent[]> {
   // Get user's calendar IDs first
@@ -91,8 +91,8 @@ export async function getAllEvents(
 // Get event by ID
 export async function getEventById(
   db: DB,
-  userId: string,
-  eventId: string
+  userId: number,
+  eventId: number
 ): Promise<CalendarEvent | null> {
   // Get user's calendar IDs
   const userCalendars = await db
@@ -123,7 +123,7 @@ export async function getEventById(
 // Batch import events for a calendar (full replace strategy)
 export async function importEventsForCalendar(
   db: DB,
-  calendarId: string,
+  calendarId: number,
   providerType: ProviderType,
   events: ProviderEvent[]
 ): Promise<number> {
@@ -138,9 +138,8 @@ export async function importEventsForCalendar(
     return 0
   }
 
-  // Prepare event data for batch insert
-  const eventData: InsertCalendarEvent[] = events.map((event) => ({
-    id: createId(),
+  // Prepare event data for batch insert (id is auto-incremented)
+  const eventData: Omit<InsertCalendarEvent, 'id'>[] = events.map((event) => ({
     calendarId,
     providerType,
     providerEventId: event.providerEventId,
@@ -167,7 +166,7 @@ export async function importEventsForCalendar(
 // Delete all events for a calendar
 export async function deleteEventsForCalendar(
   db: DB,
-  calendarId: string
+  calendarId: number
 ): Promise<number> {
   const result = await db
     .delete(calendarEventsTable)
@@ -180,7 +179,7 @@ export async function deleteEventsForCalendar(
 // Get events count for a calendar
 export async function getEventsCountForCalendar(
   db: DB,
-  calendarId: string
+  calendarId: number
 ): Promise<number> {
   const result = await db
     .select()

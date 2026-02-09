@@ -1,4 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain, session, Menu, globalShortcut } from 'electron'
+import { createServer, type Server } from 'node:http'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -7,10 +8,10 @@ import { TrayManager } from './tray'
 import { NotificationScheduler, type NotificationPermissionStatus } from './notificationScheduler'
 
 function setupContentSecurityPolicy(): void {
-  const apiUrl = import.meta.env.MAIN_VITE_API_URL || 'http://localhost:3000'
+  const apiUrl = import.meta.env.MAIN_VITE_API_BASE_URL || 'http://localhost:3000'
 
-  // Build connect-src directive with configured API URL
-  const connectSrc = `'self' ${apiUrl}`
+  // Build connect-src directive with configured API URL and OAuth providers
+  const connectSrc = `'self' ${apiUrl} https://accounts.google.com https://github.com https://appleid.apple.com`
 
   // In development, Vite's HMR requires unsafe-inline and unsafe-eval for scripts
   // In production, we use strict CSP
@@ -20,7 +21,7 @@ function setupContentSecurityPolicy(): void {
     "default-src 'self'",
     `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data:",
+    "img-src 'self' data: https://*.googleusercontent.com https://avatars.githubusercontent.com",
     `connect-src ${connectSrc}`
   ].join('; ')
 
@@ -63,9 +64,75 @@ function resolvePreloadPath(): string {
   return join(__dirname, '../preload/index.js')
 }
 
+interface OAuthCallbackServer {
+  port: number
+  waitForToken: () => Promise<string | null>
+  close: () => void
+}
+
+function startOAuthCallbackServer(): Promise<OAuthCallbackServer> {
+  return new Promise((resolveSetup) => {
+    let resolveToken: ((token: string | null) => void) | null = null
+    const tokenPromise = new Promise<string | null>((resolve) => {
+      resolveToken = resolve
+    })
+
+    // Timeout: resolve with null after 5 minutes
+    const timeout = setTimeout(() => {
+      if (resolveToken) {
+        resolveToken(null)
+        resolveToken = null
+      }
+    }, 5 * 60 * 1000)
+
+    const server: Server = createServer((req, res) => {
+      if (!req.url?.startsWith('/callback')) {
+        res.writeHead(404)
+        res.end()
+        return
+      }
+
+      // Extract session token from query parameter (set by desktop-auth-callback endpoint)
+      const url = new URL(req.url, `http://localhost`)
+      const sessionToken = url.searchParams.get('session_token')
+
+      res.writeHead(200, { 'Content-Type': 'text/html' })
+      res.end(
+        sessionToken
+          ? '<html><body style="font-family:system-ui;text-align:center;padding:3rem"><h1>Signed in successfully</h1><p>You can close this window and return to the app.</p></body></html>'
+          : '<html><body style="font-family:system-ui;text-align:center;padding:3rem"><h1>Authentication failed</h1><p>Please close this window and try again.</p></body></html>'
+      )
+
+      clearTimeout(timeout)
+      if (resolveToken) {
+        resolveToken(sessionToken)
+        resolveToken = null
+      }
+    })
+
+    server.listen(0, '127.0.0.1', () => {
+      const addr = server.address()
+      const port = typeof addr === 'object' && addr ? addr.port : 0
+      resolveSetup({
+        port,
+        waitForToken: () => tokenPromise,
+        close: () => {
+          clearTimeout(timeout)
+          server.close()
+        },
+      })
+    })
+  })
+}
+
 let mainWindow: BrowserWindow | null = null
 let trayManager: TrayManager | null = null
 let notificationScheduler: NotificationScheduler | null = null
+let authToken: string | null = null
+
+export function getAuthToken(): string | null {
+  return authToken
+}
 
 function createApplicationMenu(): void {
   const isMac = process.platform === 'darwin'
@@ -74,21 +141,21 @@ function createApplicationMenu(): void {
     // App menu (macOS only)
     ...(isMac
       ? [
-          {
-            label: app.name,
-            submenu: [
-              { role: 'about' as const },
-              { type: 'separator' as const },
-              { role: 'services' as const },
-              { type: 'separator' as const },
-              { role: 'hide' as const },
-              { role: 'hideOthers' as const },
-              { role: 'unhide' as const },
-              { type: 'separator' as const },
-              { role: 'quit' as const }
-            ]
-          }
-        ]
+        {
+          label: app.name,
+          submenu: [
+            { role: 'about' as const },
+            { type: 'separator' as const },
+            { role: 'services' as const },
+            { type: 'separator' as const },
+            { role: 'hide' as const },
+            { role: 'hideOthers' as const },
+            { role: 'unhide' as const },
+            { type: 'separator' as const },
+            { role: 'quit' as const }
+          ]
+        }
+      ]
       : []),
     // Edit menu
     {
@@ -102,10 +169,10 @@ function createApplicationMenu(): void {
         { role: 'paste' },
         ...(isMac
           ? [
-              { role: 'pasteAndMatchStyle' as const },
-              { role: 'delete' as const },
-              { role: 'selectAll' as const }
-            ]
+            { role: 'pasteAndMatchStyle' as const },
+            { role: 'delete' as const },
+            { role: 'selectAll' as const }
+          ]
           : [{ role: 'delete' as const }, { type: 'separator' as const }, { role: 'selectAll' as const }])
       ]
     },
@@ -229,6 +296,13 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
+  // Auth token IPC — renderer sends JWT for main process use (tray, notifications)
+  ipcMain.on('auth:token-update', (_event, token: string | null) => {
+    authToken = token
+    trayManager?.setAuthToken(token)
+    notificationScheduler?.setAuthToken(token)
+  })
+
   // Notification permission handlers
   ipcMain.handle('notification:get-permission', (): NotificationPermissionStatus => {
     return NotificationScheduler.getPermissionStatus()
@@ -240,12 +314,44 @@ app.whenReady().then(() => {
     NotificationScheduler.openNotificationSettings()
   })
 
+  // OAuth social sign-in via system browser
+  // Opens the default browser for OAuth (supports passkeys, biometrics, etc.)
+  // and uses a temporary loopback HTTP server to receive the callback.
+  // The entire OAuth flow happens in the browser so state cookies are consistent.
+  ipcMain.handle('auth:social-sign-in', async (_event, provider: string) => {
+    const apiUrl = `${import.meta.env.MAIN_VITE_API_BASE_URL || 'http://localhost:3000'}/api`
+
+    // Start a temporary local server to receive the OAuth callback
+    const callbackServer = await startOAuthCallbackServer()
+    console.log(`opening URL ${apiUrl}`)
+
+    // Open system browser to the server's desktop-oauth endpoint.
+    // The server initiates the OAuth flow so the browser has the state cookie.
+    const oauthInitUrl =
+      `${apiUrl}/desktop-oauth?provider=${encodeURIComponent(provider)}&port=${callbackServer.port}`
+    shell.openExternal(oauthInitUrl)
+
+    // Bring Electron back to front so user sees loading state
+    setTimeout(() => {
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore()
+        mainWindow.focus()
+      }
+    }, 1000)
+
+    try {
+      return await callbackServer.waitForToken()
+    } finally {
+      callbackServer.close()
+    }
+  })
+
   // Timer states updates from renderer for tray display (supports multiple timers)
   ipcMain.on(
     'timer:states-change',
     (
       _event,
-      timers: { timerId: string; taskId: string; taskTitle: string; startTime: string }[]
+      timers: { timerId: number; taskId: number; taskTitle: string; startTime: string }[]
     ) => {
       trayManager?.updateTimerStates(timers)
     }
@@ -267,22 +373,22 @@ app.whenReady().then(() => {
   trayManager.init()
 
   // Wire up show task detail callback - opens task modal in renderer
-  trayManager.setOnShowTaskDetail((taskId: string) => {
+  trayManager.setOnShowTaskDetail((taskId: number) => {
     mainWindow?.webContents.send('tray:show-task-detail', taskId)
   })
 
   // Initialize notification scheduler for task reminders
   notificationScheduler = new NotificationScheduler()
   notificationScheduler.setHandlers({
-    onStartTimer: (taskId: string) => {
+    onStartTimer: (taskId: number) => {
       // Notify renderer to refresh timers
       mainWindow?.webContents.send('notification:timer-started', taskId)
     },
-    onStopTimer: (taskId: string) => {
+    onStopTimer: (taskId: number, _timerId: number) => {
       // Notify renderer to refresh timers
       mainWindow?.webContents.send('notification:timer-stopped', taskId)
     },
-    onShowTask: (taskId: string) => {
+    onShowTask: (taskId: number) => {
       // Show the main window and open task detail
       mainWindow?.show()
       mainWindow?.webContents.send('tray:show-task-detail', taskId)

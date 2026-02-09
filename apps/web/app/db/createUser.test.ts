@@ -33,10 +33,11 @@ describe('createUser', () => {
 
     it('creates a user row in the local SQLite file', async () => {
         const context = getCtx();
-        const created = await createUser(context.db, 'Alice');
+        const created = await createUser(context.db, 'Alice', 'alice@example.com');
 
         expect(created).toMatchObject({
             name: 'Alice',
+            email: 'alice@example.com',
         });
         expect(created?.id).toBeTruthy();
 
@@ -46,12 +47,12 @@ describe('createUser', () => {
         expect(rows[0]).toMatchObject({
             id: created?.id,
             name: 'Alice',
+            email: 'alice@example.com',
         });
     });
 
     it('rejects blank names', async () => {
         const context = getCtx();
-        await expect(createUser(context.db, '   ')).rejects.toThrow('Name is required');
+        await expect(createUser(context.db, '   ', 'blank@example.com')).rejects.toThrow('Name is required');
     });
 });
-

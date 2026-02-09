@@ -8,6 +8,8 @@ First, run the following command to create the database schema:
 pnpm run drizzle:push
 ```
 
+Note: the database schema is treated as a fresh-start setup. If you already have a local database or an older schema, delete `apps/web/tmp/local.db` and rerun the command above.
+
 Then, run the following command to start the development server:
 
 ```bash

@@ -21,7 +21,7 @@ Interactive API documentation is available at `/api/doc` when the server is runn
 - **Framework**: Hono with OpenAPI extension
 - **Schema Validation**: Zod with OpenAPI integration (@hono/zod-openapi)
 - **Database**: LibSQL (Turso) with Drizzle ORM
-- **UUID Generation**: UUID v7 for better performance and ordering
+- **ID Strategy**: SQLite integer IDs with auto-increment
 
 ### Code Organization
 ```
@@ -54,7 +54,7 @@ apps/web/app/
 
 ### Validation Errors
 The API uses Zod schemas for comprehensive request validation:
-- **UUID validation**: All IDs must be valid UUID v7 format
+- **ID validation**: All IDs must be positive integers
 - **Required fields**: Missing required fields return 400 with specific error messages
 - **String length**: Title field must be 1-200 characters
 - **Date format**: All timestamps must be valid ISO 8601 format
@@ -68,7 +68,7 @@ The API supports Cross-Origin Resource Sharing (CORS) for all routes:
 
 ## Implementation Notes
 
-1. **UUID v7**: Used for better performance and natural ordering
+1. **Integer IDs**: SQLite auto-incremented IDs for simpler storage and queries
 2. **Automatic User Management**: A default user is automatically created and used for all operations
 3. **Status Derivation**: Task status is derived from completion state and active timers
 4. **Cascade Deletion**: Deleting a task automatically deletes all associated timers

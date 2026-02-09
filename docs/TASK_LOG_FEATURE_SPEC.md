@@ -30,12 +30,12 @@
 ### Proposed Schema (`task_comments`)
 | Column           | Type                | Notes |
 |------------------|---------------------|-------|
-| `id`             | UUID v7 (PK)        | Matches existing ID strategy. |
-| `task_id`        | UUID (FK tasks.id)  | Required, cascades on delete. |
+| `id`             | INTEGER (PK)        | SQLite auto-increment ID. |
+| `task_id`        | INTEGER (FK tasks.id) | Required, cascades on delete. |
 | `body`           | TEXT                | Markdown/plain text body (1–2000 chars). |
 | `created_at`     | DATETIME            | Default `CURRENT_TIMESTAMP`. |
 | `updated_at`     | DATETIME            | For edits; nullable until first edit. |
-| `author_id`      | UUID (FK users.id)  | Defaults to the single-user context today, future-proofed for multi-user. |
+| `author_id`      | INTEGER (FK users.id) | Defaults to the single-user context today, future-proofed for multi-user. |
 
 Indexes:
 - `(task_id, created_at DESC)` for per-task timeline queries.
@@ -54,7 +54,7 @@ Indexes:
   ]
   ```
   Client renders these directly in the timeline UI.
-- **Validation:** Reuse Zod patterns (string length, UUID). API only needs to ensure that the task exists and the body meets requirements.
+- **Validation:** Reuse Zod patterns (string length, numeric IDs). API only needs to ensure that the task exists and the body meets requirements.
 
 ## UX Flow with Timer
 1. User starts a timer.

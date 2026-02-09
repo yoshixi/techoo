@@ -28,7 +28,12 @@
       "Bash(git push:*)",
       "Bash(pnpm --filter electron list:*)",
       "Bash(pnpm --filter electron exec npm view:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "WebFetch(domain:www.better-auth.com)",
+      "Bash(xargs:*)",
+      "Bash(pnpm --filter web add:*)",
+      "Bash(devenv shell:*)",
+      "Bash(git stash:*)"
     ]
   }
 }

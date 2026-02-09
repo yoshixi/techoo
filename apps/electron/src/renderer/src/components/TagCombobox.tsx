@@ -5,8 +5,8 @@ import { Badge } from './ui/badge'
 import { cn } from '../lib/utils'
 
 interface TagComboboxProps {
-  selectedTagIds: string[]
-  onSelectionChange: (tagIds: string[]) => void
+  selectedTagIds: number[]
+  onSelectionChange: (tagIds: number[]) => void
   onClose?: () => void
   placeholder?: string
   className?: string
@@ -72,7 +72,7 @@ export const TagCombobox: React.FC<TagComboboxProps> = ({
   }, [onClose])
 
   const handleToggleTag = useCallback(
-    (tagId: string): void => {
+    (tagId: number): void => {
       if (selectedTagIds.includes(tagId)) {
         onSelectionChange(selectedTagIds.filter((id) => id !== tagId))
       } else {
@@ -83,7 +83,7 @@ export const TagCombobox: React.FC<TagComboboxProps> = ({
   )
 
   const handleRemoveTag = useCallback(
-    (tagId: string, event: React.MouseEvent): void => {
+    (tagId: number, event: React.MouseEvent): void => {
       event.stopPropagation()
       onSelectionChange(selectedTagIds.filter((id) => id !== tagId))
     },

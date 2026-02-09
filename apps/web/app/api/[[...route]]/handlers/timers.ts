@@ -1,4 +1,5 @@
 import type { RouteHandler } from '@hono/zod-openapi'
+import type { AppBindings } from '../types'
 import {
   listTimersRoute,
   getTaskTimersRoute,
@@ -8,7 +9,6 @@ import {
   deleteTimerRoute
 } from '../routes/timers'
 import { getDb } from '../../../core/common.db'
-import { ensureDefaultUser } from '../../../core/tasks.db'
 import {
   getAllTimers,
   getAllTimersByTaskIds,
@@ -20,13 +20,14 @@ import {
 } from '../../../core/timers.db'
 
 // Timer handlers
-export const listTimersHandler: RouteHandler<typeof listTimersRoute> = async (c) => {
+export const listTimersHandler: RouteHandler<typeof listTimersRoute, AppBindings> = async (c) => {
   try {
     const db = getDb()
+    const user = c.get('user')
 
     const { taskIds } = c.req.valid('query')
     if (taskIds) {
-      const timers = await getAllTimersByTaskIds(db, taskIds)
+      const timers = await getAllTimersByTaskIds(db, user.id, taskIds)
       return c.json(
         {
           timers: timers,
@@ -35,9 +36,9 @@ export const listTimersHandler: RouteHandler<typeof listTimersRoute> = async (c)
         200
       )
     }
-    
-    const timers = await getAllTimers(db)
-    
+
+    const timers = await getAllTimers(db, user.id)
+
     return c.json(
       {
         timers: timers,
@@ -48,7 +49,7 @@ export const listTimersHandler: RouteHandler<typeof listTimersRoute> = async (c)
   } catch (error) {
     console.error('Error fetching timers:', error)
     return c.json(
-      { 
+      {
         error: 'Internal server error',
         message: 'Failed to fetch timers'
       },
@@ -57,24 +58,24 @@ export const listTimersHandler: RouteHandler<typeof listTimersRoute> = async (c)
   }
 }
 
-export const getTaskTimersHandler: RouteHandler<typeof getTaskTimersRoute> = async (c) => {
+export const getTaskTimersHandler: RouteHandler<typeof getTaskTimersRoute, AppBindings> = async (c) => {
   try {
     const db = getDb()
-    const defaultUser = await ensureDefaultUser(db)
+    const user = c.get('user')
     const { taskId } = c.req.valid('param')
-    
-    const timers = await getTimersByTaskId(db, defaultUser.id.toString(), taskId)
-    
+
+    const timers = await getTimersByTaskId(db, user.id, taskId)
+
     if (timers === null) {
       return c.json(
         {
-          error: 'Not found', 
+          error: 'Not found',
           message: 'Task not found'
         },
         404
       )
     }
-    
+
     return c.json(
       {
         timers: timers,
@@ -94,13 +95,14 @@ export const getTaskTimersHandler: RouteHandler<typeof getTaskTimersRoute> = asy
   }
 }
 
-export const getTimerHandler: RouteHandler<typeof getTimerRoute> = async (c) => {
+export const getTimerHandler: RouteHandler<typeof getTimerRoute, AppBindings> = async (c) => {
   try {
     const db = getDb()
+    const user = c.get('user')
     const { id } = c.req.valid('param')
-    
-    const timer = await getTimerById(db, id)
-    
+
+    const timer = await getTimerById(db, user.id, id)
+
     if (!timer) {
       return c.json(
         {
@@ -110,7 +112,7 @@ export const getTimerHandler: RouteHandler<typeof getTimerRoute> = async (c) => 
         404
       )
     }
-    
+
     return c.json({ timer }, 200)
   } catch (error) {
     console.error('Error fetching timer:', error)
@@ -124,14 +126,14 @@ export const getTimerHandler: RouteHandler<typeof getTimerRoute> = async (c) => 
   }
 }
 
-export const createTimerHandler: RouteHandler<typeof createTimerRoute> = async (c) => {
+export const createTimerHandler: RouteHandler<typeof createTimerRoute, AppBindings> = async (c) => {
   try {
     const db = getDb()
-    const defaultUser = await ensureDefaultUser(db)
+    const user = c.get('user')
     const data = c.req.valid('json')
-    
-    const timer = await createTimer(db, defaultUser.id.toString(), data)
-    
+
+    const timer = await createTimer(db, user.id, data)
+
     if (!timer) {
       return c.json(
         {
@@ -141,7 +143,7 @@ export const createTimerHandler: RouteHandler<typeof createTimerRoute> = async (
         404
       )
     }
-    
+
     return c.json({ timer }, 201)
   } catch (error) {
     console.error('Error creating timer:', error)
@@ -155,14 +157,15 @@ export const createTimerHandler: RouteHandler<typeof createTimerRoute> = async (
   }
 }
 
-export const updateTimerHandler: RouteHandler<typeof updateTimerRoute> = async (c) => {
+export const updateTimerHandler: RouteHandler<typeof updateTimerRoute, AppBindings> = async (c) => {
   try {
     const db = getDb()
+    const user = c.get('user')
     const { id } = c.req.valid('param')
     const data = c.req.valid('json')
-    
-    const timer = await updateTimer(db, id, data)
-    
+
+    const timer = await updateTimer(db, user.id, id, data)
+
     if (!timer) {
       return c.json(
         {
@@ -172,7 +175,7 @@ export const updateTimerHandler: RouteHandler<typeof updateTimerRoute> = async (
         404
       )
     }
-    
+
     return c.json({ timer }, 200)
   } catch (error) {
     console.error('Error updating timer:', error)
@@ -186,13 +189,14 @@ export const updateTimerHandler: RouteHandler<typeof updateTimerRoute> = async (
   }
 }
 
-export const deleteTimerHandler: RouteHandler<typeof deleteTimerRoute> = async (c) => {
+export const deleteTimerHandler: RouteHandler<typeof deleteTimerRoute, AppBindings> = async (c) => {
   try {
     const db = getDb()
+    const user = c.get('user')
     const { id } = c.req.valid('param')
-    
-    const timer = await deleteTimer(db, id)
-    
+
+    const timer = await deleteTimer(db, user.id, id)
+
     if (!timer) {
       return c.json(
         {
@@ -202,7 +206,7 @@ export const deleteTimerHandler: RouteHandler<typeof deleteTimerRoute> = async (
         404
       )
     }
-    
+
     return c.json({ timer }, 200)
   } catch (error) {
     console.error('Error deleting timer:', error)

@@ -32,8 +32,8 @@ export const TaskManager: React.FC = () => {
     startAt: ''
   })
 
-  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
-  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
+  const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null)
+  const [completingTaskId, setCompletingTaskId] = useState<number | null>(null)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
 
   // Fetch all tasks
@@ -61,7 +61,7 @@ export const TaskManager: React.FC = () => {
 
   const timers = timersResponse?.timers ?? []
   const activeTimersByTaskId = useMemo(() => {
-    const map = new Map<string, TaskTimer>()
+    const map = new Map<number, TaskTimer>()
     timers.forEach((timer) => {
       if (!timer.endTime) {
         const existing = map.get(timer.taskId)
@@ -103,7 +103,7 @@ export const TaskManager: React.FC = () => {
     }
   }
 
-  const handleDeleteTask = async (taskId: string): Promise<void> => {
+  const handleDeleteTask = async (taskId: number): Promise<void> => {
     if (!confirm('Are you sure you want to delete this task?')) return
 
     setDeletingTaskId(taskId)
@@ -117,7 +117,7 @@ export const TaskManager: React.FC = () => {
     }
   }
 
-  const handleStartTimer = async (taskId: string): Promise<void> => {
+  const handleStartTimer = async (taskId: number): Promise<void> => {
     try {
       await createTimer({
         taskId,
@@ -144,7 +144,7 @@ export const TaskManager: React.FC = () => {
     }
   }
 
-  const handleStopTimer = async (timerId: string): Promise<void> => {
+  const handleStopTimer = async (timerId: number): Promise<void> => {
     try {
       await putApiTimersId(timerId, {
         endTime: new Date().toISOString()

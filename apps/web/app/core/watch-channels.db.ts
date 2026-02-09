@@ -4,14 +4,14 @@ import {
   type InsertCalendarWatchChannel,
   type SelectCalendarWatchChannel
 } from '../db/schema/schema'
-import { createId, type DB } from './common.db'
+import { type DB } from './common.db'
 import { getCurrentUnixTimestamp } from './common.core'
 import type { ProviderType } from './oauth.core'
 
 // Create a watch channel
 export async function createWatchChannel(
   db: DB,
-  calendarId: string,
+  calendarId: number,
   providerType: ProviderType,
   channelId: string,
   resourceId: string,
@@ -30,8 +30,8 @@ export async function createWatchChannel(
       )
     )
 
-  const channelData: InsertCalendarWatchChannel = {
-    id: createId(),
+  // id is auto-incremented
+  const channelData: Omit<InsertCalendarWatchChannel, 'id'> = {
     calendarId,
     channelId,
     resourceId,
@@ -57,7 +57,7 @@ export async function createWatchChannel(
 // Get watch channel by calendar ID
 export async function getWatchChannelByCalendarId(
   db: DB,
-  calendarId: string,
+  calendarId: number,
   providerType: ProviderType
 ): Promise<SelectCalendarWatchChannel | null> {
   const [channel] = await db
@@ -89,7 +89,7 @@ export async function getWatchChannelByChannelId(
 // Delete watch channel
 export async function deleteWatchChannel(
   db: DB,
-  calendarId: string,
+  calendarId: number,
   providerType: ProviderType
 ): Promise<SelectCalendarWatchChannel | null> {
   const [channel] = await db

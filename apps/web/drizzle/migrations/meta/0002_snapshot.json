@@ -9,14 +9,14 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "blob",
+          "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "blob",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -79,21 +79,21 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "blob",
+          "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": true
         },
         "task_id": {
           "name": "task_id",
-          "type": "blob",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "tag_id": {
           "name": "tag_id",
-          "type": "blob",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -154,14 +154,14 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "blob",
+          "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": true
         },
         "task_id": {
           "name": "task_id",
-          "type": "blob",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -222,14 +222,14 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "blob",
+          "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "blob",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -311,10 +311,10 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "blob",
+          "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": true
         },
         "name": {
           "name": "name",

@@ -1,4 +1,5 @@
 import type { RouteHandler } from '@hono/zod-openapi'
+import type { AppBindings } from '../types'
 import {
   getGoogleAuthUrlRoute,
   googleAuthCallbackRoute,
@@ -7,7 +8,6 @@ import {
 } from '../routes/google-auth'
 import { getDb } from '../../../core/common.db'
 import { formatTimestamp } from '../../../core/common.core'
-import { ensureDefaultUser } from '../../../core/tasks.db'
 import {
   getOAuthToken,
   upsertOAuthToken,
@@ -17,7 +17,10 @@ import { deleteAllCalendarsForProvider } from '../../../core/calendars.db'
 import { googleCalendarProvider } from '../../../core/calendar-providers/google.service'
 
 // GET /auth/google - Get authorization URL
-export const getGoogleAuthUrlHandler: RouteHandler<typeof getGoogleAuthUrlRoute> = async (c) => {
+export const getGoogleAuthUrlHandler: RouteHandler<
+  typeof getGoogleAuthUrlRoute,
+  AppBindings
+> = async (c) => {
   try {
     const authUrl = googleCalendarProvider.getAuthUrl()
     return c.json({ authUrl }, 200)
@@ -29,7 +32,10 @@ export const getGoogleAuthUrlHandler: RouteHandler<typeof getGoogleAuthUrlRoute>
 }
 
 // GET /auth/google/callback - OAuth callback
-export const googleAuthCallbackHandler: RouteHandler<typeof googleAuthCallbackRoute> = async (c) => {
+export const googleAuthCallbackHandler: RouteHandler<
+  typeof googleAuthCallbackRoute,
+  AppBindings
+> = async (c) => {
   try {
     const { code, error: oauthError } = c.req.valid('query')
 
@@ -42,14 +48,14 @@ export const googleAuthCallbackHandler: RouteHandler<typeof googleAuthCallbackRo
     }
 
     const db = getDb()
-    const defaultUser = await ensureDefaultUser(db)
+    const user = c.get('user')
 
     // Exchange code for tokens
     const tokens = await googleCalendarProvider.exchangeCodeForTokens(code)
 
     // Store tokens in database
     await upsertOAuthToken(db, {
-      userId: defaultUser.id.toString(),
+      userId: user.id,
       providerType: 'google',
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -72,12 +78,15 @@ export const googleAuthCallbackHandler: RouteHandler<typeof googleAuthCallbackRo
 }
 
 // GET /auth/google/status - Check OAuth status
-export const getGoogleAuthStatusHandler: RouteHandler<typeof getGoogleAuthStatusRoute> = async (c) => {
+export const getGoogleAuthStatusHandler: RouteHandler<
+  typeof getGoogleAuthStatusRoute,
+  AppBindings
+> = async (c) => {
   try {
     const db = getDb()
-    const defaultUser = await ensureDefaultUser(db)
+    const user = c.get('user')
 
-    const token = await getOAuthToken(db, defaultUser.id.toString(), 'google')
+    const token = await getOAuthToken(db, user.id, 'google')
 
     if (!token) {
       return c.json({ connected: false }, 200)
@@ -101,12 +110,15 @@ export const getGoogleAuthStatusHandler: RouteHandler<typeof getGoogleAuthStatus
 }
 
 // DELETE /auth/google - Disconnect Google OAuth
-export const deleteGoogleAuthHandler: RouteHandler<typeof deleteGoogleAuthRoute> = async (c) => {
+export const deleteGoogleAuthHandler: RouteHandler<
+  typeof deleteGoogleAuthRoute,
+  AppBindings
+> = async (c) => {
   try {
     const db = getDb()
-    const defaultUser = await ensureDefaultUser(db)
+    const user = c.get('user')
 
-    const token = await getOAuthToken(db, defaultUser.id.toString(), 'google')
+    const token = await getOAuthToken(db, user.id, 'google')
 
     if (!token) {
       return c.json({ error: 'No Google OAuth connection found' }, 404)
@@ -120,10 +132,10 @@ export const deleteGoogleAuthHandler: RouteHandler<typeof deleteGoogleAuthRoute>
     }
 
     // Delete all calendars for this provider (cascades to events)
-    await deleteAllCalendarsForProvider(db, defaultUser.id.toString(), 'google')
+    await deleteAllCalendarsForProvider(db, user.id, 'google')
 
     // Delete the OAuth token
-    await deleteOAuthToken(db, defaultUser.id.toString(), 'google')
+    await deleteOAuthToken(db, user.id, 'google')
 
     return c.json(
       {

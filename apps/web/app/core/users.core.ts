@@ -1,9 +1,9 @@
 import { z } from '@hono/zod-openapi'
-import { UUIDSchema } from './common.core'
+import { IdSchema } from './common.core'
 
 // User model
 export const UserModel = z.object({
-  id: UUIDSchema.openapi({
+  id: IdSchema.openapi({
     description: 'Unique identifier for the user'
   }),
   name: z.string().min(1).max(100).openapi({

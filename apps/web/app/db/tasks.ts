@@ -2,13 +2,13 @@ import { eq, and, desc } from 'drizzle-orm'
 
 import { tasksTable, usersTable, type InsertTask, type SelectTask, type SelectUser } from './schema/schema'
 import type { Task, CreateTask, UpdateTask } from '../core/tasks.core'
-import { createId, type DB } from './common'
+import { type DB } from './common'
 
 // Convert database task to API task
 export function convertDbTaskToApi(dbTask: SelectTask): Task {
 
   return {
-    id: dbTask.id.toString(),
+    id: dbTask.id,
     title: dbTask.title,
     description: dbTask.description || '',
     dueDate: dbTask.dueAt ? new Date(dbTask.dueAt * 1000).toISOString() : undefined,
@@ -27,8 +27,8 @@ export async function ensureDefaultUser(db: DB): Promise<SelectUser> {
 
   if (existingUsers.length === 0) {
     const result = await db.insert(usersTable).values({
-      id: createId(),
-      name: 'Default User'
+      name: 'Default User',
+      email: 'default@example.com',
     }).returning()
     const user = result[0]
     if (!user) {
@@ -44,7 +44,7 @@ export async function ensureDefaultUser(db: DB): Promise<SelectUser> {
   return user
 }
 
-export async function getAllTasks(db: DB, userId: string): Promise<Task[]> {
+export async function getAllTasks(db: DB, userId: number): Promise<Task[]> {
   const dbTasks = await db
     .select()
     .from(tasksTable)
@@ -54,7 +54,7 @@ export async function getAllTasks(db: DB, userId: string): Promise<Task[]> {
   return dbTasks.map(convertDbTaskToApi)
 }
 
-export async function getTaskById(db: DB, userId: string, taskId: string): Promise<Task | null> {
+export async function getTaskById(db: DB, userId: number, taskId: number): Promise<Task | null> {
   const [dbTask] = await db
     .select()
     .from(tasksTable)
@@ -67,10 +67,9 @@ export async function getTaskById(db: DB, userId: string, taskId: string): Promi
   return convertDbTaskToApi(dbTask)
 }
 
-export async function createTask(db: DB, userId: string, data: CreateTask): Promise<Task> {
+export async function createTask(db: DB, userId: number, data: CreateTask): Promise<Task> {
   const now = Math.floor(Date.now() / 1000) // Unix timestamp in seconds
   const taskData: InsertTask = {
-    id: createId(),
     userId: userId,
     title: data.title.trim(),
     description: data.description?.trim() || null,
@@ -88,7 +87,7 @@ export async function createTask(db: DB, userId: string, data: CreateTask): Prom
   return convertDbTaskToApi(dbTask)
 }
 
-export async function updateTask(db: DB, userId: string, taskId: string, data: UpdateTask): Promise<Task | null> {
+export async function updateTask(db: DB, userId: number, taskId: number, data: UpdateTask): Promise<Task | null> {
   // Check if task exists
   const [existingTask] = await db
     .select()
@@ -123,7 +122,7 @@ export async function updateTask(db: DB, userId: string, taskId: string, data: U
   return convertDbTaskToApi(updatedDbTask)
 }
 
-export async function deleteTask(db: DB, userId: string, taskId: string): Promise<Task | null> {
+export async function deleteTask(db: DB, userId: number, taskId: number): Promise<Task | null> {
   const [existingTask] = await db
     .select()
     .from(tasksTable)

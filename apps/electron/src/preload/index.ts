@@ -3,8 +3,8 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // Timer state type (supports multiple timers)
 interface TimerState {
-  timerId: string
-  taskId: string
+  timerId: number
+  taskId: number
   taskTitle: string
   startTime: string
 }
@@ -14,13 +14,17 @@ type NotificationPermissionStatus = 'granted' | 'denied' | 'not-determined'
 
 // Custom APIs for renderer
 const api = {
+  // Auth token management
+  updateAuthToken: (token: string | null): void => {
+    ipcRenderer.send('auth:token-update', token)
+  },
   // Update all active timer states for tray display
   updateTimerStates: (timers: TimerState[]): void => {
     ipcRenderer.send('timer:states-change', timers)
   },
   // Listen for show task detail request from tray menu (receives taskId)
-  onShowTaskDetail: (callback: (taskId: string) => void): (() => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, taskId: string): void => {
+  onShowTaskDetail: (callback: (taskId: number) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, taskId: number): void => {
       callback(taskId)
     }
     ipcRenderer.on('tray:show-task-detail', handler)
@@ -29,8 +33,8 @@ const api = {
     }
   },
   // Listen for timer started from notification action
-  onNotificationTimerStarted: (callback: (taskId: string) => void): (() => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, taskId: string): void => {
+  onNotificationTimerStarted: (callback: (taskId: number) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, taskId: number): void => {
       callback(taskId)
     }
     ipcRenderer.on('notification:timer-started', handler)
@@ -39,8 +43,8 @@ const api = {
     }
   },
   // Listen for timer stopped from notification action
-  onNotificationTimerStopped: (callback: (taskId: string) => void): (() => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, taskId: string): void => {
+  onNotificationTimerStopped: (callback: (taskId: number) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, taskId: number): void => {
       callback(taskId)
     }
     ipcRenderer.on('notification:timer-stopped', handler)
@@ -54,7 +58,10 @@ const api = {
   requestNotificationPermission: (): Promise<NotificationPermissionStatus> =>
     ipcRenderer.invoke('notification:request-permission'),
   openNotificationSettings: (): Promise<void> =>
-    ipcRenderer.invoke('notification:open-settings')
+    ipcRenderer.invoke('notification:open-settings'),
+  // OAuth social sign-in via popup BrowserWindow
+  signInWithOAuth: (provider: string): Promise<string | null> =>
+    ipcRenderer.invoke('auth:social-sign-in', provider)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeEach, beforeAll, afterAll } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import type { AppBindings } from '../types';
 import { healthRoute } from '../routes/health';
 import { healthHandler } from './index';
 import { createSqliteLibsqlTestContext, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
 
 // Create a test app with the health endpoint
 const createTestApp = () => {
-  const app = new OpenAPIHono();
+  const app = new OpenAPIHono<AppBindings>();
 
   // Add CORS middleware like in the main app
   app.use('/*', async (c, next) => {
@@ -29,7 +30,7 @@ const createTestApp = () => {
 
 describe('Health Handler', () => {
   let testContext: SqliteLibsqlTestContext;
-  let app: OpenAPIHono;
+  let app: OpenAPIHono<AppBindings>;
 
   beforeAll(async () => {
     testContext = await createSqliteLibsqlTestContext();

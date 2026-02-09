@@ -1,7 +1,7 @@
 CREATE TABLE `task_comments` (
-	`id` blob PRIMARY KEY NOT NULL,
-	`task_id` blob NOT NULL,
-	`author_id` blob NOT NULL,
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`task_id` integer NOT NULL,
+	`author_id` integer NOT NULL,
 	`body` text NOT NULL,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,

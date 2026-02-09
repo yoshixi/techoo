@@ -50,7 +50,7 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
   const savedIndicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Track the last saved state to compare against
   const lastSavedTaskRef = useRef<Task | null>(task)
-  const activitiesQuery = useGetApiTasksIdActivities(task?.id ?? '', {
+  const activitiesQuery = useGetApiTasksIdActivities(task?.id ?? 0, {
     swr: { enabled: Boolean(task?.id) }
   })
 
@@ -192,7 +192,7 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
     }
   }
 
-  const handleTagsChange = async (tagIds: string[]): Promise<void> => {
+  const handleTagsChange = async (tagIds: number[]): Promise<void> => {
     if (!currentTask) return
     try {
       const response = await putApiTasksId(currentTask.id, { tagIds })

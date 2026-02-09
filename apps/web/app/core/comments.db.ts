@@ -1,19 +1,19 @@
 import { and, desc, eq, inArray } from 'drizzle-orm'
 import { taskCommentsTable, tasksTable, type InsertTaskComment, type SelectTaskComment } from '../db/schema/schema'
-import { createId, type DB } from './common.db'
+import { type DB } from './common.db'
 import { formatTimestamp, getCurrentUnixTimestamp, validateRequiredString } from './common.core'
 
 export interface TaskComment {
-  id: string
-  taskId: string
-  authorId: string
+  id: number
+  taskId: number
+  authorId: number
   body: string
   createdAt: string
   updatedAt: string
 }
 
 export interface CreateComment {
-  taskId: string
+  taskId: number
   body: string
 }
 
@@ -23,9 +23,9 @@ export interface UpdateComment {
 
 function convertDbCommentToApi(dbComment: SelectTaskComment): TaskComment {
   return {
-    id: dbComment.id.toString(),
-    taskId: dbComment.taskId.toString(),
-    authorId: dbComment.authorId.toString(),
+    id: dbComment.id,
+    taskId: dbComment.taskId,
+    authorId: dbComment.authorId,
     body: dbComment.body,
     createdAt: formatTimestamp(dbComment.createdAt),
     updatedAt: formatTimestamp(dbComment.updatedAt)
@@ -40,7 +40,7 @@ function normalizeBody(body: string | undefined): string {
   return trimmed
 }
 
-export async function getCommentsByTaskId(db: DB, userId: string, taskId: string): Promise<TaskComment[] | null> {
+export async function getCommentsByTaskId(db: DB, userId: number, taskId: number): Promise<TaskComment[] | null> {
   const [task] = await db
     .select()
     .from(tasksTable)
@@ -59,7 +59,7 @@ export async function getCommentsByTaskId(db: DB, userId: string, taskId: string
   return dbComments.map(convertDbCommentToApi)
 }
 
-export async function getCommentsByTaskIds(db: DB, taskIds: string[]): Promise<TaskComment[]> {
+export async function getCommentsByTaskIds(db: DB, taskIds: number[]): Promise<TaskComment[]> {
   if (taskIds.length === 0) {
     return []
   }
@@ -76,9 +76,9 @@ export async function getCommentsByTaskIds(db: DB, taskIds: string[]): Promise<T
 
 export async function getCommentById(
   db: DB,
-  userId: string,
-  taskId: string,
-  commentId: string
+  userId: number,
+  taskId: number,
+  commentId: number
 ): Promise<TaskComment | null> {
   const [dbComment] = await db
     .select({
@@ -102,7 +102,7 @@ export async function getCommentById(
   return convertDbCommentToApi(dbComment.comment)
 }
 
-export async function createComment(db: DB, userId: string, data: CreateComment): Promise<TaskComment | null> {
+export async function createComment(db: DB, userId: number, data: CreateComment): Promise<TaskComment | null> {
   const [task] = await db
     .select()
     .from(tasksTable)
@@ -114,7 +114,6 @@ export async function createComment(db: DB, userId: string, data: CreateComment)
 
   const now = getCurrentUnixTimestamp()
   const commentData: InsertTaskComment = {
-    id: createId(),
     taskId: data.taskId,
     authorId: userId,
     body: normalizeBody(data.body),
@@ -133,9 +132,9 @@ export async function createComment(db: DB, userId: string, data: CreateComment)
 
 export async function updateComment(
   db: DB,
-  userId: string,
-  taskId: string,
-  commentId: string,
+  userId: number,
+  taskId: number,
+  commentId: number,
   data: UpdateComment
 ): Promise<TaskComment | null> {
   const [existing] = await db
@@ -181,9 +180,9 @@ export async function updateComment(
 
 export async function deleteComment(
   db: DB,
-  userId: string,
-  taskId: string,
-  commentId: string
+  userId: number,
+  taskId: number,
+  commentId: number
 ): Promise<TaskComment | null> {
   const [existing] = await db
     .select({

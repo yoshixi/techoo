@@ -165,11 +165,11 @@ export const usePostApiTasks = <TError = ErrorResponse | ErrorResponse>(options?
  * Retrieve a specific task by ID
  * @summary Get a task
  */
-export const getApiTasksId = (id: string) => {
+export const getApiTasksId = (id: number) => {
   return customInstance<TaskResponse>({ url: `/api/tasks/${id}`, method: 'GET' })
 }
 
-export const getGetApiTasksIdKey = (id: string) => [`/api/tasks/${id}`] as const
+export const getGetApiTasksIdKey = (id: number) => [`/api/tasks/${id}`] as const
 
 export type GetApiTasksIdQueryResult = NonNullable<Awaited<ReturnType<typeof getApiTasksId>>>
 export type GetApiTasksIdQueryError = ErrorResponse | ErrorResponse
@@ -178,7 +178,7 @@ export type GetApiTasksIdQueryError = ErrorResponse | ErrorResponse
  * @summary Get a task
  */
 export const useGetApiTasksId = <TError = ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiTasksId>>, TError> & {
       swrKey?: Key
@@ -204,7 +204,7 @@ export const useGetApiTasksId = <TError = ErrorResponse | ErrorResponse>(
  * Update an existing task by ID
  * @summary Update a task
  */
-export const putApiTasksId = (id: string, updateTask: UpdateTask) => {
+export const putApiTasksId = (id: number, updateTask: UpdateTask) => {
   return customInstance<TaskResponse>({
     url: `/api/tasks/${id}`,
     method: 'PUT',
@@ -213,12 +213,12 @@ export const putApiTasksId = (id: string, updateTask: UpdateTask) => {
   })
 }
 
-export const getPutApiTasksIdMutationFetcher = (id: string) => {
+export const getPutApiTasksIdMutationFetcher = (id: number) => {
   return (_: Key, { arg }: { arg: UpdateTask }) => {
     return putApiTasksId(id, arg)
   }
 }
-export const getPutApiTasksIdMutationKey = (id: string) => [`/api/tasks/${id}`] as const
+export const getPutApiTasksIdMutationKey = (id: number) => [`/api/tasks/${id}`] as const
 
 export type PutApiTasksIdMutationResult = NonNullable<Awaited<ReturnType<typeof putApiTasksId>>>
 export type PutApiTasksIdMutationError = ErrorResponse | ErrorResponse | ErrorResponse
@@ -227,7 +227,7 @@ export type PutApiTasksIdMutationError = ErrorResponse | ErrorResponse | ErrorRe
  * @summary Update a task
  */
 export const usePutApiTasksId = <TError = ErrorResponse | ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof putApiTasksId>>,
@@ -255,16 +255,16 @@ export const usePutApiTasksId = <TError = ErrorResponse | ErrorResponse | ErrorR
  * Delete a task by ID
  * @summary Delete a task
  */
-export const deleteApiTasksId = (id: string) => {
+export const deleteApiTasksId = (id: number) => {
   return customInstance<TaskResponse>({ url: `/api/tasks/${id}`, method: 'DELETE' })
 }
 
-export const getDeleteApiTasksIdMutationFetcher = (id: string) => {
+export const getDeleteApiTasksIdMutationFetcher = (id: number) => {
   return (_: Key, __: { arg: Arguments }) => {
     return deleteApiTasksId(id)
   }
 }
-export const getDeleteApiTasksIdMutationKey = (id: string) => [`/api/tasks/${id}`] as const
+export const getDeleteApiTasksIdMutationKey = (id: number) => [`/api/tasks/${id}`] as const
 
 export type DeleteApiTasksIdMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteApiTasksId>>
@@ -275,7 +275,7 @@ export type DeleteApiTasksIdMutationError = ErrorResponse | ErrorResponse
  * @summary Delete a task
  */
 export const useDeleteApiTasksId = <TError = ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof deleteApiTasksId>>,
@@ -302,14 +302,14 @@ export const useDeleteApiTasksId = <TError = ErrorResponse | ErrorResponse>(
 /**
  * @summary List comments for a task
  */
-export const getApiTasksTaskIdComments = (taskId: string) => {
+export const getApiTasksTaskIdComments = (taskId: number) => {
   return customInstance<TaskCommentListResponse>({
     url: `/api/tasks/${taskId}/comments`,
     method: 'GET'
   })
 }
 
-export const getGetApiTasksTaskIdCommentsKey = (taskId: string) =>
+export const getGetApiTasksTaskIdCommentsKey = (taskId: number) =>
   [`/api/tasks/${taskId}/comments`] as const
 
 export type GetApiTasksTaskIdCommentsQueryResult = NonNullable<
@@ -321,7 +321,7 @@ export type GetApiTasksTaskIdCommentsQueryError = ErrorResponse | ErrorResponse
  * @summary List comments for a task
  */
 export const useGetApiTasksTaskIdComments = <TError = ErrorResponse | ErrorResponse>(
-  taskId: string,
+  taskId: number,
   options?: {
     swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiTasksTaskIdComments>>, TError> & {
       swrKey?: Key
@@ -348,7 +348,7 @@ export const useGetApiTasksTaskIdComments = <TError = ErrorResponse | ErrorRespo
  * @summary Create a comment for a task
  */
 export const postApiTasksTaskIdComments = (
-  taskId: string,
+  taskId: number,
   createTaskComment: CreateTaskComment
 ) => {
   return customInstance<TaskCommentResponse>({
@@ -359,12 +359,12 @@ export const postApiTasksTaskIdComments = (
   })
 }
 
-export const getPostApiTasksTaskIdCommentsMutationFetcher = (taskId: string) => {
+export const getPostApiTasksTaskIdCommentsMutationFetcher = (taskId: number) => {
   return (_: Key, { arg }: { arg: CreateTaskComment }) => {
     return postApiTasksTaskIdComments(taskId, arg)
   }
 }
-export const getPostApiTasksTaskIdCommentsMutationKey = (taskId: string) =>
+export const getPostApiTasksTaskIdCommentsMutationKey = (taskId: number) =>
   [`/api/tasks/${taskId}/comments`] as const
 
 export type PostApiTasksTaskIdCommentsMutationResult = NonNullable<
@@ -378,7 +378,7 @@ export type PostApiTasksTaskIdCommentsMutationError = ErrorResponse | ErrorRespo
 export const usePostApiTasksTaskIdComments = <
   TError = ErrorResponse | ErrorResponse | ErrorResponse
 >(
-  taskId: string,
+  taskId: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof postApiTasksTaskIdComments>>,
@@ -405,14 +405,14 @@ export const usePostApiTasksTaskIdComments = <
 /**
  * @summary Get a single task comment
  */
-export const getApiTasksTaskIdCommentsCommentId = (taskId: string, commentId: string) => {
+export const getApiTasksTaskIdCommentsCommentId = (taskId: number, commentId: number) => {
   return customInstance<TaskCommentResponse>({
     url: `/api/tasks/${taskId}/comments/${commentId}`,
     method: 'GET'
   })
 }
 
-export const getGetApiTasksTaskIdCommentsCommentIdKey = (taskId: string, commentId: string) =>
+export const getGetApiTasksTaskIdCommentsCommentIdKey = (taskId: number, commentId: number) =>
   [`/api/tasks/${taskId}/comments/${commentId}`] as const
 
 export type GetApiTasksTaskIdCommentsCommentIdQueryResult = NonNullable<
@@ -424,8 +424,8 @@ export type GetApiTasksTaskIdCommentsCommentIdQueryError = ErrorResponse | Error
  * @summary Get a single task comment
  */
 export const useGetApiTasksTaskIdCommentsCommentId = <TError = ErrorResponse | ErrorResponse>(
-  taskId: string,
-  commentId: string,
+  taskId: number,
+  commentId: number,
   options?: {
     swr?: SWRConfiguration<
       Awaited<ReturnType<typeof getApiTasksTaskIdCommentsCommentId>>,
@@ -453,8 +453,8 @@ export const useGetApiTasksTaskIdCommentsCommentId = <TError = ErrorResponse | E
  * @summary Update a task comment
  */
 export const patchApiTasksTaskIdCommentsCommentId = (
-  taskId: string,
-  commentId: string,
+  taskId: number,
+  commentId: number,
   updateTaskComment: UpdateTaskComment
 ) => {
   return customInstance<TaskCommentResponse>({
@@ -466,16 +466,16 @@ export const patchApiTasksTaskIdCommentsCommentId = (
 }
 
 export const getPatchApiTasksTaskIdCommentsCommentIdMutationFetcher = (
-  taskId: string,
-  commentId: string
+  taskId: number,
+  commentId: number
 ) => {
   return (_: Key, { arg }: { arg: UpdateTaskComment }) => {
     return patchApiTasksTaskIdCommentsCommentId(taskId, commentId, arg)
   }
 }
 export const getPatchApiTasksTaskIdCommentsCommentIdMutationKey = (
-  taskId: string,
-  commentId: string
+  taskId: number,
+  commentId: number
 ) => [`/api/tasks/${taskId}/comments/${commentId}`] as const
 
 export type PatchApiTasksTaskIdCommentsCommentIdMutationResult = NonNullable<
@@ -492,8 +492,8 @@ export type PatchApiTasksTaskIdCommentsCommentIdMutationError =
 export const usePatchApiTasksTaskIdCommentsCommentId = <
   TError = ErrorResponse | ErrorResponse | ErrorResponse
 >(
-  taskId: string,
-  commentId: string,
+  taskId: number,
+  commentId: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof patchApiTasksTaskIdCommentsCommentId>>,
@@ -521,7 +521,7 @@ export const usePatchApiTasksTaskIdCommentsCommentId = <
 /**
  * @summary Delete a task comment
  */
-export const deleteApiTasksTaskIdCommentsCommentId = (taskId: string, commentId: string) => {
+export const deleteApiTasksTaskIdCommentsCommentId = (taskId: number, commentId: number) => {
   return customInstance<TaskCommentResponse>({
     url: `/api/tasks/${taskId}/comments/${commentId}`,
     method: 'DELETE'
@@ -529,16 +529,16 @@ export const deleteApiTasksTaskIdCommentsCommentId = (taskId: string, commentId:
 }
 
 export const getDeleteApiTasksTaskIdCommentsCommentIdMutationFetcher = (
-  taskId: string,
-  commentId: string
+  taskId: number,
+  commentId: number
 ) => {
   return (_: Key, __: { arg: Arguments }) => {
     return deleteApiTasksTaskIdCommentsCommentId(taskId, commentId)
   }
 }
 export const getDeleteApiTasksTaskIdCommentsCommentIdMutationKey = (
-  taskId: string,
-  commentId: string
+  taskId: number,
+  commentId: number
 ) => [`/api/tasks/${taskId}/comments/${commentId}`] as const
 
 export type DeleteApiTasksTaskIdCommentsCommentIdMutationResult = NonNullable<
@@ -550,8 +550,8 @@ export type DeleteApiTasksTaskIdCommentsCommentIdMutationError = ErrorResponse |
  * @summary Delete a task comment
  */
 export const useDeleteApiTasksTaskIdCommentsCommentId = <TError = ErrorResponse | ErrorResponse>(
-  taskId: string,
-  commentId: string,
+  taskId: number,
+  commentId: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof deleteApiTasksTaskIdCommentsCommentId>>,
@@ -579,14 +579,14 @@ export const useDeleteApiTasksTaskIdCommentsCommentId = <TError = ErrorResponse 
 /**
  * @summary Get combined task activity timeline
  */
-export const getApiTasksIdActivities = (id: string) => {
+export const getApiTasksIdActivities = (id: number) => {
   return customInstance<TaskActivitiesResponse>({
     url: `/api/tasks/${id}/activities`,
     method: 'GET'
   })
 }
 
-export const getGetApiTasksIdActivitiesKey = (id: string) =>
+export const getGetApiTasksIdActivitiesKey = (id: number) =>
   [`/api/tasks/${id}/activities`] as const
 
 export type GetApiTasksIdActivitiesQueryResult = NonNullable<
@@ -598,7 +598,7 @@ export type GetApiTasksIdActivitiesQueryError = ErrorResponse | ErrorResponse
  * @summary Get combined task activity timeline
  */
 export const useGetApiTasksIdActivities = <TError = ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiTasksIdActivities>>, TError> & {
       swrKey?: Key
@@ -713,11 +713,11 @@ export const usePostApiTimers = <TError = ErrorResponse | ErrorResponse | ErrorR
  * Retrieve all timers for a specific task
  * @summary Get timers for a task
  */
-export const getApiTasksTaskIdTimers = (taskId: string) => {
+export const getApiTasksTaskIdTimers = (taskId: number) => {
   return customInstance<TimerListResponse>({ url: `/api/tasks/${taskId}/timers`, method: 'GET' })
 }
 
-export const getGetApiTasksTaskIdTimersKey = (taskId: string) =>
+export const getGetApiTasksTaskIdTimersKey = (taskId: number) =>
   [`/api/tasks/${taskId}/timers`] as const
 
 export type GetApiTasksTaskIdTimersQueryResult = NonNullable<
@@ -729,7 +729,7 @@ export type GetApiTasksTaskIdTimersQueryError = ErrorResponse | ErrorResponse
  * @summary Get timers for a task
  */
 export const useGetApiTasksTaskIdTimers = <TError = ErrorResponse | ErrorResponse>(
-  taskId: string,
+  taskId: number,
   options?: {
     swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiTasksTaskIdTimers>>, TError> & {
       swrKey?: Key
@@ -756,11 +756,11 @@ export const useGetApiTasksTaskIdTimers = <TError = ErrorResponse | ErrorRespons
  * Retrieve a specific timer by its ID
  * @summary Get a timer by ID
  */
-export const getApiTimersId = (id: string) => {
+export const getApiTimersId = (id: number) => {
   return customInstance<TimerResponse>({ url: `/api/timers/${id}`, method: 'GET' })
 }
 
-export const getGetApiTimersIdKey = (id: string) => [`/api/timers/${id}`] as const
+export const getGetApiTimersIdKey = (id: number) => [`/api/timers/${id}`] as const
 
 export type GetApiTimersIdQueryResult = NonNullable<Awaited<ReturnType<typeof getApiTimersId>>>
 export type GetApiTimersIdQueryError = ErrorResponse | ErrorResponse
@@ -769,7 +769,7 @@ export type GetApiTimersIdQueryError = ErrorResponse | ErrorResponse
  * @summary Get a timer by ID
  */
 export const useGetApiTimersId = <TError = ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiTimersId>>, TError> & {
       swrKey?: Key
@@ -795,7 +795,7 @@ export const useGetApiTimersId = <TError = ErrorResponse | ErrorResponse>(
  * Update an existing timer (typically to set end time)
  * @summary Update a timer
  */
-export const putApiTimersId = (id: string, updateTimer: UpdateTimer) => {
+export const putApiTimersId = (id: number, updateTimer: UpdateTimer) => {
   return customInstance<TimerResponse>({
     url: `/api/timers/${id}`,
     method: 'PUT',
@@ -804,12 +804,12 @@ export const putApiTimersId = (id: string, updateTimer: UpdateTimer) => {
   })
 }
 
-export const getPutApiTimersIdMutationFetcher = (id: string) => {
+export const getPutApiTimersIdMutationFetcher = (id: number) => {
   return (_: Key, { arg }: { arg: UpdateTimer }) => {
     return putApiTimersId(id, arg)
   }
 }
-export const getPutApiTimersIdMutationKey = (id: string) => [`/api/timers/${id}`] as const
+export const getPutApiTimersIdMutationKey = (id: number) => [`/api/timers/${id}`] as const
 
 export type PutApiTimersIdMutationResult = NonNullable<Awaited<ReturnType<typeof putApiTimersId>>>
 export type PutApiTimersIdMutationError = ErrorResponse | ErrorResponse
@@ -818,7 +818,7 @@ export type PutApiTimersIdMutationError = ErrorResponse | ErrorResponse
  * @summary Update a timer
  */
 export const usePutApiTimersId = <TError = ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof putApiTimersId>>,
@@ -846,16 +846,16 @@ export const usePutApiTimersId = <TError = ErrorResponse | ErrorResponse>(
  * Delete a timer
  * @summary Delete a timer
  */
-export const deleteApiTimersId = (id: string) => {
+export const deleteApiTimersId = (id: number) => {
   return customInstance<TimerResponse>({ url: `/api/timers/${id}`, method: 'DELETE' })
 }
 
-export const getDeleteApiTimersIdMutationFetcher = (id: string) => {
+export const getDeleteApiTimersIdMutationFetcher = (id: number) => {
   return (_: Key, __: { arg: Arguments }) => {
     return deleteApiTimersId(id)
   }
 }
-export const getDeleteApiTimersIdMutationKey = (id: string) => [`/api/timers/${id}`] as const
+export const getDeleteApiTimersIdMutationKey = (id: number) => [`/api/timers/${id}`] as const
 
 export type DeleteApiTimersIdMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteApiTimersId>>
@@ -866,7 +866,7 @@ export type DeleteApiTimersIdMutationError = ErrorResponse | ErrorResponse
  * @summary Delete a timer
  */
 export const useDeleteApiTimersId = <TError = ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof deleteApiTimersId>>,
@@ -978,11 +978,11 @@ export const usePostApiTags = <TError = ErrorResponse | ErrorResponse>(options?:
  * Retrieve a specific tag by ID
  * @summary Get a tag
  */
-export const getApiTagsId = (id: string) => {
+export const getApiTagsId = (id: number) => {
   return customInstance<TagResponse>({ url: `/api/tags/${id}`, method: 'GET' })
 }
 
-export const getGetApiTagsIdKey = (id: string) => [`/api/tags/${id}`] as const
+export const getGetApiTagsIdKey = (id: number) => [`/api/tags/${id}`] as const
 
 export type GetApiTagsIdQueryResult = NonNullable<Awaited<ReturnType<typeof getApiTagsId>>>
 export type GetApiTagsIdQueryError = ErrorResponse | ErrorResponse
@@ -991,7 +991,7 @@ export type GetApiTagsIdQueryError = ErrorResponse | ErrorResponse
  * @summary Get a tag
  */
 export const useGetApiTagsId = <TError = ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiTagsId>>, TError> & {
       swrKey?: Key
@@ -1017,7 +1017,7 @@ export const useGetApiTagsId = <TError = ErrorResponse | ErrorResponse>(
  * Update an existing tag by ID
  * @summary Update a tag
  */
-export const putApiTagsId = (id: string, updateTag: UpdateTag) => {
+export const putApiTagsId = (id: number, updateTag: UpdateTag) => {
   return customInstance<TagResponse>({
     url: `/api/tags/${id}`,
     method: 'PUT',
@@ -1026,12 +1026,12 @@ export const putApiTagsId = (id: string, updateTag: UpdateTag) => {
   })
 }
 
-export const getPutApiTagsIdMutationFetcher = (id: string) => {
+export const getPutApiTagsIdMutationFetcher = (id: number) => {
   return (_: Key, { arg }: { arg: UpdateTag }) => {
     return putApiTagsId(id, arg)
   }
 }
-export const getPutApiTagsIdMutationKey = (id: string) => [`/api/tags/${id}`] as const
+export const getPutApiTagsIdMutationKey = (id: number) => [`/api/tags/${id}`] as const
 
 export type PutApiTagsIdMutationResult = NonNullable<Awaited<ReturnType<typeof putApiTagsId>>>
 export type PutApiTagsIdMutationError = ErrorResponse | ErrorResponse | ErrorResponse
@@ -1040,7 +1040,7 @@ export type PutApiTagsIdMutationError = ErrorResponse | ErrorResponse | ErrorRes
  * @summary Update a tag
  */
 export const usePutApiTagsId = <TError = ErrorResponse | ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof putApiTagsId>>,
@@ -1068,16 +1068,16 @@ export const usePutApiTagsId = <TError = ErrorResponse | ErrorResponse | ErrorRe
  * Delete a tag by ID. This will also remove the tag from all associated tasks.
  * @summary Delete a tag
  */
-export const deleteApiTagsId = (id: string) => {
+export const deleteApiTagsId = (id: number) => {
   return customInstance<TagResponse>({ url: `/api/tags/${id}`, method: 'DELETE' })
 }
 
-export const getDeleteApiTagsIdMutationFetcher = (id: string) => {
+export const getDeleteApiTagsIdMutationFetcher = (id: number) => {
   return (_: Key, __: { arg: Arguments }) => {
     return deleteApiTagsId(id)
   }
 }
-export const getDeleteApiTagsIdMutationKey = (id: string) => [`/api/tags/${id}`] as const
+export const getDeleteApiTagsIdMutationKey = (id: number) => [`/api/tags/${id}`] as const
 
 export type DeleteApiTagsIdMutationResult = NonNullable<Awaited<ReturnType<typeof deleteApiTagsId>>>
 export type DeleteApiTagsIdMutationError = ErrorResponse | ErrorResponse
@@ -1086,7 +1086,7 @@ export type DeleteApiTagsIdMutationError = ErrorResponse | ErrorResponse
  * @summary Delete a tag
  */
 export const useDeleteApiTagsId = <TError = ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof deleteApiTagsId>>,

@@ -1,6 +1,5 @@
 import { drizzle as drizzleLibsql } from "drizzle-orm/libsql"
 import { createClient } from "@libsql/client"
-import { v7 as uuidv7 } from "uuid"
 import path from "path"
 import fs from "fs"
 import * as schema from '../db/schema/schema';
@@ -29,13 +28,16 @@ function createLibsqlDrizzle(url: string) {
   })
 }
 
-// Database connection - centralized for all database operations
+// Database connection - centralized for all database operations (singleton)
+let dbInstance: ReturnType<typeof drizzleLibsql> | null = null
+
 export function getDb() {
+  if (dbInstance) return dbInstance
+
   // Use Turso for production, SQLite for development
   if (process.env.TURSO_CONNECTION_URL && process.env.TURSO_AUTH_TOKEN) {
-    // ProductioUse Turso/libsql
     console.log('🌐 Using Turso database for production')
-    return drizzleLibsql({
+    dbInstance = drizzleLibsql({
       connection: {
         url: process.env.TURSO_CONNECTION_URL,
         authToken: process.env.TURSO_AUTH_TOKEN
@@ -44,31 +46,20 @@ export function getDb() {
       casing: "snake_case"
     })
   } else {
-    // Development: Use local SQLite
-    // console.log('💾 Using local SQLite database for development')
-
-    // const dbPath = getLocalDbPath()
-    // return createBetterSqlite3Connection(dbPath)
-    // console.error('❌ Failed to initialize SQLite database:', error)
-    // console.log('🔄 Falling back to libsql client')
-
     const dbPath = getLocalDbPath()
     const fileUrl = `file:${dbPath}`
     console.log("use local database")
 
     try {
-      return createLibsqlDrizzle(fileUrl)
+      dbInstance = createLibsqlDrizzle(fileUrl)
     } catch (fallbackError) {
       console.error('❌ Failed to initialize libsql file database:', fallbackError)
       console.log('🧪 Falling back to libsql in-memory database')
-      return createLibsqlDrizzle('file::memory:')
+      dbInstance = createLibsqlDrizzle('file::memory:')
     }
   }
-}
 
-// Helper function to create consistent UUIDs across all database operations
-export function createId(): string {
-  return uuidv7()
+  return dbInstance!
 }
 
 // Type alias for database instance to ensure consistency

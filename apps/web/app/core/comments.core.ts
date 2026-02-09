@@ -1,14 +1,14 @@
 import { z } from '@hono/zod-openapi'
-import { UUIDSchema } from './common.core'
+import { IdSchema } from './common.core'
 
 export const TaskCommentModel = z.object({
-  id: UUIDSchema.openapi({
+  id: IdSchema.openapi({
     description: 'Unique identifier for the comment'
   }),
-  taskId: UUIDSchema.openapi({
+  taskId: IdSchema.openapi({
     description: 'Task ID associated with this comment'
   }),
-  authorId: UUIDSchema.openapi({
+  authorId: IdSchema.openapi({
     description: 'Author (user) ID of the comment'
   }),
   body: z.string().min(1).max(2000).openapi({
@@ -50,7 +50,7 @@ export const TaskCommentResponseModel = z.object({
 }).openapi('TaskCommentResponse')
 
 export const TaskIdForCommentsParamModel = z.object({
-  taskId: UUIDSchema.openapi({
+  taskId: IdSchema.openapi({
     description: 'Task ID for comment operations',
     param: {
       name: 'taskId',
@@ -60,7 +60,7 @@ export const TaskIdForCommentsParamModel = z.object({
 }).openapi('TaskIdForCommentsParam')
 
 export const CommentIdParamModel = z.object({
-  commentId: UUIDSchema.openapi({
+  commentId: IdSchema.openapi({
     description: 'Comment ID',
     param: {
       name: 'commentId',

@@ -29,10 +29,11 @@ components:
       type: object
       properties:
         id:
-          type: string
-          format: uuid
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
           description: Unique identifier for the tag
-          example: 01234567-89ab-cdef-0123-456789abcdef
+          example: 1
         name:
           type: string
           minLength: 1
@@ -58,10 +59,11 @@ components:
       type: object
       properties:
         id:
-          type: string
-          format: uuid
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
           description: Unique identifier for the task
-          example: 01234567-89ab-cdef-0123-456789abcdef
+          example: 1
         title:
           type: string
           minLength: 1
@@ -193,10 +195,11 @@ components:
         tagIds:
           type: array
           items:
-            type: string
-            format: uuid
-            description: UUID format
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            description: Numeric ID
+            example: 1
           description: Array of tag IDs to associate with the task
           example: []
       required:
@@ -242,10 +245,11 @@ components:
         tagIds:
           type: array
           items:
-            type: string
-            format: uuid
-            description: UUID format
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            description: Numeric ID
+            example: 1
           description: Array of tag IDs to associate with the task. Replaces all existing
             tags
           example: []
@@ -253,20 +257,23 @@ components:
       type: object
       properties:
         id:
-          type: string
-          format: uuid
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
           description: Unique identifier for the comment
-          example: 01234567-89ab-cdef-0123-456789abcdef
+          example: 1
         taskId:
-          type: string
-          format: uuid
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
           description: Task ID associated with this comment
-          example: 01234567-89ab-cdef-0123-456789abcdef
+          example: 1
         authorId:
-          type: string
-          format: uuid
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
           description: Author (user) ID of the comment
-          example: 01234567-89ab-cdef-0123-456789abcdef
+          example: 1
         body:
           type: string
           minLength: 1
@@ -333,15 +340,17 @@ components:
       type: object
       properties:
         id:
-          type: string
-          format: uuid
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
           description: Unique identifier for the timer
-          example: 01234567-89ab-cdef-0123-456789abcdef
+          example: 1
         taskId:
-          type: string
-          format: uuid
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
           description: ID of the associated task
-          example: 01234567-89ab-cdef-0123-456789abcdef
+          example: 1
         startTime:
           type: string
           format: date-time
@@ -431,10 +440,11 @@ components:
       type: object
       properties:
         taskId:
-          type: string
-          format: uuid
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
           description: ID of the task to start timer for
-          example: 01234567-89ab-cdef-0123-456789abcdef
+          example: 1
         startTime:
           type: string
           format: date-time
@@ -626,10 +636,14 @@ paths:
         - schema:
             type: array
             items:
-              type: string
+              type: integer
+              minimum: 0
+              exclusiveMinimum: true
+              description: Numeric ID
+              example: 1
             description: Filter tasks by tag IDs (comma-separated). Returns tasks with ANY
               of the specified tags (OR logic)
-            example: 01234567-89ab-cdef-0123-456789abcdef,98765432-10ab-cdef-0123-456789abcdef
+            example: 1,2
           required: false
           description: Filter tasks by tag IDs (comma-separated). Returns tasks with ANY
             of the specified tags (OR logic)
@@ -681,10 +695,11 @@ paths:
       description: Retrieve a specific task by ID
       parameters:
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Task ID
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Task ID
           name: id
@@ -713,10 +728,11 @@ paths:
       description: Update an existing task by ID
       parameters:
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Task ID
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Task ID
           name: id
@@ -756,10 +772,11 @@ paths:
       description: Delete a task by ID
       parameters:
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Task ID
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Task ID
           name: id
@@ -788,10 +805,11 @@ paths:
       summary: List comments for a task
       parameters:
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Task ID for comment operations
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Task ID for comment operations
           name: taskId
@@ -819,10 +837,11 @@ paths:
       summary: Create a comment for a task
       parameters:
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Task ID for comment operations
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Task ID for comment operations
           name: taskId
@@ -862,19 +881,21 @@ paths:
       summary: Get a single task comment
       parameters:
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Task ID for comment operations
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Task ID for comment operations
           name: taskId
           in: path
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Comment ID
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Comment ID
           name: commentId
@@ -902,19 +923,21 @@ paths:
       summary: Update a task comment
       parameters:
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Task ID for comment operations
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Task ID for comment operations
           name: taskId
           in: path
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Comment ID
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Comment ID
           name: commentId
@@ -953,19 +976,21 @@ paths:
       summary: Delete a task comment
       parameters:
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Task ID for comment operations
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Task ID for comment operations
           name: taskId
           in: path
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Comment ID
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Comment ID
           name: commentId
@@ -994,10 +1019,11 @@ paths:
       summary: Get combined task activity timeline
       parameters:
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Task ID
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Task ID
           name: id
@@ -1029,14 +1055,15 @@ paths:
         - schema:
             type: array
             items:
-              type: string
-              format: uuid
-              description: UUID format
-              example: 01234567-89ab-cdef-0123-456789abcdef
+              type: integer
+              minimum: 0
+              exclusiveMinimum: true
+              description: Numeric ID
+              example: 1
             description: IDs of the tasks to get timers for
             example:
-              - 01234567-89ab-cdef-0123-456789abcdef
-              - 01234567-89ab-cdef-0123-456789abcdef
+              - 1
+              - 2
           required: false
           description: IDs of the tasks to get timers for
           name: taskIds
@@ -1093,10 +1120,11 @@ paths:
       description: Retrieve all timers for a specific task
       parameters:
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Task ID for timer operations
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Task ID for timer operations
           name: taskId
@@ -1126,10 +1154,11 @@ paths:
       description: Retrieve a specific timer by its ID
       parameters:
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Timer ID
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Timer ID
           name: id
@@ -1158,10 +1187,11 @@ paths:
       description: Update an existing timer (typically to set end time)
       parameters:
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Timer ID
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Timer ID
           name: id
@@ -1195,10 +1225,11 @@ paths:
       description: Delete a timer
       parameters:
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Timer ID
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Timer ID
           name: id
@@ -1272,10 +1303,11 @@ paths:
       description: Retrieve a specific tag by ID
       parameters:
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Tag ID
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Tag ID
           name: id
@@ -1304,10 +1336,11 @@ paths:
       description: Update an existing tag by ID
       parameters:
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Tag ID
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Tag ID
           name: id
@@ -1348,10 +1381,11 @@ paths:
         associated tasks.
       parameters:
         - schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
             description: Tag ID
-            example: 01234567-89ab-cdef-0123-456789abcdef
+            example: 1
           required: true
           description: Tag ID
           name: id

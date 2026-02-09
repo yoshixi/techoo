@@ -1,13 +1,13 @@
 import { z } from '@hono/zod-openapi'
-import { UUIDSchema } from './common.core'
+import { IdSchema } from './common.core'
 import { ProviderTypeEnum } from './oauth.core'
 
 // Calendar event model (API representation)
 export const CalendarEventModel = z.object({
-  id: UUIDSchema.openapi({
+  id: z.string().openapi({
     description: 'Unique identifier for the event'
   }),
-  calendarId: UUIDSchema.openapi({
+  calendarId: z.string().openapi({
     description: 'Calendar ID this event belongs to'
   }),
   providerType: ProviderTypeEnum.openapi({
@@ -26,11 +26,11 @@ export const CalendarEventModel = z.object({
     description: 'Event description',
     example: 'Weekly team sync'
   }),
-  startAt: z.iso.datetime().openapi({
+  startAt: z.string().openapi({
     description: 'Event start time',
     example: '2024-01-15T10:00:00.000Z'
   }),
-  endAt: z.iso.datetime().openapi({
+  endAt: z.string().openapi({
     description: 'Event end time',
     example: '2024-01-15T11:00:00.000Z'
   }),
@@ -42,11 +42,11 @@ export const CalendarEventModel = z.object({
     description: 'Event location',
     example: 'Conference Room A'
   }),
-  createdAt: z.iso.datetime().openapi({
+  createdAt: z.string().openapi({
     description: 'Timestamp when the event was imported',
     example: '2024-01-01T10:00:00.000Z'
   }),
-  updatedAt: z.iso.datetime().openapi({
+  updatedAt: z.string().openapi({
     description: 'Timestamp when the event was last updated',
     example: '2024-01-01T15:30:00.000Z'
   })
@@ -70,14 +70,14 @@ export const CalendarEventResponseModel = z.object({
 
 // Event query parameters
 export const CalendarEventQueryParamsModel = z.object({
-  calendarId: UUIDSchema.optional().openapi({
+  calendarId: IdSchema.optional().openapi({
     description: 'Filter events by calendar ID'
   }),
-  startDate: z.iso.datetime().optional().openapi({
+  startDate: z.string().optional().openapi({
     description: 'Filter events starting from this date (inclusive)',
     example: '2024-01-01T00:00:00.000Z'
   }),
-  endDate: z.iso.datetime().optional().openapi({
+  endDate: z.string().optional().openapi({
     description: 'Filter events ending before this date (inclusive)',
     example: '2024-01-31T23:59:59.000Z'
   })
@@ -85,7 +85,7 @@ export const CalendarEventQueryParamsModel = z.object({
 
 // Path parameter models
 export const CalendarEventIdParamModel = z.object({
-  id: UUIDSchema.openapi({
+  id: IdSchema.openapi({
     description: 'Event ID',
     param: {
       name: 'id',

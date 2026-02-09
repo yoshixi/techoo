@@ -7,8 +7,12 @@
  */
 
 export interface CreateTimer {
-  /** ID of the task to start timer for */
-  taskId: string
+  /**
+   * ID of the task to start timer for
+   * @minimum 0
+   * @exclusiveMinimum
+   */
+  taskId: number
   /** Timestamp when the timer should start */
   startTime: string
 }

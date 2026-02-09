@@ -1,12 +1,12 @@
 import { eq, and } from 'drizzle-orm'
 import { oauthTokensTable, type InsertOauthToken, type SelectOauthToken } from '../db/schema/schema'
-import { createId, type DB } from './common.db'
+import { type DB } from './common.db'
 import { formatTimestamp, getCurrentUnixTimestamp } from './common.core'
 import type { ProviderType, OAuthToken } from './oauth.core'
 
 // Internal types for token data
 export interface CreateOAuthToken {
-  userId: string
+  userId: number
   providerType: ProviderType
   accessToken: string
   refreshToken: string
@@ -37,7 +37,7 @@ export function convertDbTokenToApi(dbToken: SelectOauthToken): OAuthToken {
 // Get OAuth token by user ID and provider type
 export async function getOAuthToken(
   db: DB,
-  userId: string,
+  userId: number,
   providerType: ProviderType
 ): Promise<SelectOauthToken | null> {
   const [token] = await db
@@ -55,7 +55,7 @@ export async function getOAuthToken(
 // Check if user has a valid (non-expired) token
 export async function hasValidOAuthToken(
   db: DB,
-  userId: string,
+  userId: number,
   providerType: ProviderType
 ): Promise<boolean> {
   const token = await getOAuthToken(db, userId, providerType)
@@ -95,9 +95,8 @@ export async function upsertOAuthToken(
     return updatedToken
   }
 
-  // Create new token
-  const tokenData: InsertOauthToken = {
-    id: createId(),
+  // Create new token (id is auto-incremented)
+  const tokenData: Omit<InsertOauthToken, 'id'> = {
     userId: data.userId,
     providerType: data.providerType,
     accessToken: data.accessToken,
@@ -122,7 +121,7 @@ export async function upsertOAuthToken(
 // Update OAuth token (for token refresh)
 export async function updateOAuthToken(
   db: DB,
-  userId: string,
+  userId: number,
   providerType: ProviderType,
   data: UpdateOAuthToken
 ): Promise<SelectOauthToken | null> {
@@ -151,7 +150,7 @@ export async function updateOAuthToken(
 // Delete OAuth token
 export async function deleteOAuthToken(
   db: DB,
-  userId: string,
+  userId: number,
   providerType: ProviderType
 ): Promise<SelectOauthToken | null> {
   const existingToken = await getOAuthToken(db, userId, providerType)

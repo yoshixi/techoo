@@ -8,7 +8,7 @@ import {
 } from '../gen/api'
 
 interface TimerManagerProps {
-  taskId: string
+  taskId: number
   mode?: 'full' | 'compact'
   onTimerStarted?: () => void
   onTimerStopped?: () => void
@@ -37,7 +37,7 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
   const { trigger: createTimer, isMutating: isCreating } = usePostApiTimers()
   const [activeTimer, setActiveTimer] = useState<TaskTimer | null>(null)
   const [elapsedTime, setElapsedTime] = useState<number>(0)
-  const [editingTimerId, setEditingTimerId] = useState<string | null>(null)
+  const [editingTimerId, setEditingTimerId] = useState<number | null>(null)
   const [editingStartTime, setEditingStartTime] = useState<string>('')
   const [editingEndTime, setEditingEndTime] = useState<string>('')
   const [isUpdating, setIsUpdating] = useState(false)

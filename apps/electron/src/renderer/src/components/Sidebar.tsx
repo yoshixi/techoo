@@ -21,8 +21,8 @@ interface AppSidebarProps {
   currentView: View
   onViewChange: (view: View) => void
   activeTasks: Task[]
-  activeTimersByTaskId: Map<string, TaskTimer>
-  onStopTimer: (taskId: string, timerId: string) => void
+  activeTimersByTaskId: Map<number, TaskTimer>
+  onStopTimer: (taskId: number, timerId: number) => void
   onOpenTaskDetail: (task: Task) => void
 }
 

@@ -335,9 +335,8 @@ function formatDate(value: string): string {
   })
 }
 
-function createId(): string {
-  if (crypto?.randomUUID) return crypto.randomUUID()
-  return Math.random().toString(36).slice(2)
+function createId(): number {
+  return Date.now()
 }
 ```
 

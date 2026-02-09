@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, beforeAll, afterAll, vi } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { v7 as uuidv7 } from 'uuid';
+import type { AppBindings } from '../types';
 import {
   listTagsRoute,
   getTagRoute,
@@ -25,21 +25,18 @@ import {
   createTaskHandler,
   updateTaskHandler
 } from './tasks';
-import { createSqliteLibsqlTestContext, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
+import { createSqliteLibsqlTestContext, createTestUser, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
 
-type TestGlobal = typeof globalThis & { testDb?: SqliteLibsqlTestContext['db'] };
+type TestGlobal = typeof globalThis & { testDb?: SqliteLibsqlTestContext['db']; testUser?: { id: number; email: string; name: string } };
 
 // Mock the database connection
 vi.mock('../../../core/common.db', () => ({
-  getDb: () => (globalThis as TestGlobal).testDb!,
-  createId: () => {
-    return uuidv7();
-  }
+  getDb: () => (globalThis as TestGlobal).testDb!
 }));
 
 // Create a test app with tag and task routes
 const createTestApp = () => {
-  const app = new OpenAPIHono();
+  const app = new OpenAPIHono<AppBindings>();
 
   // Add CORS middleware like in the main app
   app.use('/*', async (c, next) => {
@@ -51,6 +48,12 @@ const createTestApp = () => {
       return c.text('', 200);
     }
 
+    await next();
+  });
+
+  // Inject test user context (simulates JWT auth middleware)
+  app.use('/*', async (c, next) => {
+    c.set('user', (globalThis as TestGlobal).testUser!);
     await next();
   });
 
@@ -71,7 +74,7 @@ const createTestApp = () => {
 
 describe('Tag Handlers', () => {
   let testContext: SqliteLibsqlTestContext;
-  let app: OpenAPIHono;
+  let app: OpenAPIHono<AppBindings>;
 
   beforeAll(async () => {
     testContext = await createSqliteLibsqlTestContext();
@@ -82,6 +85,8 @@ describe('Tag Handlers', () => {
 
   beforeEach(async () => {
     await testContext.reset();
+    const user = await createTestUser(testContext.db);
+    (globalThis as TestGlobal).testUser = { id: user.id, email: user.email, name: user.name };
   });
 
   afterAll(async () => {
@@ -205,7 +210,7 @@ describe('Tag Handlers', () => {
     });
 
     it('should return 404 for non-existent tag', async () => {
-      const fakeId = uuidv7();
+      const fakeId = 999999;
       const res = await app.request(new Request(`http://localhost/tags/${fakeId}`));
 
       expect(res.status).toBe(404);
@@ -265,7 +270,7 @@ describe('Tag Handlers', () => {
     });
 
     it('should return 404 for non-existent tag', async () => {
-      const fakeId = uuidv7();
+      const fakeId = 999999;
       const res = await app.request(new Request(`http://localhost/tags/${fakeId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -301,7 +306,7 @@ describe('Tag Handlers', () => {
     });
 
     it('should return 404 for non-existent tag', async () => {
-      const fakeId = uuidv7();
+      const fakeId = 999999;
       const res = await app.request(new Request(`http://localhost/tags/${fakeId}`, {
         method: 'DELETE'
       }));
@@ -422,7 +427,7 @@ describe('Tag Handlers', () => {
       expect(data.tasks.map((t: any) => t.title).sort()).toEqual(['Both tags', 'Urgent task']);
     });
 
-    it('should return empty array when filtering with non-UUID tag values', async () => {
+    it('should reject filtering with non-numeric tag values', async () => {
       // Create tags
       const urgentRes = await app.request(new Request('http://localhost/tags', {
         method: 'POST',
@@ -444,13 +449,9 @@ describe('Tag Handlers', () => {
         body: JSON.stringify({ title: 'No tags' })
       }));
 
-      // Filter by tag name (should return empty since we only accept UUIDs now)
+      // Filter by tag name (should return empty since we only accept numeric IDs now)
       const res = await app.request(new Request('http://localhost/tasks?tags=urgent'));
-      expect(res.status).toBe(200);
-
-      const data = await res.json();
-      expect(data.total).toBe(0);
-      expect(data.tasks).toEqual([]);
+      expect(res.status).toBe(400);
     });
 
     it('should filter tasks by multiple tags (OR logic)', async () => {
@@ -498,7 +499,7 @@ describe('Tag Handlers', () => {
     });
 
     it('should reject creating task with invalid tag IDs', async () => {
-      const fakeTagId = uuidv7();
+      const fakeTagId = 999999;
       const res = await app.request(new Request('http://localhost/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

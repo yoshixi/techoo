@@ -1,5 +1,4 @@
 import { z } from '@hono/zod-openapi'
-import { UUIDSchema } from './common.core'
 
 // Provider types
 export const ProviderTypeEnum = z.enum(['google', 'outlook', 'apple'])
@@ -7,17 +6,17 @@ export type ProviderType = z.infer<typeof ProviderTypeEnum>
 
 // OAuth token model (API representation)
 export const OAuthTokenModel = z.object({
-  id: UUIDSchema.openapi({
+  id: z.string().openapi({
     description: 'Unique identifier for the OAuth token'
   }),
-  userId: UUIDSchema.openapi({
+  userId: z.string().openapi({
     description: 'User ID'
   }),
   providerType: ProviderTypeEnum.openapi({
     description: 'OAuth provider type',
     example: 'google'
   }),
-  expiresAt: z.iso.datetime().openapi({
+  expiresAt: z.string().openapi({
     description: 'Token expiration timestamp',
     example: '2024-12-31T23:59:59.000Z'
   }),
@@ -25,11 +24,11 @@ export const OAuthTokenModel = z.object({
     description: 'Granted scopes',
     example: 'https://www.googleapis.com/auth/calendar.readonly'
   }),
-  createdAt: z.iso.datetime().openapi({
+  createdAt: z.string().openapi({
     description: 'Timestamp when the token was created',
     example: '2024-01-01T10:00:00.000Z'
   }),
-  updatedAt: z.iso.datetime().openapi({
+  updatedAt: z.string().openapi({
     description: 'Timestamp when the token was last updated',
     example: '2024-01-01T15:30:00.000Z'
   })
@@ -43,7 +42,7 @@ export const OAuthStatusResponseModel = z.object({
   providerType: ProviderTypeEnum.optional().openapi({
     description: 'The connected provider type'
   }),
-  expiresAt: z.iso.datetime().optional().nullable().openapi({
+  expiresAt: z.string().optional().nullable().openapi({
     description: 'Token expiration timestamp'
   })
 }).openapi('OAuthStatusResponse')

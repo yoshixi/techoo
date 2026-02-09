@@ -1,4 +1,5 @@
 import type { RouteHandler } from '@hono/zod-openapi'
+import type { AppBindings } from '../types'
 import {
   listTaskCommentsRoute,
   createTaskCommentRoute,
@@ -7,7 +8,6 @@ import {
   deleteTaskCommentRoute
 } from '../routes/comments'
 import { getDb } from '../../../core/common.db'
-import { ensureDefaultUser } from '../../../core/tasks.db'
 import {
   getCommentsByTaskId,
   createComment,
@@ -16,13 +16,13 @@ import {
   deleteComment
 } from '../../../core/comments.db'
 
-export const listTaskCommentsHandler: RouteHandler<typeof listTaskCommentsRoute> = async (c) => {
+export const listTaskCommentsHandler: RouteHandler<typeof listTaskCommentsRoute, AppBindings> = async (c) => {
   try {
     const db = getDb()
-    const user = await ensureDefaultUser(db)
+    const user = c.get('user')
     const { taskId } = c.req.valid('param')
 
-    const comments = await getCommentsByTaskId(db, user.id.toString(), taskId)
+    const comments = await getCommentsByTaskId(db, user.id, taskId)
     if (!comments) {
       return c.json(
         {
@@ -52,14 +52,14 @@ export const listTaskCommentsHandler: RouteHandler<typeof listTaskCommentsRoute>
   }
 }
 
-export const createTaskCommentHandler: RouteHandler<typeof createTaskCommentRoute> = async (c) => {
+export const createTaskCommentHandler: RouteHandler<typeof createTaskCommentRoute, AppBindings> = async (c) => {
   try {
     const db = getDb()
-    const user = await ensureDefaultUser(db)
+    const user = c.get('user')
     const { taskId } = c.req.valid('param')
     const data = c.req.valid('json')
 
-    const comment = await createComment(db, user.id.toString(), { taskId, body: data.body })
+    const comment = await createComment(db, user.id, { taskId, body: data.body })
     if (!comment) {
       return c.json(
         {
@@ -83,13 +83,13 @@ export const createTaskCommentHandler: RouteHandler<typeof createTaskCommentRout
   }
 }
 
-export const getTaskCommentHandler: RouteHandler<typeof getTaskCommentRoute> = async (c) => {
+export const getTaskCommentHandler: RouteHandler<typeof getTaskCommentRoute, AppBindings> = async (c) => {
   try {
     const db = getDb()
-    const user = await ensureDefaultUser(db)
+    const user = c.get('user')
     const { taskId, commentId } = c.req.valid('param')
 
-    const comment = await getCommentById(db, user.id.toString(), taskId, commentId)
+    const comment = await getCommentById(db, user.id, taskId, commentId)
     if (!comment) {
       return c.json(
         {
@@ -113,14 +113,14 @@ export const getTaskCommentHandler: RouteHandler<typeof getTaskCommentRoute> = a
   }
 }
 
-export const updateTaskCommentHandler: RouteHandler<typeof updateTaskCommentRoute> = async (c) => {
+export const updateTaskCommentHandler: RouteHandler<typeof updateTaskCommentRoute, AppBindings> = async (c) => {
   try {
     const db = getDb()
-    const user = await ensureDefaultUser(db)
+    const user = c.get('user')
     const { taskId, commentId } = c.req.valid('param')
     const data = c.req.valid('json')
 
-    const comment = await updateComment(db, user.id.toString(), taskId, commentId, data)
+    const comment = await updateComment(db, user.id, taskId, commentId, data)
     if (!comment) {
       return c.json(
         {
@@ -144,13 +144,13 @@ export const updateTaskCommentHandler: RouteHandler<typeof updateTaskCommentRout
   }
 }
 
-export const deleteTaskCommentHandler: RouteHandler<typeof deleteTaskCommentRoute> = async (c) => {
+export const deleteTaskCommentHandler: RouteHandler<typeof deleteTaskCommentRoute, AppBindings> = async (c) => {
   try {
     const db = getDb()
-    const user = await ensureDefaultUser(db)
+    const user = c.get('user')
     const { taskId, commentId } = c.req.valid('param')
 
-    const comment = await deleteComment(db, user.id.toString(), taskId, commentId)
+    const comment = await deleteComment(db, user.id, taskId, commentId)
     if (!comment) {
       return c.json(
         {

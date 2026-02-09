@@ -1,13 +1,13 @@
 import { z } from '@hono/zod-openapi'
-import { UUIDSchema } from './common.core'
+import { IdSchema } from './common.core'
 import { ProviderTypeEnum } from './oauth.core'
 
 // Calendar model (API representation)
 export const CalendarModel = z.object({
-  id: UUIDSchema.openapi({
+  id: z.string().openapi({
     description: 'Unique identifier for the calendar'
   }),
-  userId: UUIDSchema.openapi({
+  userId: z.string().openapi({
     description: 'User ID'
   }),
   providerType: ProviderTypeEnum.openapi({
@@ -30,15 +30,15 @@ export const CalendarModel = z.object({
     description: 'Whether the calendar is enabled for sync',
     example: true
   }),
-  lastSyncedAt: z.iso.datetime().nullable().openapi({
+  lastSyncedAt: z.string().nullable().openapi({
     description: 'Timestamp of last sync',
     example: '2024-01-01T10:00:00.000Z'
   }),
-  createdAt: z.iso.datetime().openapi({
+  createdAt: z.string().openapi({
     description: 'Timestamp when the calendar was added',
     example: '2024-01-01T10:00:00.000Z'
   }),
-  updatedAt: z.iso.datetime().openapi({
+  updatedAt: z.string().openapi({
     description: 'Timestamp when the calendar was last updated',
     example: '2024-01-01T15:30:00.000Z'
   })
@@ -136,7 +136,7 @@ export const CalendarSyncResponseModel = z.object({
 
 // Path parameter models
 export const CalendarIdParamModel = z.object({
-  id: UUIDSchema.openapi({
+  id: IdSchema.openapi({
     description: 'Calendar ID',
     param: {
       name: 'id',

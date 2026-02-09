@@ -1,6 +1,6 @@
 CREATE TABLE `task_timers` (
-	`id` blob PRIMARY KEY NOT NULL,
-	`task_id` blob NOT NULL,
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`task_id` integer NOT NULL,
 	`start_time` integer NOT NULL,
 	`end_time` integer,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
@@ -9,8 +9,8 @@ CREATE TABLE `task_timers` (
 );
 --> statement-breakpoint
 CREATE TABLE `tasks` (
-	`id` blob PRIMARY KEY NOT NULL,
-	`user_id` blob NOT NULL,
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`user_id` integer NOT NULL,
 	`title` text NOT NULL,
 	`description` text,
 	`due_at` integer,
@@ -21,6 +21,6 @@ CREATE TABLE `tasks` (
 );
 --> statement-breakpoint
 CREATE TABLE `users` (
-	`id` blob PRIMARY KEY NOT NULL,
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL
 );

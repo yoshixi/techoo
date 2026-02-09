@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Plus, Play, Square, CheckCircle, Maximize2, ArrowUpDown, CalendarDays } from 'lucide-react'
+import { Plus, Play, Square, CheckCircle, Maximize2, ArrowUpDown, CalendarDays, ChevronRight, ChevronDown } from 'lucide-react'
 
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card'
@@ -164,7 +164,7 @@ function App(): React.JSX.Element {
   // | OFF   | ON          | All tasks (scheduled first, then unscheduled) |
   // | OFF   | OFF         | Only scheduled tasks |
   const [showUnscheduled, setShowUnscheduled] = useState(true)
-  const [filterTagIds, setFilterTagIds] = useState<string[]>([])
+  const [filterTagIds, setFilterTagIds] = useState<number[]>([])
   const [sortBy, setSortBy] = useState<'createdAt' | 'startAt'>('startAt')
   const [calendarViewMode, setCalendarViewMode] = useState<ViewMode>('day')
   const [currentTime, setCurrentTime] = useState(Date.now())
@@ -173,7 +173,7 @@ function App(): React.JSX.Element {
     description: string
     startAt: string
     endAt: string
-    tagIds: string[]
+    tagIds: number[]
   } | null>(null)
   const [isCreatingCalendarTask, setIsCreatingCalendarTask] = useState(false)
   const [calendarCreateError, setCalendarCreateError] = useState<string | null>(null)
@@ -223,7 +223,7 @@ function App(): React.JSX.Element {
         startAtTo: showTodayOnly ? todayRange.endAt : undefined,
         sortBy,
         order: 'asc' as const,
-        nullsLast: showUnscheduled && sortBy === 'startAt' ? ('true' as const) : undefined,
+        nullsLast: showUnscheduled ? ('true' as const) : undefined,
         tags: filterTagIds.length ? filterTagIds : undefined
       }
     },
@@ -285,7 +285,7 @@ function App(): React.JSX.Element {
         startAtTo: showTodayOnly ? todayRange.endAt : undefined,
         sortBy,
         order: 'asc' as const,
-        nullsLast: showUnscheduled && sortBy === 'startAt' ? ('true' as const) : undefined,
+        nullsLast: showUnscheduled ? ('true' as const) : undefined,
         tags: filterTagIds.length ? filterTagIds : undefined
       }
     },
@@ -306,7 +306,7 @@ function App(): React.JSX.Element {
   // Combined tasks for operations that need to find a task
   const allTasks = useMemo(() => {
     // Merge activeTasks, inactiveTasks, and sidebarActiveTasks, removing duplicates
-    const taskMap = new Map<string, Task>()
+    const taskMap = new Map<number, Task>()
     for (const task of [...activeTasks, ...inactiveTasks, ...sidebarActiveTasks]) {
       taskMap.set(task.id, task)
     }
@@ -326,15 +326,16 @@ function App(): React.JSX.Element {
     description: '',
     dueDate: '',
     startAt: '',
-    tagIds: [] as string[]
+    tagIds: [] as number[]
   })
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [focusedTaskIndex, setFocusedTaskIndex] = useState<number>(-1)
-  const [editingCell, setEditingCell] = useState<{ taskId: string; field: 'title' | 'description' } | null>(null)
+  const [editingCell, setEditingCell] = useState<{ taskId: number; field: 'title' | 'description' } | null>(null)
   const [editingValue, setEditingValue] = useState('')
-  const [editingTagsTaskId, setEditingTagsTaskId] = useState<string | null>(null)
+  const [editingTagsTaskId, setEditingTagsTaskId] = useState<number | null>(null)
   const [scheduleEditingTask, setScheduleEditingTask] = useState<Task | null>(null)
   const [isSchedulePickerOpen, setIsSchedulePickerOpen] = useState(false)
+  const [expandedTaskIds, setExpandedTaskIds] = useState<Set<number>>(new Set())
 
   const taskIds = useMemo(() => allTasks.map((task) => task.id), [allTasks])
 
@@ -349,7 +350,7 @@ function App(): React.JSX.Element {
   })
   const timers = timersResponse?.timers ?? []
   const activeTimersByTaskId = useMemo(() => {
-    const map = new Map<string, TaskTimer>()
+    const map = new Map<number, TaskTimer>()
     timers.forEach((timer) => {
       if (!timer.endTime) {
         const existing = map.get(timer.taskId)
@@ -367,17 +368,37 @@ function App(): React.JSX.Element {
     return map
   }, [timers])
 
-  const totalTimeByTaskId = useMemo(() => {
-    const map = new Map<string, number>()
+  // Group timers by task ID for nested timer rows
+  const timersByTaskId = useMemo(() => {
+    const map = new Map<number, TaskTimer[]>()
     timers.forEach((timer) => {
-      const startTime = new Date(timer.startTime).getTime()
-      const endTime = timer.endTime ? new Date(timer.endTime).getTime() : currentTime
-      const duration = endTime - startTime
-      const currentTotal = map.get(timer.taskId) || 0
-      map.set(timer.taskId, currentTotal + duration)
+      const existing = map.get(timer.taskId) || []
+      map.set(timer.taskId, [...existing, timer])
+    })
+    // Sort each task's timers by start time (newest first)
+    map.forEach((taskTimers, taskId) => {
+      map.set(
+        taskId,
+        taskTimers.sort(
+          (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+        )
+      )
     })
     return map
-  }, [timers, currentTime])
+  }, [timers])
+
+  // Toggle expand/collapse for timer rows
+  const toggleTaskExpansion = useCallback((taskId: number) => {
+    setExpandedTaskIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(taskId)) {
+        next.delete(taskId)
+      } else {
+        next.add(taskId)
+      }
+      return next
+    })
+  }, [])
 
   // Combined list for keyboard navigation (active tasks first, then inactive)
   const allTasksForNavigation = useMemo(() => {
@@ -427,7 +448,7 @@ function App(): React.JSX.Element {
 
   // Listen for show task detail request from tray menu
   useEffect(() => {
-    const unsubscribe = window.api.onShowTaskDetail((taskId: string) => {
+    const unsubscribe = window.api.onShowTaskDetail((taskId: number) => {
       // Find the task and show the detail modal
       const task = allTasks.find((t) => t.id === taskId)
       if (task) {
@@ -524,6 +545,9 @@ function App(): React.JSX.Element {
       // Start the timer - move task from inactive to active list optimistically
       setCurrentTime(Date.now())
 
+      // Auto-expand the timer rows when starting a timer
+      setExpandedTaskIds((prev) => new Set(prev).add(task.id))
+
       // Optimistic update: move task from inactive to active list
       mutateInactiveTasks(
         (currentData) => {
@@ -599,7 +623,7 @@ function App(): React.JSX.Element {
     if (!newTaskFields.title.trim()) return
 
     const now = new Date().toISOString()
-    const tempId = `temp-${Date.now()}`
+    const tempId = -Date.now()
 
     // Create optimistic task object
     const optimisticTask: Task = {
@@ -676,7 +700,7 @@ function App(): React.JSX.Element {
     setIsAddingTask(false)
   }
 
-  function handleStartEditing(taskId: string, field: 'title' | 'description', currentValue: string): void {
+  function handleStartEditing(taskId: number, field: 'title' | 'description', currentValue: string): void {
     setEditingCell({ taskId, field })
     setEditingValue(currentValue || '')
   }
@@ -711,7 +735,7 @@ function App(): React.JSX.Element {
       })
   }
 
-  async function handleSaveSchedule(taskId: string, startAt: string | null, endAt: string | null): Promise<void> {
+  async function handleSaveSchedule(taskId: number, startAt: string | null, endAt: string | null): Promise<void> {
     try {
       await putApiTasksId(taskId, {
         startAt: startAt ? normalizeDateTime(startAt) : null,
@@ -767,7 +791,7 @@ function App(): React.JSX.Element {
     }
   }
 
-  function handleUpdateTaskTags(taskId: string, tagIds: string[]): void {
+  function handleUpdateTaskTags(taskId: number, tagIds: number[]): void {
     putApiTasksId(taskId, { tagIds })
       .then(() => mutateBothTaskLists())
       .catch((error) => {
@@ -775,7 +799,7 @@ function App(): React.JSX.Element {
       })
   }
 
-  const handleDeleteTask = async (taskId: string): Promise<void> => {
+  const handleDeleteTask = async (taskId: number): Promise<void> => {
     if (!confirm('Are you sure you want to delete this task?')) return
 
     try {
@@ -789,12 +813,15 @@ function App(): React.JSX.Element {
     }
   }
 
-  function handleStartTimer(taskId: string): void {
+  function handleStartTimer(taskId: number): void {
     const task = allTasks.find(t => t.id === taskId)
     if (!task) return
 
     // UI first (optimistic) - move task from inactive to active
     setCurrentTime(Date.now())
+
+    // Auto-expand the timer rows when starting a timer
+    setExpandedTaskIds((prev) => new Set(prev).add(taskId))
 
     // Optimistic update: move task from inactive to active list
     mutateInactiveTasks(
@@ -835,7 +862,7 @@ function App(): React.JSX.Element {
       })
   }
 
-  function handleStopTimer(taskId: string, timerId: string): void {
+  function handleStopTimer(taskId: number, timerId: number): void {
     const task = allTasks.find(t => t.id === taskId)
     if (!task) return
 
@@ -880,21 +907,7 @@ function App(): React.JSX.Element {
       })
   }
 
-  function getTotalTimeDisplay(taskId: string): string {
-    const totalMs = totalTimeByTaskId.get(taskId) || 0
-    const hours = Math.floor(totalMs / 3600000)
-    const minutes = Math.floor((totalMs % 3600000) / 60000)
-
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`
-    }
-    if (minutes > 0) {
-      return `${minutes}m`
-    }
-    return '0m'
-  }
-
-  function isTaskActive(taskId: string): boolean {
+  function isTaskActive(taskId: number): boolean {
     return activeTimersByTaskId.has(taskId)
   }
 
@@ -933,7 +946,6 @@ function App(): React.JSX.Element {
     const isFocused = focusedTask?.id === task.id
     return (
       <TableRow
-        key={task.id}
         className={`cursor-pointer hover:bg-muted/50 transition-colors ${isTaskActive(task.id) ? 'bg-primary/5' : ''} ${isCompleted ? 'opacity-50' : ''} ${isFocused ? 'ring-2 ring-primary ring-inset' : ''}`}
         onClick={() => {
           setSelectedTask(task)
@@ -944,6 +956,24 @@ function App(): React.JSX.Element {
       >
         <TableCell onClick={(e) => { e.stopPropagation(); setEditingTagsTaskId(null) }}>
           <div className="flex items-center gap-1">
+            {(timersByTaskId.get(task.id)?.length ?? 0) > 0 && (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleTaskExpansion(task.id)
+                }}
+                className="h-7 w-7"
+                title={expandedTaskIds.has(task.id) ? 'Collapse timers' : 'Expand timers'}
+              >
+                {expandedTaskIds.has(task.id) ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </Button>
+            )}
             {activeTimersByTaskId.has(task.id) ? (
               <Button
                 size="icon"
@@ -961,27 +991,27 @@ function App(): React.JSX.Element {
               </Button>
             ) : (
               <Button
-                size="icon"
+                size="icon-lg"
                 variant="ghost"
                 onClick={() => handleStartTimer(task.id)}
                 className="h-7 w-7 hover:bg-green-100"
                 disabled={timersLoading}
                 title="Start timer"
               >
-                <Play className="h-4 w-4 text-green-600" />
+                <Play className="h-5 w-5 text-green-600" />
               </Button>
             )}
             <Button
-              size="icon"
+              size="icon-lg"
               variant="ghost"
               onClick={() => handleToggleTaskCompletion(task)}
               title={task.completedAt ? 'Mark incomplete' : 'Mark complete'}
               className={task.completedAt ? 'opacity-50' : 'hover:bg-green-100'}
             >
-              <CheckCircle className={`h-4 w-4 ${task.completedAt ? 'text-gray-400' : 'text-green-600'}`} />
+              <CheckCircle className={`h-5 w-5 ${task.completedAt ? 'text-gray-400' : 'text-green-600'}`} />
             </Button>
             <Button
-              size="icon"
+              size="icon-lg"
               variant="ghost"
               onClick={() => {
                 setSelectedTask(task)
@@ -991,21 +1021,9 @@ function App(): React.JSX.Element {
               title="Open task details"
               className="hover:bg-blue-100"
             >
-              <Maximize2 className="h-4 w-4 text-blue-600" />
+              <Maximize2 className="h-5 w-5 text-blue-600" />
             </Button>
           </div>
-        </TableCell>
-        <TableCell
-          onClick={() => {
-            setSelectedTask(task)
-            setEditingTagsTaskId(null)
-            const index = allTasksForNavigation.findIndex((t) => t.id === task.id)
-            setFocusedTaskIndex(index)
-          }}
-        >
-          <span className="text-sm">
-            {getTotalTimeDisplay(task.id)}
-          </span>
         </TableCell>
         <TableCell
           onClick={() => {
@@ -1185,12 +1203,44 @@ function App(): React.JSX.Element {
     )
   }
 
+  function renderTimerRows(task: Task): React.JSX.Element[] {
+    if (!expandedTaskIds.has(task.id)) return []
+
+    const taskTimers = timersByTaskId.get(task.id) || []
+    if (taskTimers.length === 0) return []
+
+    return taskTimers.map((timer) => {
+      const startTime = new Date(timer.startTime)
+      const endTime = timer.endTime ? new Date(timer.endTime) : null
+      const durationMs = (endTime?.getTime() ?? Date.now()) - startTime.getTime()
+      const hours = Math.floor(durationMs / 3600000)
+      const minutes = Math.floor((durationMs % 3600000) / 60000)
+      const durationStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
+
+      return (
+        <TableRow key={timer.id} className="bg-muted/30 text-sm">
+          <TableCell></TableCell>
+          <TableCell className="pl-8 text-muted-foreground">
+            {startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {' - '}
+            {endTime ? (
+              endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            ) : (
+              <span className="text-green-600">Active</span>
+            )}
+            <span className="ml-2 font-mono">({durationStr})</span>
+          </TableCell>
+          <TableCell colSpan={3}></TableCell>
+        </TableRow>
+      )
+    })
+  }
+
   function renderTableHeader(): React.JSX.Element {
     return (
       <TableHeader>
         <TableRow>
           <TableHead>Actions</TableHead>
-          <TableHead>Time Tracked</TableHead>
           <TableHead>Start Date</TableHead>
           <TableHead>Title</TableHead>
           <TableHead>Description</TableHead>
@@ -1378,116 +1428,120 @@ function App(): React.JSX.Element {
                 </CardHeader>
                 <CardContent className="flex-1 min-h-0 overflow-auto">
                   <div className="overflow-x-auto min-w-0">
-                  <Table>
-                    {renderTableHeader()}
-                    <TableBody>
-                      {isAddingTask && (
-                        <TableRow className="bg-primary/5">
-                          <TableCell>
-                            <span className="text-muted-foreground text-sm">0m</span>
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="datetime-local"
-                              value={newTaskFields.startAt}
-                              onChange={(e) =>
-                                setNewTaskFields((prev) => ({ ...prev, startAt: e.target.value }))
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  handleCreateTask()
-                                } else if (e.key === 'Escape') {
-                                  handleCancelAdd()
+                    <Table>
+                      {renderTableHeader()}
+                      <TableBody>
+                        {isAddingTask && (
+                          <TableRow className="bg-primary/5">
+                            <TableCell>
+                              <Input
+                                type="datetime-local"
+                                value={newTaskFields.startAt}
+                                onChange={(e) =>
+                                  setNewTaskFields((prev) => ({ ...prev, startAt: e.target.value }))
                                 }
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              placeholder="Enter task title"
-                              value={newTaskFields.title}
-                              onChange={(e) =>
-                                setNewTaskFields((prev) => ({ ...prev, title: e.target.value }))
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  handleCreateTask()
-                                } else if (e.key === 'Escape') {
-                                  handleCancelAdd()
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleCreateTask()
+                                  } else if (e.key === 'Escape') {
+                                    handleCancelAdd()
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                placeholder="Enter task title"
+                                value={newTaskFields.title}
+                                onChange={(e) =>
+                                  setNewTaskFields((prev) => ({ ...prev, title: e.target.value }))
                                 }
-                              }}
-                              autoFocus
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              placeholder="Enter description"
-                              value={newTaskFields.description}
-                              onChange={(e) =>
-                                setNewTaskFields((prev) => ({ ...prev, description: e.target.value }))
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  handleCreateTask()
-                                } else if (e.key === 'Escape') {
-                                  handleCancelAdd()
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleCreateTask()
+                                  } else if (e.key === 'Escape') {
+                                    handleCancelAdd()
+                                  }
+                                }}
+                                autoFocus
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                placeholder="Enter description"
+                                value={newTaskFields.description}
+                                onChange={(e) =>
+                                  setNewTaskFields((prev) => ({ ...prev, description: e.target.value }))
                                 }
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <TagCombobox
-                              selectedTagIds={newTaskFields.tagIds}
-                              onSelectionChange={(tagIds) =>
-                                setNewTaskFields((prev) => ({ ...prev, tagIds }))
-                              }
-                              placeholder="Add tags..."
-                              className="min-w-[120px]"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                size="sm"
-                                onClick={handleCreateTask}
-                                disabled={!newTaskFields.title.trim()}
-                              >
-                                Save
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={handleCancelAdd}>
-                                Cancel
-                              </Button>
-                              <span className="text-xs text-muted-foreground">
-                                Press Enter to save
-                              </span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                      {tasksLoading && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground">
-                            Loading tasks...
-                          </TableCell>
-                        </TableRow>
-                      )}
-                      {!tasksLoading && tasksError && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center text-destructive">
-                            Failed to load tasks. {getErrorMessage(tasksError)}
-                          </TableCell>
-                        </TableRow>
-                      )}
-                      {!tasksLoading && !tasksError && displayTasks.length === 0 && !isAddingTask && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground">
-                            No tasks found
-                          </TableCell>
-                        </TableRow>
-                      )}
-                      {!tasksLoading && !tasksError && displayTasks.map(renderTaskRow)}
-                    </TableBody>
-                  </Table>
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleCreateTask()
+                                  } else if (e.key === 'Escape') {
+                                    handleCancelAdd()
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TagCombobox
+                                selectedTagIds={newTaskFields.tagIds}
+                                onSelectionChange={(tagIds) =>
+                                  setNewTaskFields((prev) => ({ ...prev, tagIds }))
+                                }
+                                placeholder="Add tags..."
+                                className="min-w-[120px]"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={handleCreateTask}
+                                  disabled={!newTaskFields.title.trim()}
+                                >
+                                  Save
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={handleCancelAdd}>
+                                  Cancel
+                                </Button>
+                                <span className="text-xs text-muted-foreground">
+                                  Press Enter to save
+                                </span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        {tasksLoading && (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground">
+                              Loading tasks...
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        {!tasksLoading && tasksError && (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-destructive">
+                              Failed to load tasks. {getErrorMessage(tasksError)}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        {!tasksLoading && !tasksError && displayTasks.length === 0 && !isAddingTask && (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground">
+                              No tasks found
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        {!tasksLoading &&
+                          !tasksError &&
+                          displayTasks.map((task) => (
+                            <React.Fragment key={task.id}>
+                              {renderTaskRow(task)}
+                              {renderTimerRows(task)}
+                            </React.Fragment>
+                          ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 </CardContent>
               </Card>

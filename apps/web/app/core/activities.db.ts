@@ -21,14 +21,14 @@ function getActivityTimestamp(item: TaskActivityItem): number {
   return item.type === 'timer' ? getTimerTimestamp(item.data) : getCommentTimestamp(item.data)
 }
 
-function getActivityTieBreaker(item: TaskActivityItem): string {
+function getActivityTieBreaker(item: TaskActivityItem): number {
   return item.data.id
 }
 
 export async function getTaskActivities(
   db: DB,
-  userId: string,
-  taskId: string
+  userId: number,
+  taskId: number
 ): Promise<TaskActivityItem[] | null> {
   const timers = await getTimersByTaskId(db, userId, taskId)
   if (timers === null) {
@@ -50,6 +50,6 @@ export async function getTaskActivities(
     if (timeDiff !== 0) {
       return timeDiff
     }
-    return getActivityTieBreaker(b).localeCompare(getActivityTieBreaker(a))
+    return getActivityTieBreaker(b) - getActivityTieBreaker(a)
   })
 }

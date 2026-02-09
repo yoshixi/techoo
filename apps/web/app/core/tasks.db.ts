@@ -1,13 +1,13 @@
 import { eq, and, desc, asc, inArray, isNull, notInArray, exists, notExists, sql, or, gte, lt, type SQL } from 'drizzle-orm'
-import { tasksTable, usersTable, taskTagsTable, tagsTable, taskTimersTable, type InsertTask, type SelectTask, type SelectUser, type InsertTaskTag } from '../db/schema/schema'
-import { createId, type DB } from './common.db'
+import { tasksTable, taskTagsTable, tagsTable, taskTimersTable, type InsertTask, type SelectTask, type InsertTaskTag } from '../db/schema/schema'
+import { type DB } from './common.db'
 import { formatTimestamp, parseISOToUnixTimestamp, getCurrentUnixTimestamp, validateRequiredString } from './common.core'
 import { convertDbTagToApi, type Tag } from './tags.db'
 import { stopActiveTimersForTask } from './timers.db'
 
 // Define API types without zod dependencies
 export interface Task {
-  id: string
+  id: number
   title: string
   description: string
   dueDate: string | null
@@ -26,7 +26,7 @@ export interface CreateTask {
   startAt?: string
   endAt?: string
   completedAt?: string | null
-  tagIds?: string[]
+  tagIds?: number[]
 }
 
 export interface UpdateTask {
@@ -36,11 +36,11 @@ export interface UpdateTask {
   startAt?: string | null
   endAt?: string | null
   completedAt?: string | null
-  tagIds?: string[]
+  tagIds?: number[]
 }
 
 // Helper function to load tags for a task
-async function loadTaskTags(db: DB, taskId: string): Promise<Tag[]> {
+async function loadTaskTags(db: DB, taskId: number): Promise<Tag[]> {
   const taskTagsWithTags = await db
     .select({
       tag: tagsTable
@@ -53,7 +53,7 @@ async function loadTaskTags(db: DB, taskId: string): Promise<Tag[]> {
 }
 
 // Helper function to load tags for multiple tasks (efficient batch loading)
-async function loadTagsForTasks(db: DB, taskIds: string[]): Promise<Map<string, Tag[]>> {
+async function loadTagsForTasks(db: DB, taskIds: number[]): Promise<Map<number, Tag[]>> {
   if (taskIds.length === 0) return new Map()
 
   const uniqueIds = Array.from(new Set(taskIds))
@@ -68,20 +68,19 @@ async function loadTagsForTasks(db: DB, taskIds: string[]): Promise<Map<string, 
     .where(inArray(taskTagsTable.taskId, uniqueIds))
 
   // Group tags by task ID
-  const tagsByTaskId = new Map<string, Tag[]>()
+  const tagsByTaskId = new Map<number, Tag[]>()
   for (const { taskId, tag } of taskTagsWithTags) {
-    const taskIdStr = taskId.toString()
-    if (!tagsByTaskId.has(taskIdStr)) {
-      tagsByTaskId.set(taskIdStr, [])
+    if (!tagsByTaskId.has(taskId)) {
+      tagsByTaskId.set(taskId, [])
     }
-    tagsByTaskId.get(taskIdStr)!.push(convertDbTagToApi(tag))
+    tagsByTaskId.get(taskId)!.push(convertDbTagToApi(tag))
   }
 
   return tagsByTaskId
 }
 
 // Helper function to manage task-tag associations
-async function setTaskTags(db: DB, userId: string, taskId: string, tagIds: string[]): Promise<void> {
+async function setTaskTags(db: DB, userId: number, taskId: number, tagIds: number[]): Promise<void> {
   if (tagIds.length === 0) {
     // Remove all existing tag associations
     await db.delete(taskTagsTable).where(eq(taskTagsTable.taskId, taskId))
@@ -108,7 +107,6 @@ async function setTaskTags(db: DB, userId: string, taskId: string, tagIds: strin
 
   // Add new associations
   const taskTagData: InsertTaskTag[] = tagIds.map(tagId => ({
-    id: createId(),
     taskId: taskId,
     tagId: tagId,
     createdAt: getCurrentUnixTimestamp()
@@ -120,7 +118,7 @@ async function setTaskTags(db: DB, userId: string, taskId: string, tagIds: strin
 // Convert database task to API task
 export function convertDbTaskToApi(dbTask: SelectTask, tags: Tag[] = []): Task {
   return {
-    id: dbTask.id.toString(),
+    id: dbTask.id,
     title: dbTask.title,
     description: dbTask.description || '',
     dueDate: dbTask.dueAt ? formatTimestamp(dbTask.dueAt) : null,
@@ -133,29 +131,6 @@ export function convertDbTaskToApi(dbTask: SelectTask, tags: Tag[] = []): Task {
   }
 }
 
-// Task database functions
-export async function ensureDefaultUser(db: DB): Promise<SelectUser> {
-  const existingUsers = await db.select().from(usersTable).limit(1)
-
-  if (existingUsers.length === 0) {
-    const result = await db.insert(usersTable).values({
-      id: createId(),
-      name: 'Default User'
-    }).returning()
-    const user = result[0]
-    if (!user) {
-      throw new Error('Failed to create default user')
-    }
-    return user
-  }
-
-  const user = existingUsers[0]
-  if (!user) {
-    throw new Error('No user found and failed to create default user')
-  }
-  return user
-}
-
 type TaskFilterOptions = {
   completed?: boolean
   hasActiveTimer?: boolean
@@ -165,10 +140,10 @@ type TaskFilterOptions = {
   sortBy?: 'createdAt' | 'startAt' | 'dueDate'
   order?: 'asc' | 'desc'
   nullsLast?: boolean
-  tags?: string[]
+  tags?: number[]
 }
 
-export async function getAllTasks(db: DB, userId: string, filters?: TaskFilterOptions): Promise<Task[]> {
+export async function getAllTasks(db: DB, userId: number, filters?: TaskFilterOptions): Promise<Task[]> {
   // Determine sort field
   let orderByField: typeof tasksTable.createdAt | typeof tasksTable.startAt | typeof tasksTable.dueAt = tasksTable.createdAt
   if (filters?.sortBy === 'startAt') {
@@ -187,11 +162,7 @@ export async function getAllTasks(db: DB, userId: string, filters?: TaskFilterOp
 
   // If tag filtering is requested
   if (filters?.tags && filters.tags.length > 0) {
-    // Validate that all provided values are valid UUIDs
-    const tagIds = filters.tags.filter(tag => {
-      // Simple UUID format check
-      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tag)
-    })
+    const tagIds = filters.tags.filter(tagId => Number.isInteger(tagId) && tagId > 0)
 
     if (tagIds.length === 0) {
       // No valid tag IDs provided, return empty array
@@ -199,7 +170,7 @@ export async function getAllTasks(db: DB, userId: string, filters?: TaskFilterOp
     }
 
     // Use EXISTS subquery to filter tasks that have ANY of these tags (OR logic)
-    // This lets the database handle the blob comparison correctly
+    // This lets the database handle the comparison directly
     const tagFilterSubquery = db
       .select({ one: sql`1` })
       .from(taskTagsTable)
@@ -214,7 +185,7 @@ export async function getAllTasks(db: DB, userId: string, filters?: TaskFilterOp
   }
 
   // Apply hasActiveTimer filter using EXISTS/NOT EXISTS subquery
-  // This lets the database handle the blob comparison correctly
+  // This lets the database handle the comparison directly
   if (filters?.hasActiveTimer !== undefined) {
     // Create a subquery that checks if a timer with null endTime exists for the task
     const activeTimerSubquery = db
@@ -316,12 +287,12 @@ export async function getAllTasks(db: DB, userId: string, filters?: TaskFilterOp
   }
 
   // Batch load tags for all tasks
-  const taskIds = dbTasks.map(t => t.id.toString())
+  const taskIds = dbTasks.map(t => t.id)
   const tagsByTaskId = await loadTagsForTasks(db, taskIds)
 
   // Convert to API format with tags
   let tasks = dbTasks.map(dbTask => {
-    const tags = tagsByTaskId.get(dbTask.id.toString()) || []
+    const tags = tagsByTaskId.get(dbTask.id) || []
     return convertDbTaskToApi(dbTask, tags)
   })
 
@@ -335,7 +306,7 @@ export async function getAllTasks(db: DB, userId: string, filters?: TaskFilterOp
   return tasks
 }
 
-export async function getTaskById(db: DB, userId: string, taskId: string): Promise<Task | null> {
+export async function getTaskById(db: DB, userId: number, taskId: number): Promise<Task | null> {
   const [dbTask] = await db
     .select()
     .from(tasksTable)
@@ -351,10 +322,9 @@ export async function getTaskById(db: DB, userId: string, taskId: string): Promi
   return convertDbTaskToApi(dbTask, tags)
 }
 
-export async function createTask(db: DB, userId: string, data: CreateTask): Promise<Task> {
+export async function createTask(db: DB, userId: number, data: CreateTask): Promise<Task> {
   const now = getCurrentUnixTimestamp()
   const taskData: InsertTask = {
-    id: createId(),
     userId: userId,
     title: validateRequiredString(data.title, 'Title'),
     description: data.description?.trim() || null,
@@ -374,18 +344,18 @@ export async function createTask(db: DB, userId: string, data: CreateTask): Prom
 
   // Handle tag associations
   if (data.tagIds && data.tagIds.length > 0) {
-    await setTaskTags(db, userId, dbTask.id.toString(), data.tagIds)
+    await setTaskTags(db, userId, dbTask.id, data.tagIds)
   }
 
   // Load tags and return complete task
   const tags = data.tagIds && data.tagIds.length > 0
-    ? await loadTaskTags(db, dbTask.id.toString())
+    ? await loadTaskTags(db, dbTask.id)
     : []
 
   return convertDbTaskToApi(dbTask, tags)
 }
 
-export async function updateTask(db: DB, userId: string, taskId: string, data: UpdateTask): Promise<Task | null> {
+export async function updateTask(db: DB, userId: number, taskId: number, data: UpdateTask): Promise<Task | null> {
   // Check if task exists
   const [existingTask] = await db
     .select()
@@ -443,7 +413,7 @@ export async function updateTask(db: DB, userId: string, taskId: string, data: U
   return convertDbTaskToApi(updatedDbTask, tags)
 }
 
-export async function deleteTask(db: DB, userId: string, taskId: string): Promise<Task | null> {
+export async function deleteTask(db: DB, userId: number, taskId: number): Promise<Task | null> {
   const [existingTask] = await db
     .select()
     .from(tasksTable)

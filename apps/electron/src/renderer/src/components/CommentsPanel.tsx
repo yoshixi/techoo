@@ -6,7 +6,7 @@ import { Label } from './ui/label'
 import { createTaskComment } from '../hooks/useTaskComments'
 
 type CommentsPanelProps = {
-  taskId: string
+  taskId: number
   onCommentCreated?: () => void
 }
 

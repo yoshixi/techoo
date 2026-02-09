@@ -36,5 +36,5 @@ export interface UpdateTask {
    */
   completedAt?: string | null
   /** Array of tag IDs to associate with the task. Replaces all existing tags */
-  tagIds?: string[]
+  tagIds?: number[]
 }

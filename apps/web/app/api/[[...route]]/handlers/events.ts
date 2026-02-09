@@ -1,17 +1,17 @@
 import type { RouteHandler } from '@hono/zod-openapi'
+import type { AppBindings } from '../types'
 import { listEventsRoute, getEventRoute } from '../routes/events'
 import { getDb } from '../../../core/common.db'
-import { ensureDefaultUser } from '../../../core/tasks.db'
 import { getAllEvents, getEventById } from '../../../core/events.db'
 
-// GET /events - List events with filters
-export const listEventsHandler: RouteHandler<typeof listEventsRoute> = async (c) => {
+// GET /events - List calendar events with optional filters
+export const listEventsHandler: RouteHandler<typeof listEventsRoute, AppBindings> = async (c) => {
   try {
     const db = getDb()
-    const defaultUser = await ensureDefaultUser(db)
+    const user = c.get('user')
     const query = c.req.valid('query')
 
-    const events = await getAllEvents(db, defaultUser.id.toString(), {
+    const events = await getAllEvents(db, user.id, {
       calendarId: query.calendarId,
       startDate: query.startDate,
       endDate: query.endDate
@@ -25,13 +25,13 @@ export const listEventsHandler: RouteHandler<typeof listEventsRoute> = async (c)
 }
 
 // GET /events/{id} - Get a specific event
-export const getEventHandler: RouteHandler<typeof getEventRoute> = async (c) => {
+export const getEventHandler: RouteHandler<typeof getEventRoute, AppBindings> = async (c) => {
   try {
     const db = getDb()
-    const defaultUser = await ensureDefaultUser(db)
+    const user = c.get('user')
     const { id } = c.req.valid('param')
 
-    const event = await getEventById(db, defaultUser.id.toString(), id)
+    const event = await getEventById(db, user.id, id)
 
     if (!event) {
       return c.json({ error: 'Event not found' }, 404)

@@ -1,12 +1,12 @@
 import { z } from '@hono/zod-openapi'
-import { UUIDSchema } from './common.core'
+import { IdSchema } from './common.core'
 
 // Base task timer model
 export const TaskTimerModel = z.object({
-  id: UUIDSchema.openapi({
+  id: IdSchema.openapi({
     description: 'Unique identifier for the timer'
   }),
-  taskId: UUIDSchema.openapi({
+  taskId: IdSchema.openapi({
     description: 'ID of the associated task'
   }),
   startTime: z.iso.datetime().openapi({
@@ -35,18 +35,18 @@ export const ListTimersQueryParamsModel = z
           return value.includes(',') ? value.split(',').map((item) => item.trim()) : [value]
         }
         return value
-      }, z.array(UUIDSchema))
+      }, z.array(IdSchema))
       .optional()
       .openapi({
         description: 'IDs of the tasks to get timers for',
-        example: ['01234567-89ab-cdef-0123-456789abcdef', '01234567-89ab-cdef-0123-456789abcdef']
+        example: [1, 2]
       })
   })
   .openapi('ListTimersQueryParams')
 
 // Create timer input model
 export const CreateTimerModel = z.object({
-  taskId: UUIDSchema.openapi({
+  taskId: IdSchema.openapi({
     description: 'ID of the task to start timer for'
   }),
   startTime: z.iso.datetime().openapi({
@@ -85,7 +85,7 @@ export const TimerResponseModel = z.object({
 
 // Path parameter models
 export const TimerIdParamModel = z.object({
-  id: UUIDSchema.openapi({
+  id: IdSchema.openapi({
     description: 'Timer ID',
     param: {
       name: 'id',
@@ -95,7 +95,7 @@ export const TimerIdParamModel = z.object({
 }).openapi('TimerIdParam')
 
 export const TaskIdForTimersParamModel = z.object({
-  taskId: UUIDSchema.openapi({
+  taskId: IdSchema.openapi({
     description: 'Task ID for timer operations',
     param: {
       name: 'taskId',

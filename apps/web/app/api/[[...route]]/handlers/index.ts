@@ -1,5 +1,6 @@
 import type { RouteHandler } from '@hono/zod-openapi'
 import { healthRoute } from '../routes/health'
+import type { AppBindings } from '../types'
 
 // Re-export all handlers for convenient importing
 export * from './tasks'
@@ -13,7 +14,7 @@ export * from './events'
 export * from './webhooks'
 
 // Health check handler
-export const healthHandler: RouteHandler<typeof healthRoute> = (c) => {
+export const healthHandler: RouteHandler<typeof healthRoute, AppBindings> = (c) => {
   return c.json(
     {
       status: 'ok',

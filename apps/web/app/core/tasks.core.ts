@@ -1,10 +1,10 @@
 import { z } from '@hono/zod-openapi'
-import { UUIDSchema } from './common.core'
+import { IdSchema } from './common.core'
 import { TagModel } from './tags.core'
 
 // Base task model
 export const TaskModel = z.object({
-  id: UUIDSchema.openapi({
+  id: IdSchema.openapi({
     description: 'Unique identifier for the task'
   }),
   title: z.string().min(1).max(200).openapi({
@@ -71,7 +71,7 @@ export const CreateTaskModel = z.object({
     description: 'Completion timestamp. Use null to mark the task as incomplete',
     example: '2024-01-02T08:00:00.000Z'
   }),
-  tagIds: z.array(UUIDSchema).optional().openapi({
+  tagIds: z.array(IdSchema).optional().openapi({
     description: 'Array of tag IDs to associate with the task',
     example: []
   })
@@ -111,7 +111,7 @@ export const UpdateTaskModel = z.object({
     description: 'Completion timestamp. Use null to mark the task as incomplete',
     example: '2024-01-02T08:00:00.000Z'
   }),
-  tagIds: z.array(UUIDSchema).optional().openapi({
+  tagIds: z.array(IdSchema).optional().openapi({
     description: 'Array of tag IDs to associate with the task. Replaces all existing tags',
     example: []
   })
@@ -187,15 +187,15 @@ export const TaskQueryParamsModel = z.object({
       return value.includes(',') ? value.split(',').map((item) => item.trim()) : [value]
     }
     return value
-  }, z.array(z.string()).optional()).openapi({
+  }, z.array(IdSchema).optional()).openapi({
     description: 'Filter tasks by tag IDs (comma-separated). Returns tasks with ANY of the specified tags (OR logic)',
-    example: '01234567-89ab-cdef-0123-456789abcdef,98765432-10ab-cdef-0123-456789abcdef'
+    example: '1,2'
   })
 }).openapi('TaskQueryParams')
 
 // Path parameter models
 export const TaskIdParamModel = z.object({
-  id: UUIDSchema.openapi({
+  id: IdSchema.openapi({
     description: 'Task ID',
     param: {
       name: 'id',

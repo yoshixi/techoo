@@ -1,6 +1,6 @@
 CREATE TABLE `tags` (
-	`id` blob PRIMARY KEY NOT NULL,
-	`user_id` blob NOT NULL,
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`user_id` integer NOT NULL,
 	`name` text NOT NULL,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
@@ -9,9 +9,9 @@ CREATE TABLE `tags` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX `tags_user_id_name_unique` ON `tags` (`user_id`,`name`);--> statement-breakpoint
 CREATE TABLE `task_tags` (
-	`id` blob PRIMARY KEY NOT NULL,
-	`task_id` blob NOT NULL,
-	`tag_id` blob NOT NULL,
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`task_id` integer NOT NULL,
+	`tag_id` integer NOT NULL,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
 	FOREIGN KEY (`task_id`) REFERENCES `tasks`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`tag_id`) REFERENCES `tags`(`id`) ON UPDATE no action ON DELETE cascade

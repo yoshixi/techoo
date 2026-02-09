@@ -1,10 +1,12 @@
+import { getJwt, clearAuthState } from '../auth'
+
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api`
 
 export interface CustomRequestConfig {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
   url: string
-  params?: Record<string, string | number | boolean | null | undefined | string[]>
+  params?: Record<string, string | number | boolean | null | undefined | Array<string | number>>
   data?: unknown
   headers?: Record<string, string>
   responseType?: 'json' | 'text'
@@ -14,7 +16,7 @@ export interface CustomRequestConfig {
  * Custom HTTP client for Electron renderer process
  * This function will be used by the generated API client
  */
-export const customInstance = <T>(config: CustomRequestConfig): Promise<T> => {
+export const customInstance = async <T>(config: CustomRequestConfig): Promise<T> => {
   const url = new URL(config.url, API_BASE_URL)
   if (config.params) {
     Object.entries(config.params).forEach(([key, value]) => {
@@ -29,28 +31,42 @@ export const customInstance = <T>(config: CustomRequestConfig): Promise<T> => {
     })
   }
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json'
+  }
+
+  // Add JWT authorization header
+  const jwt = await getJwt()
+  if (jwt) {
+    headers['Authorization'] = `Bearer ${jwt}`
+  }
+
   const requestConfig: RequestInit = {
     method: config.method || 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
+    headers,
     body: config.data ? JSON.stringify(config.data) : undefined
   }
 
-  return fetch(url.toString(), requestConfig).then(async (response) => {
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`)
-    }
+  const response = await fetch(url.toString(), requestConfig)
 
-    const contentType = response.headers.get('content-type')
-    if (contentType?.includes('application/json')) {
-      return response.json()
-    }
+  // Handle 401 (JWT expired AND refresh also failed)
+  if (response.status === 401) {
+    clearAuthState()
+    throw new Error('Unauthorized')
+  }
 
-    return (await response.text()) as unknown as T
-  })
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`)
+  }
+
+  const contentType = response.headers.get('content-type')
+  if (contentType?.includes('application/json')) {
+    return response.json()
+  }
+
+  return (await response.text()) as unknown as T
 }
 
 export default customInstance

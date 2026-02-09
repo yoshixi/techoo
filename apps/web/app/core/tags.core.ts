@@ -1,9 +1,9 @@
 import { z } from '@hono/zod-openapi'
-import { UUIDSchema } from './common.core'
+import { IdSchema } from './common.core'
 
 // Base tag model
 export const TagModel = z.object({
-  id: UUIDSchema.openapi({
+  id: IdSchema.openapi({
     description: 'Unique identifier for the tag'
   }),
   name: z.string().min(1).max(50).openapi({
@@ -54,7 +54,7 @@ export const TagResponseModel = z.object({
 
 // Path parameter models
 export const TagIdParamModel = z.object({
-  id: UUIDSchema.openapi({
+  id: IdSchema.openapi({
     description: 'Tag ID',
     param: {
       name: 'id',

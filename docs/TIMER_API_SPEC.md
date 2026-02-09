@@ -14,8 +14,8 @@ Base URL: `/api`
 
 ```typescript
 {
-  id: string;        // UUID v7
-  taskId: string;    // UUID v7, references task
+  id: number;        // SQLite integer ID
+  taskId: number;    // SQLite integer ID, references task
   startTime: string; // ISO 8601 datetime
   endTime: string | null; // ISO 8601 datetime, null for active timers
   createdAt: string; // ISO 8601 datetime
@@ -26,8 +26,8 @@ Base URL: `/api`
 **Example:**
 ```json
 {
-  "id": "01916b3e-abcd-7890-cdef-1234567890ab",
-  "taskId": "01916b3e-1234-7890-abcd-ef1234567890",
+  "id": 1,
+  "taskId": 42,
   "startTime": "2024-01-01T10:00:00.000Z",
   "endTime": "2024-01-01T10:30:00.000Z",
   "createdAt": "2024-01-01T10:00:00.000Z",
@@ -44,7 +44,7 @@ List all timers, optionally filtered by task IDs.
 **Query Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| taskIds | string[] | No | Filter timers by task IDs. Can be comma-separated or multiple params. |
+| taskIds | number[] | No | Filter timers by task IDs. Can be comma-separated or multiple params. |
 
 **Examples:**
 - `/timers` - Get all timers
@@ -72,14 +72,14 @@ Create a new timer for a task.
 **Request Body:**
 ```json
 {
-  "taskId": "uuid",
+  "taskId": 42,
   "startTime": "2024-01-01T10:00:00.000Z"
 }
 ```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| taskId | string | Yes | UUID of the task to track time for |
+| taskId | number | Yes | ID of the task to track time for |
 | startTime | string | Yes | ISO 8601 datetime when the timer started |
 
 **Response (201):**
@@ -104,7 +104,7 @@ Get all timers for a specific task.
 **Path Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| taskId | string | UUID of the task |
+| taskId | number | ID of the task |
 
 **Response (200):**
 ```json
@@ -128,7 +128,7 @@ Get a specific timer by ID.
 **Path Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| id | string | UUID of the timer |
+| id | number | ID of the timer |
 
 **Response (200):**
 ```json
@@ -151,7 +151,7 @@ Update an existing timer.
 **Path Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| id | string | UUID of the timer |
+| id | number | ID of the timer |
 
 **Request Body:**
 ```json
@@ -187,7 +187,7 @@ Delete a timer.
 **Path Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| id | string | UUID of the timer |
+| id | number | ID of the timer |
 
 **Response (200):**
 ```json
@@ -207,8 +207,8 @@ The `task_timers` table stores timer data:
 
 ```sql
 CREATE TABLE task_timers (
-  id BLOB PRIMARY KEY,           -- UUID v7 (16 bytes)
-  task_id BLOB NOT NULL,         -- Foreign key to tasks.id (cascade delete)
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  task_id INTEGER NOT NULL,      -- Foreign key to tasks.id (cascade delete)
   start_time INTEGER NOT NULL,   -- Unix timestamp (seconds)
   end_time INTEGER,              -- Unix timestamp (seconds), NULL for active
   created_at INTEGER NOT NULL DEFAULT (unixepoch()),

@@ -7,10 +7,18 @@
  */
 
 export interface TaskTimer {
-  /** Unique identifier for the timer */
-  id: string
-  /** ID of the associated task */
-  taskId: string
+  /**
+   * Unique identifier for the timer
+   * @minimum 0
+   * @exclusiveMinimum
+   */
+  id: number
+  /**
+   * ID of the associated task
+   * @minimum 0
+   * @exclusiveMinimum
+   */
+  taskId: number
   /** Timestamp when the timer was started */
   startTime: string
   /**
