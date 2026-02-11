@@ -33,7 +33,8 @@
       "Bash(xargs:*)",
       "Bash(pnpm --filter web add:*)",
       "Bash(devenv shell:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(pnpm --filter electron add:*)"
     ]
   }
 }
