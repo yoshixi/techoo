@@ -512,6 +512,126 @@ Access tokens are automatically refreshed when:
 - Token expires within 5 minutes of API call
 - Refreshed tokens are stored back to the `accounts` table
 
+## How Calendar Sync Works
+
+This section explains the complete flow from connecting a Google account to keeping calendar events updated.
+
+### Step 1: Connect Google Account (One-time)
+
+```
+User clicks "Sign in with Google"
+         ↓
+better-auth redirects to Google OAuth
+         ↓
+User grants permissions (including calendar.readonly scope)
+         ↓
+Google redirects back to /api/auth/callback/google
+         ↓
+better-auth stores tokens in `accounts` table
+         ↓
+User is now authenticated AND has calendar access
+```
+
+### Step 2: Add Calendars to Sync
+
+```
+GET /calendars/available
+         ↓
+Fetches list of calendars from Google Calendar API
+(using tokens from accounts table)
+         ↓
+User selects which calendars to sync
+         ↓
+POST /calendars { providerCalendarId: "primary" }
+         ↓
+Calendar record created in `calendars` table
+```
+
+### Step 3: Initial Sync (Manual)
+
+```
+POST /calendars/{id}/sync
+         ↓
+Fetch events from Google (next 30 days)
+         ↓
+Delete existing events for this calendar
+         ↓
+Insert all fetched events into `calendar_events` table
+         ↓
+Update lastSyncedAt timestamp
+```
+
+### Step 4: Enable Real-time Updates (Push Notifications)
+
+```
+POST /calendars/{id}/watch
+         ↓
+Create watch channel with Google Calendar API
+(sends our webhook URL to Google)
+         ↓
+Google returns channelId + resourceId
+         ↓
+Store in `calendar_watch_channels` table
+         ↓
+Google will now notify us of changes
+```
+
+### Step 5: Receiving Updates (Automatic)
+
+```
+User creates/updates/deletes event in Google Calendar
+         ↓
+Google sends POST to /api/webhooks/google-calendar
+(with X-Goog-Channel-ID, X-Goog-Resource-State headers)
+         ↓
+Webhook handler validates channel
+         ↓
+Fetches latest events from Google
+         ↓
+Updates local database (full replace)
+         ↓
+Returns 200 OK to Google
+```
+
+### Visual Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         SETUP PHASE                              │
+├─────────────────────────────────────────────────────────────────┤
+│  1. Sign in with Google → tokens stored in accounts table       │
+│  2. GET /calendars/available → see available calendars          │
+│  3. POST /calendars → add calendar to sync                      │
+│  4. POST /calendars/{id}/sync → initial event import            │
+│  5. POST /calendars/{id}/watch → enable push notifications      │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                      ONGOING SYNC                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Google Calendar ←──────────────────────→ Shuchu Backend        │
+│       │                                        │                 │
+│       │  (User modifies event)                 │                 │
+│       │                                        │                 │
+│       └──── Push notification ────────────────→│                 │
+│             POST /webhooks/google-calendar     │                 │
+│                                                │                 │
+│       ←──── Fetch latest events ──────────────┘                 │
+│             (Google Calendar API)                                │
+│                                                │                 │
+│                                     Update calendar_events       │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Important Notes
+
+- **Watch channels expire after 7 days** - Need to renew them periodically (see Future Considerations)
+- **Webhook must be HTTPS** - Google requires a secure, publicly accessible endpoint
+- **Tokens refresh automatically** - When access token expires, we use the refresh token
+- **Full replace strategy** - On each sync, we delete and re-import all events (simple but not incremental)
+
 ## Future Considerations
 
 - **Incremental Sync:** Use Google Calendar's sync tokens for delta updates
