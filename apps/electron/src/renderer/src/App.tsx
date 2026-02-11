@@ -1,49 +1,25 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Plus, Play, Square, CheckCircle, Maximize2, ArrowUpDown, CalendarDays, ChevronRight, ChevronDown } from 'lucide-react'
 
 import { Button } from './components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card'
 import { Input } from './components/ui/input'
 import { Textarea } from './components/ui/textarea'
 import { Label } from './components/ui/label'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from './components/ui/table'
-import { Switch } from './components/ui/switch'
-import { Badge } from './components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from './components/ui/select'
 import { TagCombobox } from './components/TagCombobox'
 import {
-  deleteApiTasksId,
   postApiTasks,
-  postApiTimers,
-  putApiTasksId,
-  putApiTimersId,
-  useGetApiTasks,
-  useGetApiTimers,
-  type Task,
-  type TaskTimer
+  type Task
 } from './gen/api'
 import { TaskSideMenu } from './components/TaskSideMenu'
 import { AppSidebar } from './components/Sidebar'
 import { AccountView } from './components/AccountView'
 import { SidebarProvider, SidebarInset, useSidebar } from './components/ui/sidebar'
 import { Dialog, DialogContent } from './components/ui/dialog'
-import { formatDateTimeInput, normalizeDueDate, normalizeDateTime, getTodayRange, formatTimeRangeShort } from './lib/time'
+import { formatDateTimeInput, normalizeDateTime } from './lib/time'
 import { CalendarView, type ViewMode } from './components/CalendarView'
 import { TaskTimeRangePicker } from './components/TaskTimeRangePicker'
 import { useIsNarrow } from './hooks/use-mobile'
+import { useTasksData } from './hooks/useTasksData'
+import { TasksView } from './components/TasksView'
 
 type View = 'tasks' | 'calendar' | 'account'
 
@@ -72,22 +48,16 @@ function matchesKeyBinding(e: KeyboardEvent, binding: KeyBinding): boolean {
 // Keyboard shortcut handler component (must be inside SidebarProvider)
 function KeyboardShortcuts({
   currentView,
-  onNewTask,
   onNewCalendarTask,
   onToggleTimer,
   onNavigateNext,
-  onNavigatePrev,
-  isAddingTask,
-  isEditing
+  onNavigatePrev
 }: {
   currentView: View
-  onNewTask: () => void
   onNewCalendarTask: () => void
   onToggleTimer: () => void
   onNavigateNext: () => void
   onNavigatePrev: () => void
-  isAddingTask: boolean
-  isEditing: boolean
 }): null {
   const { toggleSidebar } = useSidebar()
 
@@ -99,13 +69,11 @@ function KeyboardShortcuts({
         return
       }
 
-      // Command/Ctrl + N: New task (behavior depends on current view)
+      // Command/Ctrl + N: New task (calendar view only now, tasks view has Quick Capture)
       if (matchesKeyBinding(e, keyMaps.NEW_TASK)) {
         e.preventDefault()
         if (currentView === 'calendar') {
           onNewCalendarTask()
-        } else if (currentView === 'tasks' && !isAddingTask) {
-          onNewTask()
         }
         return
       }
@@ -116,9 +84,6 @@ function KeyboardShortcuts({
         toggleSidebar()
         return
       }
-
-      // Don't handle other shortcuts if adding task or editing
-      if (isAddingTask || isEditing) return
 
       // Space: Toggle timer
       if (matchesKeyBinding(e, keyMaps.TOGGLE_TIMER)) {
@@ -143,31 +108,19 @@ function KeyboardShortcuts({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [toggleSidebar, currentView, onNewTask, onNewCalendarTask, onToggleTimer, onNavigateNext, onNavigatePrev, isAddingTask, isEditing])
+  }, [toggleSidebar, currentView, onNewCalendarTask, onToggleTimer, onNavigateNext, onNavigatePrev])
 
   return null
 }
 
 function App(): React.JSX.Element {
   const [currentView, setCurrentView] = useState<View>('calendar')
-  const [showCompleted, setShowCompleted] = useState(false)
-  const [showTodayOnly, setShowTodayOnly] = useState(true)
-  // "Unscheduled" toggle - controls visibility and ordering of unscheduled tasks
-  // When ON:  Shows all tasks, with scheduled tasks first (sorted by startAt asc), then unscheduled last
-  // When OFF: Only shows scheduled tasks (hides unscheduled)
-  //
-  // Interaction with "Today" filter:
-  // | Today | Unscheduled | Result |
-  // |-------|-------------|--------|
-  // | ON    | ON          | Today's scheduled tasks + all unscheduled (scheduled first) |
-  // | ON    | OFF         | Only today's scheduled tasks |
-  // | OFF   | ON          | All tasks (scheduled first, then unscheduled) |
-  // | OFF   | OFF         | Only scheduled tasks |
-  const [showUnscheduled, setShowUnscheduled] = useState(true)
+  const [showCompleted] = useState(false)
+  const [showTodayOnly] = useState(true)
+  const [showUnscheduled] = useState(true)
   const [filterTagIds, setFilterTagIds] = useState<number[]>([])
-  const [sortBy, setSortBy] = useState<'createdAt' | 'startAt'>('startAt')
+  const [sortBy] = useState<'createdAt' | 'startAt'>('startAt')
   const [calendarViewMode, setCalendarViewMode] = useState<ViewMode>('day')
-  const [currentTime, setCurrentTime] = useState(Date.now())
   const [calendarDraft, setCalendarDraft] = useState<{
     title: string
     description: string
@@ -187,223 +140,37 @@ function App(): React.JSX.Element {
     setSidebarOpen(!isNarrow)
   }, [isNarrow])
 
-  // Calculate today's date range for "Today" filter
-  const todayRange = useMemo(() => getTodayRange(), [currentTime])
-
-  // Query for tasks with active timers (filtered by current view settings)
-  const activeTaskQuery = useMemo(
-    () => {
-      // For calendar view, don't apply date/scheduled filters
-      if (currentView === 'calendar') {
-        return {
-          completed: undefined,
-          hasActiveTimer: 'true' as const,
-          scheduled: undefined,
-          startAtFrom: undefined,
-          startAtTo: undefined,
-          sortBy,
-          order: 'asc' as const,
-          tags: filterTagIds.length ? filterTagIds : undefined
-        }
-      }
-
-      // For tasks view:
-      // - showUnscheduled=false: only show scheduled tasks
-      // - showUnscheduled=true + showTodayOnly=true: show today's scheduled + all unscheduled (uses OR logic)
-      // - showUnscheduled=true + showTodayOnly=false: show all tasks
-      const scheduledFilter = showUnscheduled
-        ? (showTodayOnly ? ('false' as const) : undefined) // 'false' triggers OR logic with date range
-        : ('true' as const) // only scheduled tasks
-
-      return {
-        completed: showCompleted ? undefined : ('false' as const),
-        hasActiveTimer: 'true' as const,
-        scheduled: scheduledFilter,
-        startAtFrom: showTodayOnly ? todayRange.startAt : undefined,
-        startAtTo: showTodayOnly ? todayRange.endAt : undefined,
-        sortBy,
-        order: 'asc' as const,
-        nullsLast: showUnscheduled ? ('true' as const) : undefined,
-        tags: filterTagIds.length ? filterTagIds : undefined
-      }
-    },
-    [showCompleted, showTodayOnly, showUnscheduled, sortBy, filterTagIds, currentView, todayRange]
-  )
-  const {
-    data: activeTasksResponse,
-    error: activeTasksError,
-    isLoading: activeTasksLoading,
-    mutate: mutateActiveTasks
-  } = useGetApiTasks(activeTaskQuery)
-  const activeTasks = activeTasksResponse?.tasks ?? []
-
-  // Query for ALL tasks with active timers (for sidebar - no filters applied)
-  const sidebarActiveTaskQuery = useMemo(
-    () => ({
-      hasActiveTimer: 'true' as const,
-      sortBy: 'startAt' as const,
-      order: 'asc' as const
-    }),
-    []
-  )
-  const {
-    data: sidebarActiveTasksResponse,
-    mutate: mutateSidebarActiveTasks
-  } = useGetApiTasks(sidebarActiveTaskQuery)
-  const sidebarActiveTasks = sidebarActiveTasksResponse?.tasks ?? []
-
-  // Query for tasks without active timers (Tasks section)
-  const inactiveTaskQuery = useMemo(
-    () => {
-      // For calendar view, don't apply date/scheduled filters
-      if (currentView === 'calendar') {
-        return {
-          completed: undefined,
-          hasActiveTimer: 'false' as const,
-          scheduled: undefined,
-          startAtFrom: undefined,
-          startAtTo: undefined,
-          sortBy,
-          order: 'asc' as const,
-          tags: filterTagIds.length ? filterTagIds : undefined
-        }
-      }
-
-      // For tasks view:
-      // - showUnscheduled=false: only show scheduled tasks
-      // - showUnscheduled=true + showTodayOnly=true: show today's scheduled + all unscheduled (uses OR logic)
-      // - showUnscheduled=true + showTodayOnly=false: show all tasks
-      const scheduledFilter = showUnscheduled
-        ? (showTodayOnly ? ('false' as const) : undefined) // 'false' triggers OR logic with date range
-        : ('true' as const) // only scheduled tasks
-
-      return {
-        completed: showCompleted ? undefined : ('false' as const),
-        hasActiveTimer: 'false' as const,
-        scheduled: scheduledFilter,
-        startAtFrom: showTodayOnly ? todayRange.startAt : undefined,
-        startAtTo: showTodayOnly ? todayRange.endAt : undefined,
-        sortBy,
-        order: 'asc' as const,
-        nullsLast: showUnscheduled ? ('true' as const) : undefined,
-        tags: filterTagIds.length ? filterTagIds : undefined
-      }
-    },
-    [showCompleted, showTodayOnly, showUnscheduled, sortBy, filterTagIds, currentView, todayRange]
-  )
-  const {
-    data: inactiveTasksResponse,
-    error: inactiveTasksError,
-    isLoading: inactiveTasksLoading,
-    mutate: mutateInactiveTasks
-  } = useGetApiTasks(inactiveTaskQuery)
-  const inactiveTasks = inactiveTasksResponse?.tasks ?? []
-
-  const displayTasks = useMemo(() => {
-    return [...activeTasks, ...inactiveTasks]
-  }, [activeTasks, inactiveTasks])
-
-  // Combined tasks for operations that need to find a task
-  const allTasks = useMemo(() => {
-    // Merge activeTasks, inactiveTasks, and sidebarActiveTasks, removing duplicates
-    const taskMap = new Map<number, Task>()
-    for (const task of [...activeTasks, ...inactiveTasks, ...sidebarActiveTasks]) {
-      taskMap.set(task.id, task)
-    }
-    return Array.from(taskMap.values())
-  }, [activeTasks, inactiveTasks, sidebarActiveTasks])
-  const tasksLoading = activeTasksLoading || inactiveTasksLoading
-  const tasksError = activeTasksError || inactiveTasksError
-
-  // Helper to mutate all task lists
-  const mutateBothTaskLists = useCallback(() => {
-    return Promise.all([mutateActiveTasks(), mutateInactiveTasks(), mutateSidebarActiveTasks()])
-  }, [mutateActiveTasks, mutateInactiveTasks, mutateSidebarActiveTasks])
-
-  const [isAddingTask, setIsAddingTask] = useState(false)
-  const [newTaskFields, setNewTaskFields] = useState({
-    title: '',
-    description: '',
-    dueDate: '',
-    startAt: '',
-    tagIds: [] as number[]
+  // Shared data layer
+  const tasksData = useTasksData({
+    currentView,
+    showCompleted,
+    showTodayOnly,
+    showUnscheduled,
+    filterTagIds,
+    sortBy
   })
+
+  const {
+    displayTasks,
+    allTasks,
+    sidebarActiveTasks,
+    tasksLoading,
+    tasksError,
+    activeTimersByTaskId,
+    mutateBothTaskLists,
+    handleStartTimer,
+    handleStopTimer,
+    toggleTaskTimer,
+    handleDeleteTask
+  } = tasksData
+
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [focusedTaskIndex, setFocusedTaskIndex] = useState<number>(-1)
-  const [editingCell, setEditingCell] = useState<{ taskId: number; field: 'title' | 'description' } | null>(null)
-  const [editingValue, setEditingValue] = useState('')
-  const [editingTagsTaskId, setEditingTagsTaskId] = useState<number | null>(null)
   const [scheduleEditingTask, setScheduleEditingTask] = useState<Task | null>(null)
   const [isSchedulePickerOpen, setIsSchedulePickerOpen] = useState(false)
-  const [expandedTaskIds, setExpandedTaskIds] = useState<Set<number>>(new Set())
 
-  const taskIds = useMemo(() => allTasks.map((task) => task.id), [allTasks])
-
-  const shouldFetchTimer = useMemo(() => taskIds.length > 0, [taskIds])
-  const {
-    data: timersResponse,
-    error: timersError,
-    isLoading: timersLoading,
-    mutate: mutateTimers
-  } = useGetApiTimers(taskIds.length ? { taskIds } : undefined, {
-    swr: { enabled: shouldFetchTimer }
-  })
-  const timers = timersResponse?.timers ?? []
-  const activeTimersByTaskId = useMemo(() => {
-    const map = new Map<number, TaskTimer>()
-    timers.forEach((timer) => {
-      if (!timer.endTime) {
-        const existing = map.get(timer.taskId)
-        if (!existing) {
-          map.set(timer.taskId, timer)
-          return
-        }
-        const existingStart = new Date(existing.startTime).getTime()
-        const nextStart = new Date(timer.startTime).getTime()
-        if (nextStart > existingStart) {
-          map.set(timer.taskId, timer)
-        }
-      }
-    })
-    return map
-  }, [timers])
-
-  // Group timers by task ID for nested timer rows
-  const timersByTaskId = useMemo(() => {
-    const map = new Map<number, TaskTimer[]>()
-    timers.forEach((timer) => {
-      const existing = map.get(timer.taskId) || []
-      map.set(timer.taskId, [...existing, timer])
-    })
-    // Sort each task's timers by start time (newest first)
-    map.forEach((taskTimers, taskId) => {
-      map.set(
-        taskId,
-        taskTimers.sort(
-          (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-        )
-      )
-    })
-    return map
-  }, [timers])
-
-  // Toggle expand/collapse for timer rows
-  const toggleTaskExpansion = useCallback((taskId: number) => {
-    setExpandedTaskIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(taskId)) {
-        next.delete(taskId)
-      } else {
-        next.add(taskId)
-      }
-      return next
-    })
-  }, [])
-
-  // Combined list for keyboard navigation (active tasks first, then inactive)
-  const allTasksForNavigation = useMemo(() => {
-    return displayTasks
-  }, [displayTasks])
+  // Combined list for keyboard navigation
+  const allTasksForNavigation = useMemo(() => displayTasks, [displayTasks])
 
   // Get the focused task
   const focusedTask = useMemo(() => {
@@ -413,80 +180,19 @@ function App(): React.JSX.Element {
     return null
   }, [focusedTaskIndex, allTasksForNavigation])
 
-  // Update current time every minute for timer display
-  useEffect(() => {
-    // Update immediately on mount
-    setCurrentTime(Date.now())
-
-    const interval = setInterval(() => {
-      setCurrentTime(Date.now())
-    }, 60000)
-
-    return () => clearInterval(interval)
-  }, [])
-
-  // Sync all active timer states to main process for tray display
-  useEffect(() => {
-    const timerStates = Array.from(activeTimersByTaskId.entries()).map(([taskId, timer]) => {
-      const task = allTasks.find((t) => t.id === taskId)
-      return {
-        timerId: timer.id,
-        taskId,
-        taskTitle: task?.title || 'Task',
-        startTime: timer.startTime
-      }
-    })
-    window.api.updateTimerStates(timerStates)
-  }, [activeTimersByTaskId, allTasks])
-
-  // Cleanup timer states on unmount
-  useEffect(() => {
-    return () => {
-      window.api.updateTimerStates([])
-    }
-  }, [])
-
   // Listen for show task detail request from tray menu
   useEffect(() => {
     const unsubscribe = window.api.onShowTaskDetail((taskId: number) => {
-      // Find the task and show the detail modal
       const task = allTasks.find((t) => t.id === taskId)
-      if (task) {
-        setSelectedTask(task)
-      }
+      if (task) setSelectedTask(task)
     })
     return unsubscribe
   }, [allTasks])
 
-  // Listen for timer events from system notifications
-  useEffect(() => {
-    const unsubscribeStart = window.api.onNotificationTimerStarted(() => {
-      // Refresh both task lists and timers when timer is started from notification
-      mutateBothTaskLists()
-      mutateTimers()
-    })
-    const unsubscribeStop = window.api.onNotificationTimerStopped(() => {
-      // Refresh both task lists and timers when timer is stopped from notification
-      mutateBothTaskLists()
-      mutateTimers()
-    })
-    return () => {
-      unsubscribeStart()
-      unsubscribeStop()
-    }
-  }, [mutateBothTaskLists, mutateTimers])
-
-  // Helper to start adding a new task
-  const startAddingTask = useCallback(() => {
-    // Keep startAt blank to allow creating unscheduled tasks
-    setNewTaskFields((prev) => ({ ...prev, startAt: '', tagIds: filterTagIds }))
-    setIsAddingTask(true)
-  }, [filterTagIds])
-
   // Helper to start adding a new task via calendar (opens dialog with current time)
   const startAddingCalendarTask = useCallback(() => {
     const now = new Date()
-    const endTime = new Date(now.getTime() + 60 * 60 * 1000) // 1 hour later
+    const endTime = new Date(now.getTime() + 60 * 60 * 1000)
     const formatLocal = (date: Date): string =>
       new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
     setCalendarCreateError(null)
@@ -499,107 +205,18 @@ function App(): React.JSX.Element {
     })
   }, [filterTagIds])
 
-  // Helper to toggle timer for a task
-  const toggleTaskTimer = useCallback((task: Task) => {
-    const activeTimer = activeTimersByTaskId.get(task.id)
-    if (activeTimer) {
-      // Stop the timer - move task from active to inactive list optimistically
-      setCurrentTime(Date.now())
-
-      // Optimistic update: move task from active to inactive list
-      mutateActiveTasks(
-        (currentData) => {
-          if (!currentData) return currentData
-          return {
-            ...currentData,
-            tasks: currentData.tasks.filter((t) => t.id !== task.id),
-            total: currentData.total - 1
-          }
-        },
-        { revalidate: false }
-      )
-      mutateInactiveTasks(
-        (currentData) => {
-          if (!currentData) return currentData
-          return {
-            ...currentData,
-            tasks: [task, ...currentData.tasks],
-            total: currentData.total + 1
-          }
-        },
-        { revalidate: false }
-      )
-
-      putApiTimersId(activeTimer.id, {
-        endTime: new Date().toISOString()
-      })
-        .then(() => {
-          mutateTimers()
-          mutateBothTaskLists()
-        })
-        .catch((error) => {
-          console.error('Failed to stop timer:', error)
-          mutateBothTaskLists() // Revert on error
-        })
-    } else {
-      // Start the timer - move task from inactive to active list optimistically
-      setCurrentTime(Date.now())
-
-      // Auto-expand the timer rows when starting a timer
-      setExpandedTaskIds((prev) => new Set(prev).add(task.id))
-
-      // Optimistic update: move task from inactive to active list
-      mutateInactiveTasks(
-        (currentData) => {
-          if (!currentData) return currentData
-          return {
-            ...currentData,
-            tasks: currentData.tasks.filter((t) => t.id !== task.id),
-            total: currentData.total - 1
-          }
-        },
-        { revalidate: false }
-      )
-      mutateActiveTasks(
-        (currentData) => {
-          if (!currentData) return currentData
-          return {
-            ...currentData,
-            tasks: [task, ...currentData.tasks],
-            total: currentData.total + 1
-          }
-        },
-        { revalidate: false }
-      )
-
-      postApiTimers({
-        taskId: task.id,
-        startTime: new Date().toISOString()
-      })
-        .then(() => {
-          mutateTimers()
-          mutateBothTaskLists()
-        })
-        .catch((error) => {
-          console.error('Failed to start timer:', error)
-          mutateBothTaskLists() // Revert on error
-        })
-    }
-  }, [activeTimersByTaskId, mutateTimers, mutateActiveTasks, mutateInactiveTasks, mutateBothTaskLists])
-
   // Handle keyboard timer toggle
   const handleKeyboardToggleTimer = useCallback(() => {
-    // If a task is focused, toggle its timer
     if (focusedTask) {
       toggleTaskTimer(focusedTask)
       return
     }
-    // Otherwise, use the oldest task by start time (first inactive task)
+    const { inactiveTasks, activeTasks } = tasksData
     if (inactiveTasks.length > 0) {
-      setFocusedTaskIndex(activeTasks.length) // Focus the first inactive task
+      setFocusedTaskIndex(activeTasks.length)
       toggleTaskTimer(inactiveTasks[0])
     }
-  }, [focusedTask, inactiveTasks, activeTasks.length, toggleTaskTimer])
+  }, [focusedTask, tasksData, toggleTaskTimer])
 
   // Navigate to next task
   const handleNavigateNext = useCallback(() => {
@@ -619,151 +236,11 @@ function App(): React.JSX.Element {
     })
   }, [allTasksForNavigation.length])
 
-  function handleCreateTask(): void {
-    if (!newTaskFields.title.trim()) return
-
-    const now = new Date().toISOString()
-    const tempId = -Date.now()
-
-    // Create optimistic task object
-    const optimisticTask: Task = {
-      id: tempId,
-      title: newTaskFields.title.trim(),
-      description: newTaskFields.description.trim(),
-      dueDate: normalizeDueDate(newTaskFields.dueDate) ?? null,
-      startAt: normalizeDateTime(newTaskFields.startAt) ?? null,
-      completedAt: null,
-      tags: [],
-      createdAt: now,
-      updatedAt: now
-    }
-
-    // Optimistic UI: insert task into inactive list (new tasks don't have active timers)
-    mutateInactiveTasks(
-      (currentData) => {
-        if (!currentData) return currentData
-        return {
-          ...currentData,
-          tasks: [optimisticTask, ...currentData.tasks],
-          total: currentData.total + 1
-        }
-      },
-      { revalidate: false }
-    )
-
-    // Close form immediately
-    setNewTaskFields({ title: '', description: '', dueDate: '', startAt: '', tagIds: [] })
-    setIsAddingTask(false)
-
-    // API call in background
-    postApiTasks({
-      title: optimisticTask.title,
-      description: optimisticTask.description,
-      dueDate: normalizeDueDate(newTaskFields.dueDate),
-      startAt: normalizeDateTime(newTaskFields.startAt),
-      tagIds: newTaskFields.tagIds.length > 0 ? newTaskFields.tagIds : undefined
-    })
-      .then((response) => {
-        // Replace optimistic task with real task from server (no full revalidation)
-        mutateInactiveTasks(
-          (currentData) => {
-            if (!currentData) return currentData
-            return {
-              ...currentData,
-              tasks: currentData.tasks.map((t) =>
-                t.id === tempId ? response.task : t
-              )
-            }
-          },
-          { revalidate: false }
-        )
-      })
-      .catch((error) => {
-        console.error('Failed to create task:', error)
-        // Remove optimistic task on error (no full revalidation)
-        mutateInactiveTasks(
-          (currentData) => {
-            if (!currentData) return currentData
-            return {
-              ...currentData,
-              tasks: currentData.tasks.filter((t) => t.id !== tempId),
-              total: currentData.total - 1
-            }
-          },
-          { revalidate: false }
-        )
-      })
-  }
-
-  function handleCancelAdd(): void {
-    setNewTaskFields({ title: '', description: '', dueDate: '', startAt: '', tagIds: [] })
-    setIsAddingTask(false)
-  }
-
-  function handleStartEditing(taskId: number, field: 'title' | 'description', currentValue: string): void {
-    setEditingCell({ taskId, field })
-    setEditingValue(currentValue || '')
-  }
-
-  function handleCancelEditing(): void {
-    setEditingCell(null)
-    setEditingValue('')
-  }
-
-  function handleSaveEdit(): void {
-    if (!editingCell) return
-
-    const task = allTasks.find(t => t.id === editingCell.taskId)
-    if (!task) return
-
-    const updateValue = editingValue.trim()
-    const fieldToUpdate = editingCell.field
-    const taskIdToUpdate = editingCell.taskId
-
-    // Close edit mode immediately (optimistic UI)
-    setEditingCell(null)
-    setEditingValue('')
-
-    // Make API call in background
-    putApiTasksId(taskIdToUpdate, {
-      [fieldToUpdate]: updateValue
-    })
-      .then(() => mutateBothTaskLists())
-      .catch((error) => {
-        console.error('Failed to update task:', error)
-        // Could show a toast notification here to inform user of failure
-      })
-  }
-
-  async function handleSaveSchedule(taskId: number, startAt: string | null, endAt: string | null): Promise<void> {
-    try {
-      await putApiTasksId(taskId, {
-        startAt: startAt ? normalizeDateTime(startAt) : null,
-        endAt: endAt ? normalizeDateTime(endAt) : null
-      })
-      // Update the local task state to reflect the change immediately
-      if (scheduleEditingTask && scheduleEditingTask.id === taskId) {
-        setScheduleEditingTask({ ...scheduleEditingTask, startAt, endAt })
-      }
-      await mutateBothTaskLists()
-    } catch (error) {
-      console.error('Failed to update schedule:', error)
-    }
-  }
-
   const handleCalendarMoveTask = async (
     task: Task,
     range: { startAt: string; endAt: string }
   ): Promise<void> => {
-    try {
-      await putApiTasksId(task.id, {
-        startAt: normalizeDateTime(range.startAt),
-        endAt: normalizeDateTime(range.endAt)
-      })
-      await mutateBothTaskLists()
-    } catch (error) {
-      console.error('Failed to update task time range:', error)
-    }
+    await tasksData.handleSaveSchedule(task.id, range.startAt, range.endAt)
   }
 
   const handleCalendarCreate = async (): Promise<void> => {
@@ -791,476 +268,20 @@ function App(): React.JSX.Element {
     }
   }
 
-  function handleUpdateTaskTags(taskId: number, tagIds: number[]): void {
-    putApiTasksId(taskId, { tagIds })
-      .then(() => mutateBothTaskLists())
-      .catch((error) => {
-        console.error('Failed to update task tags:', error)
-      })
-  }
-
-  const handleDeleteTask = async (taskId: number): Promise<void> => {
-    if (!confirm('Are you sure you want to delete this task?')) return
-
-    try {
-      await deleteApiTasksId(taskId)
-      if (selectedTask?.id === taskId) {
-        setSelectedTask(null)
-      }
-      await mutateBothTaskLists()
-    } catch (error) {
-      console.error('Failed to delete task:', error)
-    }
-  }
-
-  function handleStartTimer(taskId: number): void {
-    const task = allTasks.find(t => t.id === taskId)
-    if (!task) return
-
-    // UI first (optimistic) - move task from inactive to active
-    setCurrentTime(Date.now())
-
-    // Auto-expand the timer rows when starting a timer
-    setExpandedTaskIds((prev) => new Set(prev).add(taskId))
-
-    // Optimistic update: move task from inactive to active list
-    mutateInactiveTasks(
-      (currentData) => {
-        if (!currentData) return currentData
-        return {
-          ...currentData,
-          tasks: currentData.tasks.filter((t) => t.id !== taskId),
-          total: currentData.total - 1
-        }
-      },
-      { revalidate: false }
-    )
-    mutateActiveTasks(
-      (currentData) => {
-        if (!currentData) return currentData
-        return {
-          ...currentData,
-          tasks: [task, ...currentData.tasks],
-          total: currentData.total + 1
-        }
-      },
-      { revalidate: false }
-    )
-
-    // API call in background
-    postApiTimers({
-      taskId,
-      startTime: new Date().toISOString()
-    })
-      .then(() => {
-        mutateTimers()
-        mutateBothTaskLists()
-      })
-      .catch((error) => {
-        console.error('Failed to start timer:', error)
-        mutateBothTaskLists() // Revert on error
-      })
-  }
-
-  function handleStopTimer(taskId: number, timerId: number): void {
-    const task = allTasks.find(t => t.id === taskId)
-    if (!task) return
-
-    // UI first (optimistic) - move task from active to inactive
-    setCurrentTime(Date.now())
-
-    // Optimistic update: move task from active to inactive list
-    mutateActiveTasks(
-      (currentData) => {
-        if (!currentData) return currentData
-        return {
-          ...currentData,
-          tasks: currentData.tasks.filter((t) => t.id !== taskId),
-          total: currentData.total - 1
-        }
-      },
-      { revalidate: false }
-    )
-    mutateInactiveTasks(
-      (currentData) => {
-        if (!currentData) return currentData
-        return {
-          ...currentData,
-          tasks: [task, ...currentData.tasks],
-          total: currentData.total + 1
-        }
-      },
-      { revalidate: false }
-    )
-
-    // API call in background
-    putApiTimersId(timerId, {
-      endTime: new Date().toISOString()
-    })
-      .then(() => {
-        mutateTimers()
-        mutateBothTaskLists()
-      })
-      .catch((error) => {
-        console.error('Failed to stop timer:', error)
-        mutateBothTaskLists() // Revert on error
-      })
-  }
-
-  function isTaskActive(taskId: number): boolean {
-    return activeTimersByTaskId.has(taskId)
-  }
-
-  function handleToggleTaskCompletion(task: Task): void {
-    const newCompletedAt = task.completedAt ? null : new Date().toISOString()
-    const isInActiveList = activeTasks.some(t => t.id === task.id)
-
-    // Determine which mutator to use based on which list the task is in
-    const mutateTargetList = isInActiveList ? mutateActiveTasks : mutateInactiveTasks
-
-    // Optimistic UI: update local cache immediately
-    mutateTargetList(
-      (currentData) => {
-        if (!currentData) return currentData
-        return {
-          ...currentData,
-          tasks: currentData.tasks.map((t) =>
-            t.id === task.id ? { ...t, completedAt: newCompletedAt } : t
-          )
-        }
-      },
-      { revalidate: false } // Don't revalidate yet
-    )
-
-    // API call in background
-    putApiTasksId(task.id, { completedAt: newCompletedAt })
-      .then(() => mutateBothTaskLists()) // Revalidate after success
-      .catch((error) => {
-        console.error('Failed to update task completion:', error)
-        mutateBothTaskLists() // Revalidate to revert on error
-      })
-  }
-
-  function renderTaskRow(task: Task): React.JSX.Element {
-    const isCompleted = !!task.completedAt
-    const isFocused = focusedTask?.id === task.id
-    return (
-      <TableRow
-        className={`cursor-pointer hover:bg-muted/50 transition-colors ${isTaskActive(task.id) ? 'bg-primary/5' : ''} ${isCompleted ? 'opacity-50' : ''} ${isFocused ? 'ring-2 ring-primary ring-inset' : ''}`}
-        onClick={() => {
-          setSelectedTask(task)
-          setEditingTagsTaskId(null)
-          const index = allTasksForNavigation.findIndex((t) => t.id === task.id)
-          setFocusedTaskIndex(index)
-        }}
-      >
-        <TableCell onClick={(e) => { e.stopPropagation(); setEditingTagsTaskId(null) }}>
-          <div className="flex items-center gap-1">
-            {(timersByTaskId.get(task.id)?.length ?? 0) > 0 && (
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  toggleTaskExpansion(task.id)
-                }}
-                className="h-7 w-7"
-                title={expandedTaskIds.has(task.id) ? 'Collapse timers' : 'Expand timers'}
-              >
-                {expandedTaskIds.has(task.id) ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-              </Button>
-            )}
-            {activeTimersByTaskId.has(task.id) ? (
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => {
-                  const activeTimer = activeTimersByTaskId.get(task.id)
-                  if (activeTimer) {
-                    handleStopTimer(task.id, activeTimer.id)
-                  }
-                }}
-                className="h-7 w-7 hover:bg-red-100"
-                title="Stop timer"
-              >
-                <Square className="h-4 w-4 text-red-600 animate-pulse" />
-              </Button>
-            ) : (
-              <Button
-                size="icon-lg"
-                variant="ghost"
-                onClick={() => handleStartTimer(task.id)}
-                className="h-7 w-7 hover:bg-green-100"
-                disabled={timersLoading}
-                title="Start timer"
-              >
-                <Play className="h-5 w-5 text-green-600" />
-              </Button>
-            )}
-            <Button
-              size="icon-lg"
-              variant="ghost"
-              onClick={() => handleToggleTaskCompletion(task)}
-              title={task.completedAt ? 'Mark incomplete' : 'Mark complete'}
-              className={task.completedAt ? 'opacity-50' : 'hover:bg-green-100'}
-            >
-              <CheckCircle className={`h-5 w-5 ${task.completedAt ? 'text-gray-400' : 'text-green-600'}`} />
-            </Button>
-            <Button
-              size="icon-lg"
-              variant="ghost"
-              onClick={() => {
-                setSelectedTask(task)
-                const index = allTasksForNavigation.findIndex((t) => t.id === task.id)
-                setFocusedTaskIndex(index)
-              }}
-              title="Open task details"
-              className="hover:bg-blue-100"
-            >
-              <Maximize2 className="h-5 w-5 text-blue-600" />
-            </Button>
-          </div>
-        </TableCell>
-        <TableCell
-          onClick={() => {
-            setSelectedTask(task)
-            setEditingTagsTaskId(null)
-            const index = allTasksForNavigation.findIndex((t) => t.id === task.id)
-            setFocusedTaskIndex(index)
-          }}
-        >
-          {scheduleEditingTask?.id === task.id ? (
-            <div onClick={(e) => e.stopPropagation()}>
-              <div className="flex flex-wrap items-center gap-1">
-                <Input
-                  type="datetime-local"
-                  value={formatDateTimeInput(scheduleEditingTask.startAt)}
-                  onChange={(e) => {
-                    const newStartAt = e.target.value || null
-                    setScheduleEditingTask({ ...scheduleEditingTask, startAt: newStartAt })
-                    handleSaveSchedule(task.id, newStartAt, scheduleEditingTask.endAt ?? null)
-                  }}
-                  className="h-7 text-xs w-[140px]"
-                />
-                <span className="text-muted-foreground">-</span>
-                <Input
-                  type="datetime-local"
-                  value={formatDateTimeInput(scheduleEditingTask.endAt)}
-                  onChange={(e) => {
-                    const newEndAt = e.target.value || null
-                    setScheduleEditingTask({ ...scheduleEditingTask, endAt: newEndAt })
-                    handleSaveSchedule(task.id, scheduleEditingTask.startAt ?? null, newEndAt)
-                  }}
-                  className="h-7 text-xs w-[140px]"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => setIsSchedulePickerOpen(true)}
-                  aria-label="Open schedule picker"
-                >
-                  <CalendarDays className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => {
-                    setScheduleEditingTask(null)
-                    setIsSchedulePickerOpen(false)
-                  }}
-                >
-                  Done
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div
-              className="cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1 inline-block text-sm"
-              onClick={(e) => {
-                e.stopPropagation()
-                setEditingTagsTaskId(null)
-                setScheduleEditingTask(task)
-                setIsSchedulePickerOpen(false)
-              }}
-            >
-              {formatTimeRangeShort(task.startAt, task.endAt)}
-            </div>
-          )}
-        </TableCell>
-        <TableCell
-          className="font-medium"
-          onClick={() => {
-            setSelectedTask(task)
-            setEditingTagsTaskId(null)
-            const index = allTasksForNavigation.findIndex((t) => t.id === task.id)
-            setFocusedTaskIndex(index)
-          }}
-        >
-          {editingCell?.taskId === task.id && editingCell?.field === 'title' ? (
-            <Input
-              value={editingValue}
-              onChange={(e) => setEditingValue(e.target.value)}
-              onBlur={handleSaveEdit}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleSaveEdit()
-                } else if (e.key === 'Escape') {
-                  handleCancelEditing()
-                }
-              }}
-              autoFocus
-              className="h-8"
-            />
-          ) : (
-            <div
-              className={`cursor-text hover:bg-muted/50 rounded px-1 -mx-1 inline-block ${isCompleted ? 'line-through' : ''}`}
-              onClick={(e) => {
-                e.stopPropagation()
-                setEditingTagsTaskId(null)
-                handleStartEditing(task.id, 'title', task.title)
-              }}
-            >
-              {task.title || 'Untitled'}
-            </div>
-          )}
-        </TableCell>
-        <TableCell
-          className="max-w-xs"
-          onClick={() => {
-            setSelectedTask(task)
-            setEditingTagsTaskId(null)
-            const index = allTasksForNavigation.findIndex((t) => t.id === task.id)
-            setFocusedTaskIndex(index)
-          }}
-        >
-          {editingCell?.taskId === task.id && editingCell?.field === 'description' ? (
-            <Input
-              value={editingValue}
-              onChange={(e) => setEditingValue(e.target.value)}
-              onBlur={handleSaveEdit}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleSaveEdit()
-                } else if (e.key === 'Escape') {
-                  handleCancelEditing()
-                }
-              }}
-              autoFocus
-              className="h-8"
-            />
-          ) : (
-            <div
-              className="cursor-text hover:bg-muted/50 rounded px-1 -mx-1 truncate"
-              onClick={(e) => {
-                e.stopPropagation()
-                setEditingTagsTaskId(null)
-                handleStartEditing(task.id, 'description', task.description || '')
-              }}
-            >
-              {task.description || '-'}
-            </div>
-          )}
-        </TableCell>
-        <TableCell
-          onClick={(e) => {
-            e.stopPropagation()
-            setEditingTagsTaskId(task.id)
-          }}
-        >
-          {editingTagsTaskId === task.id ? (
-            <TagCombobox
-              selectedTagIds={task.tags?.map((t) => t.id) ?? []}
-              onSelectionChange={(tagIds) => handleUpdateTaskTags(task.id, tagIds)}
-              onClose={() => setEditingTagsTaskId(null)}
-              placeholder="Add tags..."
-              className="min-w-[150px]"
-            />
-          ) : (
-            <div className="flex flex-wrap gap-1 cursor-pointer hover:bg-muted/50 rounded p-1 min-h-[28px]">
-              {task.tags && task.tags.length > 0 ? (
-                task.tags.map((tag) => (
-                  <Badge key={tag.id} variant="outline" className="text-xs px-1.5 py-0">
-                    {tag.name}
-                  </Badge>
-                ))
-              ) : (
-                <span className="text-muted-foreground text-sm">-</span>
-              )}
-            </div>
-          )}
-        </TableCell>
-      </TableRow>
-    )
-  }
-
-  function renderTimerRows(task: Task): React.JSX.Element[] {
-    if (!expandedTaskIds.has(task.id)) return []
-
-    const taskTimers = timersByTaskId.get(task.id) || []
-    if (taskTimers.length === 0) return []
-
-    return taskTimers.map((timer) => {
-      const startTime = new Date(timer.startTime)
-      const endTime = timer.endTime ? new Date(timer.endTime) : null
-      const durationMs = (endTime?.getTime() ?? Date.now()) - startTime.getTime()
-      const hours = Math.floor(durationMs / 3600000)
-      const minutes = Math.floor((durationMs % 3600000) / 60000)
-      const durationStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
-
-      return (
-        <TableRow key={timer.id} className="bg-muted/30 text-sm">
-          <TableCell></TableCell>
-          <TableCell className="pl-8 text-muted-foreground">
-            {startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            {' - '}
-            {endTime ? (
-              endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            ) : (
-              <span className="text-green-600">Active</span>
-            )}
-            <span className="ml-2 font-mono">({durationStr})</span>
-          </TableCell>
-          <TableCell colSpan={3}></TableCell>
-        </TableRow>
-      )
-    })
-  }
-
-  function renderTableHeader(): React.JSX.Element {
-    return (
-      <TableHeader>
-        <TableRow>
-          <TableHead>Actions</TableHead>
-          <TableHead>Start Date</TableHead>
-          <TableHead>Title</TableHead>
-          <TableHead>Description</TableHead>
-          <TableHead>Tags</TableHead>
-        </TableRow>
-      </TableHeader>
-    )
-  }
+  const handleTaskSelect = useCallback((task: Task) => {
+    setSelectedTask(task)
+    const index = allTasksForNavigation.findIndex((t) => t.id === task.id)
+    setFocusedTaskIndex(index)
+  }, [allTasksForNavigation])
 
   return (
     <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
       <KeyboardShortcuts
         currentView={currentView}
-        onNewTask={startAddingTask}
         onNewCalendarTask={startAddingCalendarTask}
         onToggleTimer={handleKeyboardToggleTimer}
         onNavigateNext={handleNavigateNext}
         onNavigatePrev={handleNavigatePrev}
-        isAddingTask={isAddingTask}
-        isEditing={!!editingCell}
       />
       <AppSidebar
         currentView={currentView}
@@ -1288,12 +309,6 @@ function App(): React.JSX.Element {
                     />
                   </div>
                 </div>
-                {!isAddingTask && currentView !== 'calendar' && (
-                  <Button onClick={startAddingTask}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Task
-                  </Button>
-                )}
               </div>
 
               {tasksLoading && (
@@ -1301,27 +316,19 @@ function App(): React.JSX.Element {
                   Loading tasks...
                 </div>
               )}
-              {!tasksLoading && tasksError && (
+              {!tasksLoading && tasksError ? (
                 <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
                   Failed to load tasks. {getErrorMessage(tasksError)}
                 </div>
-              )}
+              ) : null}
               {!tasksLoading && !tasksError && (
                 <CalendarView
                   className="flex-1 min-h-0"
                   tasks={displayTasks}
                   viewMode={calendarViewMode}
                   onViewModeChange={setCalendarViewMode}
-                  onTaskSelect={(task) => {
-                    setSelectedTask(task)
-                    const index = allTasksForNavigation.findIndex((t) => t.id === task.id)
-                    setFocusedTaskIndex(index)
-                  }}
-                  onTaskEdit={(task) => {
-                    setSelectedTask(task)
-                    const index = allTasksForNavigation.findIndex((t) => t.id === task.id)
-                    setFocusedTaskIndex(index)
-                  }}
+                  onTaskSelect={handleTaskSelect}
+                  onTaskEdit={handleTaskSelect}
                   onTaskDelete={(task) => handleDeleteTask(task.id)}
                   onTaskMove={handleCalendarMoveTask}
                   activeTimersByTaskId={activeTimersByTaskId}
@@ -1342,214 +349,16 @@ function App(): React.JSX.Element {
             </main>
           </div>
         ) : (
-          <div className="flex flex-1 min-h-0 flex-col p-4 sm:p-6 lg:p-8">
-            <main className="mx-auto max-w-6xl w-full flex flex-col min-h-0 flex-1 gap-6">
-              {timersError && shouldFetchTimer && (
-                <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
-                  Failed to load timers.
-                </div>
-              )}
-
-              {/* Tasks Section */}
-              <Card className="flex flex-col min-h-0 flex-1">
-                <CardHeader className="shrink-0">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Tasks</CardTitle>
-                      <CardDescription>
-                        {tasksLoading
-                          ? 'Loading tasks...'
-                          : `${displayTasks.length} task${displayTasks.length === 1 ? '' : 's'}`}
-                      </CardDescription>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'createdAt' | 'startAt')}>
-                        <SelectTrigger className="w-[140px] h-8">
-                          <ArrowUpDown className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
-                          <SelectValue placeholder="Sort by" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="startAt">Start Date</SelectItem>
-                          <SelectItem value="createdAt">Created Date</SelectItem>
-                        </SelectContent>
-                      </Select>
-
-                      <div className="flex items-center justify-between w-[140px] h-8 rounded-md border border-input px-3">
-                        <Label htmlFor="show-completed" className="text-sm cursor-pointer">
-                          Completed
-                        </Label>
-                        <Switch
-                          id="show-completed"
-                          checked={showCompleted}
-                          onCheckedChange={setShowCompleted}
-                          className="scale-75"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between w-[130px] h-8 rounded-md border border-input px-3">
-                        <Label htmlFor="show-today-only" className="text-sm cursor-pointer">
-                          Today
-                        </Label>
-                        <Switch
-                          id="show-today-only"
-                          checked={showTodayOnly}
-                          onCheckedChange={setShowTodayOnly}
-                          className="scale-75"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between w-[150px] h-8 rounded-md border border-input px-3">
-                        <Label htmlFor="show-unscheduled" className="text-sm cursor-pointer">
-                          Unscheduled
-                        </Label>
-                        <Switch
-                          id="show-unscheduled"
-                          checked={showUnscheduled}
-                          onCheckedChange={setShowUnscheduled}
-                          className="scale-75"
-                        />
-                      </div>
-
-                      <TagCombobox
-                        selectedTagIds={filterTagIds}
-                        onSelectionChange={setFilterTagIds}
-                        placeholder="Tags"
-                        className="w-[140px] h-8"
-                      />
-
-                      {!isAddingTask && (
-                        <Button size="sm" onClick={startAddingTask}>
-                          <Plus className="mr-1.5 h-3.5 w-3.5" />
-                          Add Task
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-1 min-h-0 overflow-auto">
-                  <div className="overflow-x-auto min-w-0">
-                    <Table>
-                      {renderTableHeader()}
-                      <TableBody>
-                        {isAddingTask && (
-                          <TableRow className="bg-primary/5">
-                            <TableCell>
-                              <Input
-                                type="datetime-local"
-                                value={newTaskFields.startAt}
-                                onChange={(e) =>
-                                  setNewTaskFields((prev) => ({ ...prev, startAt: e.target.value }))
-                                }
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handleCreateTask()
-                                  } else if (e.key === 'Escape') {
-                                    handleCancelAdd()
-                                  }
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                placeholder="Enter task title"
-                                value={newTaskFields.title}
-                                onChange={(e) =>
-                                  setNewTaskFields((prev) => ({ ...prev, title: e.target.value }))
-                                }
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handleCreateTask()
-                                  } else if (e.key === 'Escape') {
-                                    handleCancelAdd()
-                                  }
-                                }}
-                                autoFocus
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                placeholder="Enter description"
-                                value={newTaskFields.description}
-                                onChange={(e) =>
-                                  setNewTaskFields((prev) => ({ ...prev, description: e.target.value }))
-                                }
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handleCreateTask()
-                                  } else if (e.key === 'Escape') {
-                                    handleCancelAdd()
-                                  }
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <TagCombobox
-                                selectedTagIds={newTaskFields.tagIds}
-                                onSelectionChange={(tagIds) =>
-                                  setNewTaskFields((prev) => ({ ...prev, tagIds }))
-                                }
-                                placeholder="Add tags..."
-                                className="min-w-[120px]"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={handleCreateTask}
-                                  disabled={!newTaskFields.title.trim()}
-                                >
-                                  Save
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={handleCancelAdd}>
-                                  Cancel
-                                </Button>
-                                <span className="text-xs text-muted-foreground">
-                                  Press Enter to save
-                                </span>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )}
-                        {tasksLoading && (
-                          <TableRow>
-                            <TableCell colSpan={5} className="text-center text-muted-foreground">
-                              Loading tasks...
-                            </TableCell>
-                          </TableRow>
-                        )}
-                        {!tasksLoading && tasksError && (
-                          <TableRow>
-                            <TableCell colSpan={5} className="text-center text-destructive">
-                              Failed to load tasks. {getErrorMessage(tasksError)}
-                            </TableCell>
-                          </TableRow>
-                        )}
-                        {!tasksLoading && !tasksError && displayTasks.length === 0 && !isAddingTask && (
-                          <TableRow>
-                            <TableCell colSpan={5} className="text-center text-muted-foreground">
-                              No tasks found
-                            </TableCell>
-                          </TableRow>
-                        )}
-                        {!tasksLoading &&
-                          !tasksError &&
-                          displayTasks.map((task) => (
-                            <React.Fragment key={task.id}>
-                              {renderTaskRow(task)}
-                              {renderTimerRows(task)}
-                            </React.Fragment>
-                          ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            </main>
-          </div>
+          <TasksView
+            data={tasksData}
+            filterTagIds={filterTagIds}
+            onFilterTagIdsChange={setFilterTagIds}
+            onTaskSelect={handleTaskSelect}
+          />
         )}
-
       </SidebarInset>
+
+      {/* Calendar create task dialog */}
       <Dialog
         open={Boolean(calendarDraft)}
         onOpenChange={(open) => {
@@ -1645,7 +454,7 @@ function App(): React.JSX.Element {
                 ) : (
                   <>
                     <span className="mr-1 text-sm text-primary-foreground/80">
-                      {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}⏎
+                      {navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl'}\u23CE
                     </span>
                     Create
                   </>
@@ -1662,12 +471,12 @@ function App(): React.JSX.Element {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Task detail dialog */}
       <Dialog
         open={Boolean(selectedTask)}
         onOpenChange={(open) => {
-          if (!open) {
-            setSelectedTask(null)
-          }
+          if (!open) setSelectedTask(null)
         }}
       >
         <DialogContent className="max-w-3xl w-[95vw] border-none bg-transparent p-0 shadow-none focus-visible:outline-none">
@@ -1684,12 +493,12 @@ function App(): React.JSX.Element {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      {/* Schedule picker dialog */}
       <Dialog
         open={isSchedulePickerOpen && Boolean(scheduleEditingTask)}
         onOpenChange={(open) => {
-          if (!open) {
-            setIsSchedulePickerOpen(false)
-          }
+          if (!open) setIsSchedulePickerOpen(false)
         }}
       >
         <DialogContent className="max-w-xl w-[95vw]">
@@ -1703,7 +512,7 @@ function App(): React.JSX.Element {
                 currentTaskId={scheduleEditingTask.id}
                 onChange={({ startAt, endAt }) => {
                   setScheduleEditingTask({ ...scheduleEditingTask, startAt, endAt })
-                  handleSaveSchedule(scheduleEditingTask.id, startAt, endAt)
+                  tasksData.handleSaveSchedule(scheduleEditingTask.id, startAt, endAt)
                 }}
               />
               <div className="flex justify-end">
