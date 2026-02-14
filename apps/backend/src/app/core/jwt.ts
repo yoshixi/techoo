@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
-const ISSUER = process.env.BETTER_AUTH_URL || "http://localhost:3000";
+const ISSUER = process.env.BETTER_AUTH_URL || "http://localhost:8787";
 const JWT_EXPIRATION = "15m";
 
 export interface JwtPayload {

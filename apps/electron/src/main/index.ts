@@ -8,7 +8,7 @@ import { TrayManager } from './tray'
 import { NotificationScheduler, type NotificationPermissionStatus } from './notificationScheduler'
 
 function setupContentSecurityPolicy(): void {
-  const apiUrl = import.meta.env.MAIN_VITE_API_BASE_URL || 'http://localhost:3000'
+  const apiUrl = import.meta.env.MAIN_VITE_API_BASE_URL || 'http://localhost:8787'
 
   // Build connect-src directive with configured API URL and OAuth providers
   const connectSrc = `'self' ${apiUrl} https://accounts.google.com https://github.com https://appleid.apple.com`
@@ -319,7 +319,7 @@ app.whenReady().then(() => {
   // and uses a temporary loopback HTTP server to receive the callback.
   // The entire OAuth flow happens in the browser so state cookies are consistent.
   ipcMain.handle('auth:social-sign-in', async (_event, provider: string) => {
-    const apiUrl = `${import.meta.env.MAIN_VITE_API_BASE_URL || 'http://localhost:3000'}/api`
+    const apiUrl = `${import.meta.env.MAIN_VITE_API_BASE_URL || 'http://localhost:8787'}/api`
 
     // Start a temporary local server to receive the OAuth callback
     const callbackServer = await startOAuthCallbackServer()

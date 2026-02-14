@@ -32,10 +32,10 @@ createRoot(document.getElementById('root')!).render(
    ```bash
    pnpm install
    ```
-2. **Run the Hono backend** (from `apps/web`) so `http://localhost:3000/api` is reachable.
+2. **Run the Hono backend** (from `apps/backend`) so `http://localhost:8787/api` is reachable.
 3. **Create a `.env` file** or copy `.env.example` and set:
    ```env
-   VITE_API_URL=http://localhost:3000/api
+   VITE_API_URL=http://localhost:8787/api
    VITE_USE_API=true
    ```
 4. **Generate the OpenAPI client** whenever backend contracts change:
@@ -68,7 +68,7 @@ Whenever you regenerate the client, Orval rewrites the `endpoints/` and `schemas
 `src/renderer/src/lib/api/mutator.ts` defines the shared HTTP client that Orval plugs into every hook:
 
 ```ts
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787/api'
 
 export const customInstance = <T>(config: CustomRequestConfig): Promise<T> => {
   const url = `${API_BASE_URL}${config.url}`

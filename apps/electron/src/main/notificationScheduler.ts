@@ -1,7 +1,7 @@
 import { Notification, shell, systemPreferences } from 'electron'
 import { spawn } from 'child_process'
 
-const API_URL = import.meta.env.MAIN_VITE_API_BASE_URL || 'http://localhost:3000'
+const API_URL = import.meta.env.MAIN_VITE_API_BASE_URL || 'http://localhost:8787'
 const POLL_INTERVAL_MS = 30 * 1000 // Poll every 30 seconds
 const NOTIFY_BEFORE_MS = 60 * 1000 // Notify 1 minute before
 const NEXT_TASK_WINDOW_MS = 30 * 60 * 1000 // 30 minutes window for next task

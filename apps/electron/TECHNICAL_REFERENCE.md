@@ -24,7 +24,7 @@ This document captures how the Electron renderer consumes the Hono API and the b
 `src/renderer/src/lib/api/mutator.ts` is the only hand-written component in the networking stack. Every generated hook calls `customInstance`, which wraps the native `fetch` API:
 
 ```ts
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787/api'
 
 export const customInstance = <T>(config: CustomRequestConfig): Promise<T> => {
   const url = `${API_BASE_URL}${config.url}`
@@ -169,7 +169,7 @@ export function TaskManager(): JSX.Element {
 |---------|-------|-----|
 | `Cannot find module '../gen/api'` | Client not generated after a clean checkout | Run `pnpm run api:generate`. |
 | API requests point to `http://localhost:5173` | Missing `.env` / wrong `VITE_API_URL` | Copy `.env.example` or adjust `.env`. |
-| Requests fail with `fetch failed` | Backend not running or wrong port | Start `apps/web` (`pnpm --filter @apps/web dev`). |
+| Requests fail with `fetch failed` | Backend not running or wrong port | Start `apps/backend` (`pnpm --filter @apps/backend dev`). |
 | Mutator file missing during generation | File deleted while `clean` is enabled | Restore `src/renderer/src/lib/api/mutator.ts` before running Orval. |
 
 Armed with these details you can confidently evolve both the backend schema and the Electron UI without re-learning the integration each time.
