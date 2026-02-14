@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Shuchu is a task management application built as a monorepo with a Next.js backend API and an Electron desktop client. The project uses Turbo for build orchestration and pnpm for package management.
+Shuchu is a personal time-tracking app that makes it easy to see planned vs. actual progress for short-term tasks. Built as a monorepo with a Next.js backend API and an Electron desktop client. Uses Turbo for build orchestration and pnpm for package management. See `docs/CONCEPT.md` for the full product concept.
 
 ## Agent Notes
 - Always run `pnpm run check-types` after making edits to ensure we keep the repo type-safe. Keep this as part of your default workflow.
@@ -241,7 +241,7 @@ The web app is a Next.js application that serves a Hono-based REST API at `/api`
 - `tasksTable`: Task management with due dates, completion status, and timestamps
 - `taskTimersTable`: Time tracking for tasks with start/end times
 
-All tables use UUID v7 for IDs and Unix timestamps for time fields.
+All tables use integer auto-increment IDs and Unix timestamps for time fields.
 
 ### Electron App
 
@@ -258,12 +258,17 @@ The Electron app consumes the web API via auto-generated TypeScript clients:
 2. `pnpm --filter electron run orval:generate` generates TypeScript clients using Orval
 3. Orval uses SWR for React hooks and a custom mutator (`src/renderer/src/lib/api/mutator.ts`)
 
-**Floating Windows:**
-The Electron app supports floating windows for individual tasks. The main process manages window creation via IPC handlers (`create-floating-window`, `close-floating-window`).
+**Renderer Architecture:**
+The renderer is organized around three main views:
+- **Calendar** (`CalendarView.tsx`): Day/week timeline for visual planning
+- **Tasks** (`TasksView.tsx`): Tabbed view with Now (quick capture + running timers), Upcoming (date-grouped planning), and Review (time charts + summaries)
+- **Account** (`AccountView.tsx`): User settings
+
+Shared data fetching and mutations live in `hooks/useTasksData.ts`. UI primitives follow the shadcn/ui pattern under `components/ui/`.
 
 ### Shared Packages
 
-- **packages/ui**: React components (likely shadcn/ui based components)
+- **packages/ui**: Shared React components (shadcn/ui based)
 - **packages/eslint-config**: ESLint configuration for the monorepo
 - **packages/typescript-config**: Base TypeScript configs (`base.json`, `nextjs.json`, `react-library.json`)
 
@@ -283,7 +288,7 @@ The Electron app supports floating windows for individual tasks. The main proces
 
 ## Planning Documentation
 
-Planning documents should be placed in the `ai-docs/` directory.
+Planning documents should be placed in the `agents/plans/` directory.
 
 ## Development Logs
 
