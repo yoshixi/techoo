@@ -1,6 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { cors } from 'hono/cors'
-import { auth } from '../../core/auth'
+import { createAuth } from '../../core/auth'
 import { signJwt, verifyJwt } from '../../core/jwt'
 import type { AppBindings } from './types'
 
@@ -115,11 +115,13 @@ app.use('/*', cors({
 
 // Mount better-auth handler (sign-up, sign-in, sign-out, OAuth callbacks, etc.)
 app.on(['POST', 'GET'], '/auth/*', (c) => {
+  const auth = createAuth({ d1: c.env.DB })
   return auth.handler(c.req.raw)
 })
 
 // Token exchange endpoint: session token → short-lived JWT
 app.post('/token', async (c) => {
+  const auth = createAuth({ d1: c.env.DB })
   const session = await auth.api.getSession({ headers: c.req.raw.headers })
   if (!session) {
     return c.json({ error: 'Unauthorized' }, 401)
@@ -147,6 +149,7 @@ app.get('/desktop-oauth', async (c) => {
   const callbackURL = `${baseUrl}/api/desktop-auth-callback?port=${port}`
 
   // Call better-auth internally to get the OAuth URL + state cookie
+  const auth = createAuth({ d1: c.env.DB })
   const authResponse = await auth.handler(
     new Request(`${baseUrl}/api/auth/sign-in/social`, {
       method: 'POST',

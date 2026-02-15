@@ -101,7 +101,7 @@ async function getValidTokensOrThrow(
 // GET /calendars/available - List available calendars from Google
 export const listAvailableCalendarsHandler: RouteHandler<typeof listAvailableCalendarsRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
 
     const tokensResult = await getValidTokensOrThrow(db, user.id)
@@ -134,7 +134,7 @@ export const listAvailableCalendarsHandler: RouteHandler<typeof listAvailableCal
 // GET /calendars - List integrated calendars
 export const listCalendarsHandler: RouteHandler<typeof listCalendarsRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
 
     const calendars = await getAllCalendars(db, user.id)
@@ -149,7 +149,7 @@ export const listCalendarsHandler: RouteHandler<typeof listCalendarsRoute, AppBi
 // POST /calendars - Add a calendar to sync
 export const createCalendarHandler: RouteHandler<typeof createCalendarRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const data = c.req.valid('json')
 
@@ -198,7 +198,7 @@ export const createCalendarHandler: RouteHandler<typeof createCalendarRoute, App
 // GET /calendars/{id} - Get a specific calendar
 export const getCalendarHandler: RouteHandler<typeof getCalendarRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { id } = c.req.valid('param')
 
@@ -218,7 +218,7 @@ export const getCalendarHandler: RouteHandler<typeof getCalendarRoute, AppBindin
 // PATCH /calendars/{id} - Update a calendar
 export const updateCalendarHandler: RouteHandler<typeof updateCalendarRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { id } = c.req.valid('param')
     const data = c.req.valid('json')
@@ -239,7 +239,7 @@ export const updateCalendarHandler: RouteHandler<typeof updateCalendarRoute, App
 // DELETE /calendars/{id} - Remove a calendar
 export const deleteCalendarHandler: RouteHandler<typeof deleteCalendarRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { id } = c.req.valid('param')
 
@@ -259,7 +259,7 @@ export const deleteCalendarHandler: RouteHandler<typeof deleteCalendarRoute, App
 // POST /calendars/{id}/sync - Sync a specific calendar
 export const syncCalendarHandler: RouteHandler<typeof syncCalendarRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { id } = c.req.valid('param')
 
@@ -313,7 +313,7 @@ export const syncCalendarHandler: RouteHandler<typeof syncCalendarRoute, AppBind
 // POST /calendars/sync - Sync all enabled calendars
 export const syncAllCalendarsHandler: RouteHandler<typeof syncAllCalendarsRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
 
     const tokensResult = await getValidTokensOrThrow(db, user.id)
@@ -377,7 +377,7 @@ export const syncAllCalendarsHandler: RouteHandler<typeof syncAllCalendarsRoute,
 // POST /calendars/{id}/watch - Start watching a calendar for changes
 export const watchCalendarHandler: RouteHandler<typeof watchCalendarRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { id } = c.req.valid('param')
 
@@ -442,7 +442,7 @@ export const watchCalendarHandler: RouteHandler<typeof watchCalendarRoute, AppBi
 // DELETE /calendars/{id}/watch - Stop watching a calendar
 export const stopWatchingCalendarHandler: RouteHandler<typeof stopWatchingCalendarRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { id } = c.req.valid('param')
 
@@ -488,7 +488,7 @@ export const stopWatchingCalendarHandler: RouteHandler<typeof stopWatchingCalend
 // GET /calendars/{id}/watch - Get watch channel status
 export const getWatchStatusHandler: RouteHandler<typeof getWatchStatusRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { id } = c.req.valid('param')
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest'
 import { OpenAPIHono } from '@hono/zod-openapi'
 import type { AppBindings } from '../types'
 import {
@@ -27,15 +27,11 @@ import { getTaskActivitiesRoute } from '../routes/activities'
 import { getTaskActivitiesHandler } from './activities'
 import { createTimerRoute } from '../routes/timers'
 import { createTimerHandler } from './timers'
-import { createSqliteLibsqlTestContext, createTestUser, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils'
+import { createD1TestContext, createTestRequest, createTestUser, type D1TestContext } from '../../../db/tests/d1TestUtils'
 
-type TestGlobal = typeof globalThis & { testDb?: SqliteLibsqlTestContext['db']; testUser?: { id: number; email: string; name: string } }
+type TestUser = { id: number; email: string; name: string }
 
-vi.mock('../../../core/common.db', () => ({
-  getDb: () => (globalThis as TestGlobal).testDb!
-}))
-
-const createTestApp = () => {
+const createTestApp = (getUser: () => TestUser | null) => {
   const app = new OpenAPIHono<AppBindings>()
 
   app.use('/*', async (c, next) => {
@@ -52,7 +48,10 @@ const createTestApp = () => {
 
   // Inject test user context (simulates JWT auth middleware)
   app.use('/*', async (c, next) => {
-    c.set('user', (globalThis as TestGlobal).testUser!)
+    const user = getUser()
+    if (user) {
+      c.set('user', user)
+    }
     await next()
   })
 
@@ -70,22 +69,24 @@ const createTestApp = () => {
 }
 
 describe('Task comment handlers', () => {
-  let testContext: SqliteLibsqlTestContext
+  let testContext: D1TestContext
   let app: OpenAPIHono<AppBindings>
+  let request: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+  let testUser: TestUser | null = null
   let taskId: number
 
   beforeAll(async () => {
-    testContext = await createSqliteLibsqlTestContext()
-    ;(globalThis as TestGlobal).testDb = testContext.db
-    app = createTestApp()
+    testContext = await createD1TestContext()
+    app = createTestApp(() => testUser)
+    request = createTestRequest(testContext)(app)
   })
 
   beforeEach(async () => {
     await testContext.reset()
     const user = await createTestUser(testContext.db)
-    ;(globalThis as TestGlobal).testUser = { id: user.id, email: user.email, name: user.name }
+    testUser = { id: user.id, email: user.email, name: user.name }
     // create base task for nested comment routes
-    const res = await app.request(
+    const res = await request(
       new Request('http://localhost/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,10 +100,11 @@ describe('Task comment handlers', () => {
 
   afterAll(async () => {
     await testContext.reset()
+    await testContext.stop();
   })
 
   const createComment = async (content: string) => {
-    const res = await app.request(
+    const res = await request(
       new Request(`http://localhost/tasks/${taskId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -118,7 +120,7 @@ describe('Task comment handlers', () => {
     await createComment('First note')
     await createComment('Second note')
 
-    const res = await app.request(new Request(`http://localhost/tasks/${taskId}/comments`))
+    const res = await request(new Request(`http://localhost/tasks/${taskId}/comments`))
     expect(res.status).toBe(200)
     const data = await res.json()
     expect(data.total).toBe(2)
@@ -128,7 +130,7 @@ describe('Task comment handlers', () => {
   it('updates and deletes a comment', async () => {
     const created = await createComment('Draft note')
 
-    const updateRes = await app.request(
+    const updateRes = await request(
       new Request(`http://localhost/tasks/${taskId}/comments/${created.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -139,14 +141,14 @@ describe('Task comment handlers', () => {
     const updated = await updateRes.json()
     expect(updated.comment.body).toBe('Edited note')
 
-    const deleteRes = await app.request(
+    const deleteRes = await request(
       new Request(`http://localhost/tasks/${taskId}/comments/${created.id}`, {
         method: 'DELETE'
       })
     )
     expect(deleteRes.status).toBe(200)
 
-    const getRes = await app.request(new Request(`http://localhost/tasks/${taskId}/comments/${created.id}`))
+    const getRes = await request(new Request(`http://localhost/tasks/${taskId}/comments/${created.id}`))
     expect(getRes.status).toBe(404)
   })
 
@@ -154,7 +156,7 @@ describe('Task comment handlers', () => {
     const now = new Date()
     await createComment('Earlier comment')
     // create timer entry
-    const timerRes = await app.request(
+    const timerRes = await request(
       new Request('http://localhost/timers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -168,7 +170,7 @@ describe('Task comment handlers', () => {
 
     await createComment('Latest comment')
 
-    const activitiesRes = await app.request(new Request(`http://localhost/tasks/${taskId}/activities`))
+    const activitiesRes = await request(new Request(`http://localhost/tasks/${taskId}/activities`))
     expect(activitiesRes.status).toBe(200)
     const data = await activitiesRes.json()
     expect(data.activities).toHaveLength(3)

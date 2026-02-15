@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, beforeAll, afterAll } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import type { AppBindings } from '../types';
-import { createSqliteLibsqlTestContext, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
+import { createD1TestContext, createTestRequest, type D1TestContext } from '../../../db/tests/d1TestUtils';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { bearer } from 'better-auth/plugins';
@@ -45,11 +45,12 @@ async function testVerifyJwt(token: string) {
 }
 
 describe('Auth & Token Endpoints', () => {
-  let testContext: SqliteLibsqlTestContext;
-  let app: OpenAPIHono<AppBindings>;
+  let testContext: D1TestContext;
+  let app: OpenAPIHono<AppBindings>
+  let request: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
   beforeAll(async () => {
-    testContext = await createSqliteLibsqlTestContext();
+    testContext = await createD1TestContext();
 
     // Create a test-local better-auth instance with the test DB
     const testAuth = betterAuth({
@@ -72,8 +73,9 @@ describe('Auth & Token Endpoints', () => {
       basePath: '/api/auth',
     });
 
-    app = new OpenAPIHono<AppBindings>().basePath('/api');
-
+    app = new OpenAPIHono<AppBindings>().basePath('/api')
+    request = createTestRequest(testContext)(app)
+    
     // Mount better-auth handler
     app.on(['POST', 'GET'], '/auth/*', (c) => {
       return testAuth.handler(c.req.raw);
@@ -138,6 +140,7 @@ describe('Auth & Token Endpoints', () => {
   afterAll(async () => {
     if (testContext) {
       await testContext.reset();
+      await testContext.stop();
     }
   });
 
@@ -147,7 +150,7 @@ describe('Auth & Token Endpoints', () => {
     password = 'password123456',
     name = 'Test User'
   ) {
-    return app.request(
+    return request(
       new Request('http://localhost/api/auth/sign-up/email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -193,7 +196,7 @@ describe('Auth & Token Endpoints', () => {
     it('should sign in with valid credentials', async () => {
       await signUp('signin@example.com', 'password123456', 'Sign In User');
 
-      const res = await app.request(
+      const res = await request(
         new Request('http://localhost/api/auth/sign-in/email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -216,7 +219,7 @@ describe('Auth & Token Endpoints', () => {
     it('should reject invalid password', async () => {
       await signUp('wrong@example.com', 'password123456', 'Wrong Pass');
 
-      const res = await app.request(
+      const res = await request(
         new Request('http://localhost/api/auth/sign-in/email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -231,7 +234,7 @@ describe('Auth & Token Endpoints', () => {
     });
 
     it('should reject non-existent email', async () => {
-      const res = await app.request(
+      const res = await request(
         new Request('http://localhost/api/auth/sign-in/email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -256,7 +259,7 @@ describe('Auth & Token Endpoints', () => {
       const sessionToken = getSessionToken(signUpRes);
       expect(sessionToken).toBeTruthy();
 
-      const res = await app.request(
+      const res = await request(
         new Request('http://localhost/api/token', {
           method: 'POST',
           headers: { Authorization: `Bearer ${sessionToken}` },
@@ -275,7 +278,7 @@ describe('Auth & Token Endpoints', () => {
     });
 
     it('should reject request without Authorization header', async () => {
-      const res = await app.request(
+      const res = await request(
         new Request('http://localhost/api/token', {
           method: 'POST',
         })
@@ -285,7 +288,7 @@ describe('Auth & Token Endpoints', () => {
     });
 
     it('should reject invalid session token', async () => {
-      const res = await app.request(
+      const res = await request(
         new Request('http://localhost/api/token', {
           method: 'POST',
           headers: { Authorization: 'Bearer invalid-session-token' },
@@ -307,7 +310,7 @@ describe('Auth & Token Endpoints', () => {
       const sessionToken = getSessionToken(signUpRes);
 
       // Exchange for JWT
-      const tokenRes = await app.request(
+      const tokenRes = await request(
         new Request('http://localhost/api/token', {
           method: 'POST',
           headers: { Authorization: `Bearer ${sessionToken}` },
@@ -316,7 +319,7 @@ describe('Auth & Token Endpoints', () => {
       const { token: jwt } = await tokenRes.json();
 
       // Access protected route
-      const res = await app.request(
+      const res = await request(
         new Request('http://localhost/api/protected', {
           headers: { Authorization: `Bearer ${jwt}` },
         })
@@ -331,14 +334,14 @@ describe('Auth & Token Endpoints', () => {
     });
 
     it('should reject request without Authorization header', async () => {
-      const res = await app.request(
+      const res = await request(
         new Request('http://localhost/api/protected')
       );
       expect(res.status).toBe(401);
     });
 
     it('should reject invalid JWT', async () => {
-      const res = await app.request(
+      const res = await request(
         new Request('http://localhost/api/protected', {
           headers: { Authorization: 'Bearer invalid-jwt-token' },
         })
@@ -347,7 +350,7 @@ describe('Auth & Token Endpoints', () => {
     });
 
     it('should reject non-Bearer auth scheme', async () => {
-      const res = await app.request(
+      const res = await request(
         new Request('http://localhost/api/protected', {
           headers: { Authorization: 'Basic dXNlcjpwYXNz' },
         })
@@ -369,7 +372,7 @@ describe('Auth & Token Endpoints', () => {
       expect(sessionToken).toBeTruthy();
 
       // 2. Exchange session token for JWT
-      const tokenRes = await app.request(
+      const tokenRes = await request(
         new Request('http://localhost/api/token', {
           method: 'POST',
           headers: { Authorization: `Bearer ${sessionToken}` },
@@ -379,7 +382,7 @@ describe('Auth & Token Endpoints', () => {
       const { token: jwt } = await tokenRes.json();
 
       // 3. Access protected resource
-      const protectedRes = await app.request(
+      const protectedRes = await request(
         new Request('http://localhost/api/protected', {
           headers: { Authorization: `Bearer ${jwt}` },
         })
@@ -394,7 +397,7 @@ describe('Auth & Token Endpoints', () => {
       await signUp('lifecycle@example.com', 'password123456', 'Lifecycle User');
 
       // 2. Sign in (creates a new session)
-      const signInRes = await app.request(
+      const signInRes = await request(
         new Request('http://localhost/api/auth/sign-in/email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -409,7 +412,7 @@ describe('Auth & Token Endpoints', () => {
       expect(sessionToken).toBeTruthy();
 
       // 3. Exchange for JWT
-      const tokenRes = await app.request(
+      const tokenRes = await request(
         new Request('http://localhost/api/token', {
           method: 'POST',
           headers: { Authorization: `Bearer ${sessionToken}` },
@@ -419,7 +422,7 @@ describe('Auth & Token Endpoints', () => {
       const { token: jwt } = await tokenRes.json();
 
       // 4. Access protected resource
-      const protectedRes = await app.request(
+      const protectedRes = await request(
         new Request('http://localhost/api/protected', {
           headers: { Authorization: `Bearer ${jwt}` },
         })

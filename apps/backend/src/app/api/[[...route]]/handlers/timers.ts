@@ -22,7 +22,7 @@ import {
 // Timer handlers
 export const listTimersHandler: RouteHandler<typeof listTimersRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
 
     const { taskIds } = c.req.valid('query')
@@ -60,7 +60,7 @@ export const listTimersHandler: RouteHandler<typeof listTimersRoute, AppBindings
 
 export const getTaskTimersHandler: RouteHandler<typeof getTaskTimersRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { taskId } = c.req.valid('param')
 
@@ -97,7 +97,7 @@ export const getTaskTimersHandler: RouteHandler<typeof getTaskTimersRoute, AppBi
 
 export const getTimerHandler: RouteHandler<typeof getTimerRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { id } = c.req.valid('param')
 
@@ -128,7 +128,7 @@ export const getTimerHandler: RouteHandler<typeof getTimerRoute, AppBindings> = 
 
 export const createTimerHandler: RouteHandler<typeof createTimerRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const data = c.req.valid('json')
 
@@ -159,7 +159,7 @@ export const createTimerHandler: RouteHandler<typeof createTimerRoute, AppBindin
 
 export const updateTimerHandler: RouteHandler<typeof updateTimerRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { id } = c.req.valid('param')
     const data = c.req.valid('json')
@@ -191,7 +191,7 @@ export const updateTimerHandler: RouteHandler<typeof updateTimerRoute, AppBindin
 
 export const deleteTimerHandler: RouteHandler<typeof deleteTimerRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { id } = c.req.valid('param')
 

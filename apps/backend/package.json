@@ -2,11 +2,16 @@
   "name": "@apps/backend",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "wrangler dev --config ./wrangler.jsonc",
     "build": "vite build",
     "preview": "$npm_execpath run build && vite preview",
     "deploy": "$npm_execpath run build && wrangler deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "init-local-d1": "wrangler d1 migrations apply shuchu --local",
+    "drizzle:generate": "drizzle-kit generate --config ./drizzle.config.ts",
+    "drizzle:push:remote": "drizzle-kit push --config ./drizzle.config.ts",
+    "drizzle:migrate:local": "wrangler d1 migrations apply shuchu --local --config ./wrangler.jsonc",
+    "drizzle:migrate:remote": "wrangler d1 migrations apply shuchu --remote --config ./wrangler.jsonc",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -28,7 +33,10 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.2.3",
+    "@cloudflare/workers-types": "^4.20250214.0",
     "@types/node": "^22.15.3",
+    "drizzle-kit": "^0.31.7",
+    "miniflare": "4.20260212.0",
     "typescript": "5.9.3",
     "vitest": "^4.0.13",
     "vite": "^6.3.5",

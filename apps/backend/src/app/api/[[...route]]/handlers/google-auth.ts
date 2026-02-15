@@ -16,7 +16,7 @@ export const getGoogleAuthStatusHandler: RouteHandler<
   AppBindings
 > = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
 
     // Check accounts table (populated by better-auth when user signs in with Google)
@@ -57,7 +57,7 @@ export const deleteGoogleAuthHandler: RouteHandler<
   AppBindings
 > = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
 
     const account = await getOAuthToken(db, user.id, 'google')

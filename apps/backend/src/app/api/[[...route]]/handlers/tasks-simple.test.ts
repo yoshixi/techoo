@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, afterAll } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import type { AppBindings } from '../types';
 import {
@@ -23,17 +23,12 @@ import {
   createTimerHandler,
   getTaskTimersHandler
 } from './timers';
-import { createSqliteLibsqlTestContext, createTestUser, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
+import { createD1TestContext, createTestRequest, createTestUser, type D1TestContext } from '../../../db/tests/d1TestUtils';
 
-type TestGlobal = typeof globalThis & { testDb?: SqliteLibsqlTestContext['db']; testUser?: { id: number; email: string; name: string } };
-
-// Mock the database connection
-vi.mock('../../../core/common.db', () => ({
-  getDb: () => (globalThis as TestGlobal).testDb!
-}));
+type TestUser = { id: number; email: string; name: string };
 
 // Create a test app with task routes
-const createTestApp = () => {
+const createTestApp = (getUser: () => TestUser | null) => {
   const app = new OpenAPIHono<AppBindings>();
 
   // Add CORS middleware like in the main app
@@ -51,7 +46,10 @@ const createTestApp = () => {
 
   // Inject test user context (simulates JWT auth middleware)
   app.use('/*', async (c, next) => {
-    c.set('user', (globalThis as TestGlobal).testUser!);
+    const user = getUser();
+    if (user) {
+      c.set('user', user);
+    }
     await next();
   });
 
@@ -70,32 +68,34 @@ const createTestApp = () => {
 };
 
 describe('Task Handlers (Simplified)', () => {
-  let testContext: SqliteLibsqlTestContext;
-  let app: OpenAPIHono<AppBindings>;
+  let testContext: D1TestContext;
+  let app: OpenAPIHono<AppBindings>
+  let request: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  let testUser: TestUser | null = null;
 
   beforeAll(async () => {
-    testContext = await createSqliteLibsqlTestContext();
-    // Set the global test database for the mock to use
-    (globalThis as TestGlobal).testDb = testContext.db;
-    app = createTestApp();
+    testContext = await createD1TestContext();
+    app = createTestApp(() => testUser);
+    request = createTestRequest(testContext)(app);
   });
 
   beforeEach(async () => {
     await testContext.reset();
     const user = await createTestUser(testContext.db);
-    (globalThis as TestGlobal).testUser = { id: user.id, email: user.email, name: user.name };
+    testUser = { id: user.id, email: user.email, name: user.name };
   });
 
   afterAll(async () => {
     if (testContext) {
       await testContext.reset();
+      await testContext.stop();
     }
   });
 
   describe('GET /tasks', () => {
     it('should return empty tasks list initially', async () => {
       const req = new Request('http://localhost/tasks');
-      const res = await app.request(req);
+      const res = await request(req);
 
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -107,7 +107,7 @@ describe('Task Handlers (Simplified)', () => {
 
     it('should filter tasks by completion status', async () => {
       const createTask = async (title: string) => {
-        const res = await app.request(new Request('http://localhost/tasks', {
+        const res = await request(new Request('http://localhost/tasks', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title })
@@ -121,14 +121,14 @@ describe('Task Handlers (Simplified)', () => {
       const completedTaskId = await createTask('Completed Task');
 
       const completionTimestamp = new Date(Math.floor(Date.now() / 1000) * 1000).toISOString();
-      const completeRes = await app.request(new Request(`http://localhost/tasks/${completedTaskId}`, {
+      const completeRes = await request(new Request(`http://localhost/tasks/${completedTaskId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completedAt: completionTimestamp })
       }));
       expect(completeRes.status).toBe(200);
 
-      const completedRes = await app.request(new Request('http://localhost/tasks?completed=true'));
+      const completedRes = await request(new Request('http://localhost/tasks?completed=true'));
       expect(completedRes.status).toBe(200);
       const completedData = await completedRes.json();
       expect(completedData.tasks).toHaveLength(1);
@@ -137,7 +137,7 @@ describe('Task Handlers (Simplified)', () => {
       expect(completedIds).toContain(completedTaskId);
       expect(completedIds).not.toContain(incompleteTaskId);
 
-      const incompleteRes = await app.request(new Request('http://localhost/tasks?completed=false'));
+      const incompleteRes = await request(new Request('http://localhost/tasks?completed=false'));
       expect(incompleteRes.status).toBe(200);
       const incompleteData = await incompleteRes.json();
       expect(incompleteData.tasks).toHaveLength(1);
@@ -164,7 +164,7 @@ describe('Task Handlers (Simplified)', () => {
         body: JSON.stringify(taskData)
       });
       
-      const res = await app.request(req);
+      const res = await request(req);
 
       expect(res.status).toBe(201);
       const data = await res.json();
@@ -190,7 +190,7 @@ describe('Task Handlers (Simplified)', () => {
         body: JSON.stringify(taskData)
       });
       
-      const res = await app.request(req);
+      const res = await request(req);
 
       expect(res.status).toBe(201);
       const data = await res.json();
@@ -212,7 +212,7 @@ describe('Task Handlers (Simplified)', () => {
         })
       });
       
-      const res = await app.request(req);
+      const res = await request(req);
       expect(res.status).toBe(400);
     });
   });
@@ -229,14 +229,14 @@ describe('Task Handlers (Simplified)', () => {
         })
       });
       
-      const createRes = await app.request(createReq);
+      const createRes = await request(createReq);
       expect(createRes.status).toBe(201);
       const createData = await createRes.json();
       const taskId = createData.task.id;
 
       // Read task
       const readReq = new Request(`http://localhost/tasks/${taskId}`);
-      const readRes = await app.request(readReq);
+      const readRes = await request(readReq);
       expect(readRes.status).toBe(200);
       const readData = await readRes.json();
       expect(readData.task.title).toBe('Lifecycle Task');
@@ -250,7 +250,7 @@ describe('Task Handlers (Simplified)', () => {
         })
       });
       
-      const updateRes = await app.request(updateReq);
+      const updateRes = await request(updateReq);
       expect(updateRes.status).toBe(200);
       const updateData = await updateRes.json();
       expect(updateData.task.title).toBe('Updated Lifecycle Task');
@@ -260,12 +260,12 @@ describe('Task Handlers (Simplified)', () => {
         method: 'DELETE'
       });
       
-      const deleteRes = await app.request(deleteReq);
+      const deleteRes = await request(deleteReq);
       expect(deleteRes.status).toBe(200);
 
       // Verify task is deleted
       const verifyReq = new Request(`http://localhost/tasks/${taskId}`);
-      const verifyRes = await app.request(verifyReq);
+      const verifyRes = await request(verifyReq);
       expect(verifyRes.status).toBe(404);
     });
   });
@@ -277,7 +277,7 @@ describe('Task Handlers (Simplified)', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'Complete me' })
       });
-      const createRes = await app.request(createReq);
+      const createRes = await request(createReq);
       expect(createRes.status).toBe(201);
       const { task } = await createRes.json();
       const taskId = task.id;
@@ -288,7 +288,7 @@ describe('Task Handlers (Simplified)', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completedAt: completionTimestamp })
       });
-      const completeRes = await app.request(completeReq);
+      const completeRes = await request(completeReq);
       expect(completeRes.status).toBe(200);
       const completeData = await completeRes.json();
       expect(completeData.task.completedAt).toBe(completionTimestamp);
@@ -298,7 +298,7 @@ describe('Task Handlers (Simplified)', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completedAt: null })
       });
-      const reopenRes = await app.request(reopenReq);
+      const reopenRes = await request(reopenReq);
       expect(reopenRes.status).toBe(200);
       const reopenData = await reopenRes.json();
       expect(reopenData.task.completedAt).toBeNull();
@@ -320,7 +320,7 @@ describe('Task Handlers (Simplified)', () => {
         body: JSON.stringify(taskData)
       });
 
-      const res = await app.request(req);
+      const res = await request(req);
       expect(res.status).toBe(201);
       const data = await res.json();
       expect(data.task.startAt).toBe(startAt);
@@ -333,7 +333,7 @@ describe('Task Handlers (Simplified)', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'Update start date test' })
       });
-      const createRes = await app.request(createReq);
+      const createRes = await request(createReq);
       expect(createRes.status).toBe(201);
       const { task } = await createRes.json();
       const taskId = task.id;
@@ -345,7 +345,7 @@ describe('Task Handlers (Simplified)', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ startAt: startAt })
       });
-      const updateRes = await app.request(updateReq);
+      const updateRes = await request(updateReq);
       expect(updateRes.status).toBe(200);
       const updateData = await updateRes.json();
       expect(updateData.task.startAt).toBe(startAt);
@@ -358,7 +358,7 @@ describe('Task Handlers (Simplified)', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'Clear start date test', startAt: startAt })
       });
-      const createRes = await app.request(createReq);
+      const createRes = await request(createReq);
       expect(createRes.status).toBe(201);
       const { task } = await createRes.json();
       const taskId = task.id;
@@ -369,7 +369,7 @@ describe('Task Handlers (Simplified)', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ startAt: null })
       });
-      const clearRes = await app.request(clearReq);
+      const clearRes = await request(clearReq);
       expect(clearRes.status).toBe(200);
       const clearData = await clearRes.json();
       expect(clearData.task.startAt).toBeNull();
@@ -389,24 +389,24 @@ describe('Task Handlers (Simplified)', () => {
         startAt: '2024-01-02T09:00:00.000Z'
       };
 
-      await app.request(new Request('http://localhost/tasks', {
+      await request(new Request('http://localhost/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(task1Data)
       }));
-      await app.request(new Request('http://localhost/tasks', {
+      await request(new Request('http://localhost/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(task2Data)
       }));
-      await app.request(new Request('http://localhost/tasks', {
+      await request(new Request('http://localhost/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(task3Data)
       }));
 
       const listReq = new Request('http://localhost/tasks?sortBy=startAt');
-      const listRes = await app.request(listReq);
+      const listRes = await request(listReq);
       expect(listRes.status).toBe(200);
       const listData = await listRes.json();
       expect(listData.tasks.length).toBeGreaterThanOrEqual(3);
@@ -426,7 +426,7 @@ describe('Task Handlers (Simplified)', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'Task with timer' })
       });
-      const createTaskRes = await app.request(createTaskReq);
+      const createTaskRes = await request(createTaskReq);
       expect(createTaskRes.status).toBe(201);
       const { task } = await createTaskRes.json();
       const taskId = task.id;
@@ -440,12 +440,12 @@ describe('Task Handlers (Simplified)', () => {
           startTime: '2024-01-01T10:00:00.000Z'
         })
       });
-      const createTimerRes = await app.request(createTimerReq);
+      const createTimerRes = await request(createTimerReq);
       expect(createTimerRes.status).toBe(201);
 
       // Verify timer is active (endTime is null)
       const getTimersBeforeReq = new Request(`http://localhost/tasks/${taskId}/timers`);
-      const getTimersBeforeRes = await app.request(getTimersBeforeReq);
+      const getTimersBeforeRes = await request(getTimersBeforeReq);
       expect(getTimersBeforeRes.status).toBe(200);
       const timersBeforeData = await getTimersBeforeRes.json();
       expect(timersBeforeData.timers).toHaveLength(1);
@@ -458,12 +458,12 @@ describe('Task Handlers (Simplified)', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completedAt: completionTimestamp })
       });
-      const completeTaskRes = await app.request(completeTaskReq);
+      const completeTaskRes = await request(completeTaskReq);
       expect(completeTaskRes.status).toBe(200);
 
       // Verify timer is now stopped (endTime is not null)
       const getTimersAfterReq = new Request(`http://localhost/tasks/${taskId}/timers`);
-      const getTimersAfterRes = await app.request(getTimersAfterReq);
+      const getTimersAfterRes = await request(getTimersAfterReq);
       expect(getTimersAfterRes.status).toBe(200);
       const timersAfterData = await getTimersAfterRes.json();
       expect(timersAfterData.timers).toHaveLength(1);
@@ -477,13 +477,13 @@ describe('Task Handlers (Simplified)', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'Task with multiple timers' })
       });
-      const createTaskRes = await app.request(createTaskReq);
+      const createTaskRes = await request(createTaskReq);
       expect(createTaskRes.status).toBe(201);
       const { task } = await createTaskRes.json();
       const taskId = task.id;
 
       // Create two active timers
-      await app.request(new Request('http://localhost/timers', {
+      await request(new Request('http://localhost/timers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -491,7 +491,7 @@ describe('Task Handlers (Simplified)', () => {
           startTime: '2024-01-01T10:00:00.000Z'
         })
       }));
-      await app.request(new Request('http://localhost/timers', {
+      await request(new Request('http://localhost/timers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -501,21 +501,21 @@ describe('Task Handlers (Simplified)', () => {
       }));
 
       // Verify both timers are active
-      const getTimersBeforeRes = await app.request(new Request(`http://localhost/tasks/${taskId}/timers`));
+      const getTimersBeforeRes = await request(new Request(`http://localhost/tasks/${taskId}/timers`));
       const timersBeforeData = await getTimersBeforeRes.json();
       expect(timersBeforeData.timers).toHaveLength(2);
       expect(timersBeforeData.timers.every((t: { endTime: string | null }) => t.endTime === null)).toBe(true);
 
       // Complete the task
       const completionTimestamp = new Date(Math.floor(Date.now() / 1000) * 1000).toISOString();
-      await app.request(new Request(`http://localhost/tasks/${taskId}`, {
+      await request(new Request(`http://localhost/tasks/${taskId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completedAt: completionTimestamp })
       }));
 
       // Verify all timers are now stopped
-      const getTimersAfterRes = await app.request(new Request(`http://localhost/tasks/${taskId}/timers`));
+      const getTimersAfterRes = await request(new Request(`http://localhost/tasks/${taskId}/timers`));
       const timersAfterData = await getTimersAfterRes.json();
       expect(timersAfterData.timers).toHaveLength(2);
       expect(timersAfterData.timers.every((t: { endTime: string | null }) => t.endTime !== null)).toBe(true);
@@ -523,14 +523,14 @@ describe('Task Handlers (Simplified)', () => {
 
     it('should not affect timers of other tasks when completing a task', async () => {
       // Create two tasks
-      const createTask1Res = await app.request(new Request('http://localhost/tasks', {
+      const createTask1Res = await request(new Request('http://localhost/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'Task 1' })
       }));
       const task1 = (await createTask1Res.json()).task;
 
-      const createTask2Res = await app.request(new Request('http://localhost/tasks', {
+      const createTask2Res = await request(new Request('http://localhost/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'Task 2' })
@@ -538,7 +538,7 @@ describe('Task Handlers (Simplified)', () => {
       const task2 = (await createTask2Res.json()).task;
 
       // Create active timer for each task
-      await app.request(new Request('http://localhost/timers', {
+      await request(new Request('http://localhost/timers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -546,7 +546,7 @@ describe('Task Handlers (Simplified)', () => {
           startTime: '2024-01-01T10:00:00.000Z'
         })
       }));
-      await app.request(new Request('http://localhost/timers', {
+      await request(new Request('http://localhost/timers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -557,19 +557,19 @@ describe('Task Handlers (Simplified)', () => {
 
       // Complete task 1
       const completionTimestamp = new Date(Math.floor(Date.now() / 1000) * 1000).toISOString();
-      await app.request(new Request(`http://localhost/tasks/${task1.id}`, {
+      await request(new Request(`http://localhost/tasks/${task1.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completedAt: completionTimestamp })
       }));
 
       // Task 1's timer should be stopped
-      const task1TimersRes = await app.request(new Request(`http://localhost/tasks/${task1.id}/timers`));
+      const task1TimersRes = await request(new Request(`http://localhost/tasks/${task1.id}/timers`));
       const task1Timers = (await task1TimersRes.json()).timers;
       expect(task1Timers[0].endTime).not.toBeNull();
 
       // Task 2's timer should still be active
-      const task2TimersRes = await app.request(new Request(`http://localhost/tasks/${task2.id}/timers`));
+      const task2TimersRes = await request(new Request(`http://localhost/tasks/${task2.id}/timers`));
       const task2Timers = (await task2TimersRes.json()).timers;
       expect(task2Timers[0].endTime).toBeNull();
     });

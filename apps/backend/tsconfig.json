@@ -10,7 +10,7 @@
       "DOM",
       "DOM.Iterable"
     ],
-    "types": ["vite/client", "node"],
+    "types": ["vite/client", "node", "@cloudflare/workers-types"],
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx"
   },

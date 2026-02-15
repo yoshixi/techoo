@@ -17,6 +17,7 @@ describe('timers.db', () => {
   afterAll(async () => {
     if (testContext) {
       await testContext.reset()
+      testContext.stop()
     }
   })
 

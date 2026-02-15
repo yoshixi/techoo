@@ -18,7 +18,7 @@ import {
 
 export const listTaskCommentsHandler: RouteHandler<typeof listTaskCommentsRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { taskId } = c.req.valid('param')
 
@@ -54,7 +54,7 @@ export const listTaskCommentsHandler: RouteHandler<typeof listTaskCommentsRoute,
 
 export const createTaskCommentHandler: RouteHandler<typeof createTaskCommentRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { taskId } = c.req.valid('param')
     const data = c.req.valid('json')
@@ -85,7 +85,7 @@ export const createTaskCommentHandler: RouteHandler<typeof createTaskCommentRout
 
 export const getTaskCommentHandler: RouteHandler<typeof getTaskCommentRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { taskId, commentId } = c.req.valid('param')
 
@@ -115,7 +115,7 @@ export const getTaskCommentHandler: RouteHandler<typeof getTaskCommentRoute, App
 
 export const updateTaskCommentHandler: RouteHandler<typeof updateTaskCommentRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { taskId, commentId } = c.req.valid('param')
     const data = c.req.valid('json')
@@ -146,7 +146,7 @@ export const updateTaskCommentHandler: RouteHandler<typeof updateTaskCommentRout
 
 export const deleteTaskCommentHandler: RouteHandler<typeof deleteTaskCommentRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { taskId, commentId } = c.req.valid('param')
 

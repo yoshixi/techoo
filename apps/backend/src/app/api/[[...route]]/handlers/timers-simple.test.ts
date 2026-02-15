@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, afterAll } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import type { AppBindings } from '../types';
 import {
@@ -19,17 +19,12 @@ import {
 } from './timers';
 import { createTaskRoute } from '../routes/tasks';
 import { createTaskHandler } from './tasks';
-import { createSqliteLibsqlTestContext, createTestUser, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
+import { createD1TestContext, createTestRequest, createTestUser, type D1TestContext } from '../../../db/tests/d1TestUtils';
 
-type TestGlobal = typeof globalThis & { testDb?: SqliteLibsqlTestContext['db']; testUser?: { id: number; email: string; name: string } };
-
-// Mock the database connection
-vi.mock('../../../core/common.db', () => ({
-  getDb: () => (globalThis as TestGlobal).testDb!
-}));
+type TestUser = { id: number; email: string; name: string };
 
 // Create a test app with timer and task routes
-const createTestApp = () => {
+const createTestApp = (getUser: () => TestUser | null) => {
   const app = new OpenAPIHono<AppBindings>();
 
   // Add CORS middleware like in the main app
@@ -47,7 +42,10 @@ const createTestApp = () => {
 
   // Inject test user context (simulates JWT auth middleware)
   app.use('/*', async (c, next) => {
-    c.set('user', (globalThis as TestGlobal).testUser!);
+    const user = getUser();
+    if (user) {
+      c.set('user', user);
+    }
     await next();
   });
 
@@ -66,21 +64,22 @@ const createTestApp = () => {
 };
 
 describe('Timer Handlers (Simplified)', () => {
-  let testContext: SqliteLibsqlTestContext;
-  let app: OpenAPIHono<AppBindings>;
+  let testContext: D1TestContext;
+  let app: OpenAPIHono<AppBindings>
+  let request: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
   let sampleTaskId: number;
+  let testUser: TestUser | null = null;
 
   beforeAll(async () => {
-    testContext = await createSqliteLibsqlTestContext();
-    // Set the global test database for the mock to use
-    (globalThis as TestGlobal).testDb = testContext.db;
-    app = createTestApp();
+    testContext = await createD1TestContext();
+    app = createTestApp(() => testUser);
+    request = createTestRequest(testContext)(app);
   });
 
   beforeEach(async () => {
     await testContext.reset();
     const user = await createTestUser(testContext.db);
-    (globalThis as TestGlobal).testUser = { id: user.id, email: user.email, name: user.name };
+    testUser = { id: user.id, email: user.email, name: user.name };
 
     // Create a sample task for timer tests
     const createTaskReq = new Request('http://localhost/tasks', {
@@ -92,7 +91,7 @@ describe('Timer Handlers (Simplified)', () => {
       })
     });
     
-    const createTaskRes = await app.request(createTaskReq);
+    const createTaskRes = await request(createTaskReq);
     const taskData = await createTaskRes.json();
     sampleTaskId = taskData.task.id;
   });
@@ -100,13 +99,14 @@ describe('Timer Handlers (Simplified)', () => {
   afterAll(async () => {
     if (testContext) {
       await testContext.reset();
+      await testContext.stop();
     }
   });
 
   describe('GET /timers', () => {
     it('should return empty timers list initially', async () => {
       const req = new Request('http://localhost/timers');
-      const res = await app.request(req);
+      const res = await request(req);
 
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -124,7 +124,7 @@ describe('Timer Handlers (Simplified)', () => {
           title: 'Second Task'
         })
       });
-      const secondTaskRes = await app.request(secondTaskReq);
+      const secondTaskRes = await request(secondTaskReq);
       const secondTaskData = await secondTaskRes.json();
       const secondTaskId = secondTaskData.task.id;
 
@@ -145,12 +145,12 @@ describe('Timer Handlers (Simplified)', () => {
         })
       });
 
-      await app.request(createTimerReqA);
-      await app.request(createTimerReqB);
+      await request(createTimerReqA);
+      await request(createTimerReqB);
 
       const query = new URLSearchParams([['taskIds', String(sampleTaskId)]]);
       const req = new Request(`http://localhost/timers?${query.toString()}`);
-      const res = await app.request(req);
+      const res = await request(req);
 
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -166,11 +166,11 @@ describe('Timer Handlers (Simplified)', () => {
           title: 'Second Task'
         })
       });
-      const secondTaskRes = await app.request(secondTaskReq);
+      const secondTaskRes = await request(secondTaskReq);
       const secondTaskData = await secondTaskRes.json();
       const secondTaskId = secondTaskData.task.id;
 
-      await app.request(
+      await request(
         new Request('http://localhost/timers', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -180,7 +180,7 @@ describe('Timer Handlers (Simplified)', () => {
           })
         })
       );
-      await app.request(
+      await request(
         new Request('http://localhost/timers', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -196,7 +196,7 @@ describe('Timer Handlers (Simplified)', () => {
         ['taskIds', String(secondTaskId)]
       ]);
       const req = new Request(`http://localhost/timers?${query.toString()}`);
-      const res = await app.request(req);
+      const res = await request(req);
 
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -220,7 +220,7 @@ describe('Timer Handlers (Simplified)', () => {
         body: JSON.stringify(timerData)
       });
 
-      const res = await app.request(req);
+      const res = await request(req);
 
       expect(res.status).toBe(201);
       const data = await res.json();
@@ -242,7 +242,7 @@ describe('Timer Handlers (Simplified)', () => {
         })
       });
 
-      const res = await app.request(req);
+      const res = await request(req);
       expect(res.status).toBe(404);
       const data = await res.json();
       expect(data.error).toBe('Not found');
@@ -253,7 +253,7 @@ describe('Timer Handlers (Simplified)', () => {
   describe('GET /tasks/{taskId}/timers', () => {
     it('should return empty timers list for task with no timers', async () => {
       const req = new Request(`http://localhost/tasks/${sampleTaskId}/timers`);
-      const res = await app.request(req);
+      const res = await request(req);
 
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -274,11 +274,11 @@ describe('Timer Handlers (Simplified)', () => {
         })
       });
 
-      await app.request(createTimerReq);
+      await request(createTimerReq);
 
       // Get timers for the task
       const getTimersReq = new Request(`http://localhost/tasks/${sampleTaskId}/timers`);
-      const res = await app.request(getTimersReq);
+      const res = await request(getTimersReq);
 
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -289,7 +289,7 @@ describe('Timer Handlers (Simplified)', () => {
 
     it('should return 404 for non-existent task', async () => {
       const req = new Request('http://localhost/tasks/999999/timers');
-      const res = await app.request(req);
+      const res = await request(req);
 
       expect(res.status).toBe(404);
       const data = await res.json();
@@ -310,14 +310,14 @@ describe('Timer Handlers (Simplified)', () => {
         })
       });
       
-      const createRes = await app.request(createReq);
+      const createRes = await request(createReq);
       expect(createRes.status).toBe(201);
       const createData = await createRes.json();
       const timerId = createData.timer.id;
 
       // Read timer
       const readReq = new Request(`http://localhost/timers/${timerId}`);
-      const readRes = await app.request(readReq);
+      const readRes = await request(readReq);
       expect(readRes.status).toBe(200);
       const readData = await readRes.json();
       expect(readData.timer.id).toBe(timerId);
@@ -332,7 +332,7 @@ describe('Timer Handlers (Simplified)', () => {
         })
       });
       
-      const updateRes = await app.request(updateReq);
+      const updateRes = await request(updateReq);
       expect(updateRes.status).toBe(200);
       const updateData = await updateRes.json();
       expect(updateData.timer.endTime).toBe('2024-01-01T10:30:00.000Z');
@@ -342,12 +342,12 @@ describe('Timer Handlers (Simplified)', () => {
         method: 'DELETE'
       });
       
-      const deleteRes = await app.request(deleteReq);
+      const deleteRes = await request(deleteReq);
       expect(deleteRes.status).toBe(200);
 
       // Verify timer is deleted
       const verifyReq = new Request(`http://localhost/timers/${timerId}`);
-      const verifyRes = await app.request(verifyReq);
+      const verifyRes = await request(verifyReq);
       expect(verifyRes.status).toBe(404);
     });
   });

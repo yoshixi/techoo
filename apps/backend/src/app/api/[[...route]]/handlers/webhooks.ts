@@ -52,7 +52,7 @@ export const googleCalendarWebhookHandler: RouteHandler<
       return c.json({}, 200)
     }
 
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
 
     // Find the watch channel
     const watchChannel = await getWatchChannelByChannelId(db, channelId)

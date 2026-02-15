@@ -6,7 +6,7 @@ import { getTaskActivities } from '../../../core/activities.db'
 
 export const getTaskActivitiesHandler: RouteHandler<typeof getTaskActivitiesRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { id } = c.req.valid('param')
 

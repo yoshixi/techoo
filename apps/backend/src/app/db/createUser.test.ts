@@ -10,7 +10,7 @@ describe('createUser', () => {
 
     const getCtx = () => {
         if (!ctx) {
-            throw new Error('SQLite test context has not been initialized');
+            throw new Error('D1 test context has not been initialized');
         }
         return ctx;
     };
@@ -22,6 +22,7 @@ describe('createUser', () => {
     afterAll(async () => {
         if (ctx) {
             await ctx.reset();
+            ctx.stop();
         }
     });
 
@@ -31,7 +32,7 @@ describe('createUser', () => {
         }
     });
 
-    it('creates a user row in the local SQLite file', async () => {
+    it('creates a user row in the D1 database', async () => {
         const context = getCtx();
         const created = await createUser(context.db, 'Alice', 'alice@example.com');
 

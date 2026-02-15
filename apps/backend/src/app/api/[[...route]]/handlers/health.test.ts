@@ -3,7 +3,7 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import type { AppBindings } from '../types';
 import { healthRoute } from '../routes/health';
 import { healthHandler } from './index';
-import { createSqliteLibsqlTestContext, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
+import { createD1TestContext, createTestRequest, type D1TestContext } from '../../../db/tests/d1TestUtils';
 
 // Create a test app with the health endpoint
 const createTestApp = () => {
@@ -29,12 +29,14 @@ const createTestApp = () => {
 };
 
 describe('Health Handler', () => {
-  let testContext: SqliteLibsqlTestContext;
-  let app: OpenAPIHono<AppBindings>;
+  let testContext: D1TestContext;
+  let app: OpenAPIHono<AppBindings>
+  let request: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
   beforeAll(async () => {
-    testContext = await createSqliteLibsqlTestContext();
+    testContext = await createD1TestContext();
     app = createTestApp();
+    request = createTestRequest(testContext)(app);
   });
 
   beforeEach(async () => {
@@ -44,13 +46,14 @@ describe('Health Handler', () => {
   afterAll(async () => {
     if (testContext) {
       await testContext.reset();
+      await testContext.stop();
     }
   });
 
   describe('GET /health', () => {
     it('should return health status', async () => {
       const req = new Request('http://localhost/health');
-      const res = await app.request(req);
+      const res = await request(req);
 
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -71,7 +74,7 @@ describe('Health Handler', () => {
 
     it('should return correct CORS headers', async () => {
       const req = new Request('http://localhost/health');
-      const res = await app.request(req);
+      const res = await request(req);
 
       expect(res.status).toBe(200);
       expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
@@ -83,7 +86,7 @@ describe('Health Handler', () => {
       const req = new Request('http://localhost/health', {
         method: 'OPTIONS'
       });
-      const res = await app.request(req);
+      const res = await request(req);
 
       expect(res.status).toBe(200);
       expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
@@ -101,7 +104,7 @@ describe('Health Handler', () => {
       ];
 
       const responses = await Promise.all(
-        requests.map(req => app.request(req))
+        requests.map(req => request(req))
       );
 
       for (const res of responses) {
@@ -119,7 +122,7 @@ describe('Health Handler', () => {
       );
 
       const results = await Promise.all(
-        concurrentRequests.map(req => app.request(req))
+        concurrentRequests.map(req => request(req))
       );
 
       results.forEach(res => {

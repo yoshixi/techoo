@@ -7,7 +7,7 @@ import { getAllEvents, getEventById } from '../../../core/events.db'
 // GET /events - List calendar events with optional filters
 export const listEventsHandler: RouteHandler<typeof listEventsRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const query = c.req.valid('query')
 
@@ -27,7 +27,7 @@ export const listEventsHandler: RouteHandler<typeof listEventsRoute, AppBindings
 // GET /events/{id} - Get a specific event
 export const getEventHandler: RouteHandler<typeof getEventRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = getDb({ d1: c.env.DB })
     const user = c.get('user')
     const { id } = c.req.valid('param')
 
