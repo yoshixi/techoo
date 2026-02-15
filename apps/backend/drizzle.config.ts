@@ -5,7 +5,7 @@ import { execSync } from 'child_process'
 const schema = './src/app/db/schema/schema.ts'
 const out = './migrations'
 
-const mode = process.env.Env
+const mode = process.env.DRIZZLE_ENV ?? process.env.ENV ?? process.env.Env ?? 'local'
 
 const getLocalSqlitePath = () => {
   const cmd =
