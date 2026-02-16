@@ -1,7 +1,7 @@
 import { Tray, Menu, app, BrowserWindow, nativeImage } from 'electron'
 import { join } from 'path'
 
-const API_URL = import.meta.env.MAIN_VITE_API_BASE_URL || 'http://localhost:3000'
+const API_URL = import.meta.env.MAIN_VITE_API_BASE_URL || 'http://localhost:8787'
 
 interface TimerState {
   timerId: number

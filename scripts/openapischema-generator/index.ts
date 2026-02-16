@@ -9,8 +9,8 @@ import * as yaml from 'yaml';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Import the Hono app from the web app
-import { honoApp } from '@apps/web';
+// Import the Hono app from the backend app
+import { honoApp } from '@apps/backend';
 
 // Setup CLI with commander
 program
@@ -60,7 +60,7 @@ if (options.format === 'yaml' || options.format === 'both') {
   generatedFiles.push(yamlPath);
 }
 
-console.log(`✅ OpenAPI specification generated successfully from apps/web!`);
+console.log(`✅ OpenAPI specification generated successfully from apps/backend!`);
 generatedFiles.forEach((file, index) => {
   const relativeFile = path.relative(workspaceRoot, file);
   console.log(`📄 ${index === 0 ? 'JSON' : 'YAML'}: ${relativeFile}`);

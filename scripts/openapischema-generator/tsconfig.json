@@ -10,7 +10,7 @@
       "skipLibCheck": true,
       "forceConsistentCasingInFileNames": true,
       "paths": {
-        "@apps/web": ["../../apps/web/app/api/[[...route]]/route.ts"]
+      "@apps/backend": ["../../apps/backend/src/app/api/[[...route]]/route.ts"]
       }
     }
   }

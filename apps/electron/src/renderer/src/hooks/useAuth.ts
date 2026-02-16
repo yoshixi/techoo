@@ -28,8 +28,22 @@ export function useAuth(): UseAuthReturn {
         return
       }
 
-      // Get session info from better-auth
-      const { data: session } = await authClient.getSession()
+      const sessionToken = localStorage.getItem('session_token')
+      if (!sessionToken) {
+        setUser(null)
+        clearAuthState()
+        return
+      }
+
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'}/api/session`, {
+        headers: { Authorization: `Bearer ${sessionToken}` }
+      })
+      if (!res.ok) {
+        setUser(null)
+        clearAuthState()
+        return
+      }
+      const session = await res.json()
       if (session?.user) {
         setUser({
           id: String(session.user.id),

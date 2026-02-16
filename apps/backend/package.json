@@ -1,0 +1,43 @@
+{
+  "name": "@apps/backend",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --config ./wrangler.jsonc",
+    "build": "vite build",
+    "preview": "$npm_execpath run build && vite preview",
+    "deploy": "$npm_execpath run build && wrangler deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "drizzle:generate": "drizzle-kit generate --config ./drizzle.config.ts",
+    "drizzle:push": "drizzle-kit push --config ./drizzle.config.ts",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "exports": {
+    ".": "./src/app/api/[[...route]]/route.ts"
+  },
+  "types": "./src/app/api/[[...route]]/route.ts",
+  "dependencies": {
+    "@hono/zod-openapi": "catalog:",
+    "@libsql/client": "^0.15.15",
+    "better-auth": "^1.4.18",
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.44.7",
+    "googleapis": "^170.1.0",
+    "hono": "^4.10.6",
+    "jose": "^6.1.3",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.2.3",
+    "@cloudflare/workers-types": "^4.20250214.0",
+    "@types/node": "^22.15.3",
+    "drizzle-kit": "^0.31.7",
+    "miniflare": "4.20260212.0",
+    "typescript": "5.9.3",
+    "vitest": "^4.0.13",
+    "vite": "^6.3.5",
+    "vite-ssr-components": "^0.5.2",
+    "wrangler": "^4.17.0"
+  }
+}

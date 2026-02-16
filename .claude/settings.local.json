@@ -42,7 +42,9 @@
       "Bash(pnpm --filter web run check-types:*)",
       "Bash(git diff:*)",
       "Bash(pnpm --filter electron add:*)",
-      "Bash(sqlite3:*)"
+      "Bash(sqlite3:*)",
+      "Bash(pnpm run test:*)",
+      "Bash(sort:*)"
     ]
   }
 }

@@ -7,7 +7,7 @@
     "generate": "tsx index.ts"
   },
   "devDependencies": {
-    "@apps/web": "workspace:*",
+    "@apps/backend": "workspace:*",
     "@hono/zod-openapi": "catalog:",
     "@types/node": "latest",
     "tsx": "latest",
