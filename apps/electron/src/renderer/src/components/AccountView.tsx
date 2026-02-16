@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Button } from './ui/button'
-import { Keyboard, Bell, CheckCircle, XCircle, AlertCircle, LogOut, User, ChevronDown, ChevronRight } from 'lucide-react'
+import { Keyboard, Bell, CheckCircle, XCircle, AlertCircle, LogOut, User, ChevronDown, ChevronRight, Link } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 
 type NotificationPermissionStatus = 'granted' | 'denied' | 'not-determined'
@@ -73,6 +73,8 @@ export function AccountView(): React.JSX.Element {
   const { user, signOut } = useAuth()
   const [notificationStatus, setNotificationStatus] = useState<NotificationPermissionStatus>('not-determined')
   const [isRequesting, setIsRequesting] = useState(false)
+  const [isLinkingGoogle, setIsLinkingGoogle] = useState(false)
+  const [linkStatus, setLinkStatus] = useState<'success' | 'error' | null>(null)
 
   useEffect(() => {
     window.api.getNotificationPermission().then(setNotificationStatus)
@@ -95,6 +97,26 @@ export function AccountView(): React.JSX.Element {
   const handleSignOut = async (): Promise<void> => {
     await signOut()
     window.location.reload()
+  }
+
+  const handleLinkGoogleAccount = async (): Promise<void> => {
+    setLinkStatus(null)
+    const sessionToken = localStorage.getItem('session_token')
+    if (!sessionToken) {
+      setLinkStatus('error')
+      return
+    }
+
+    setIsLinkingGoogle(true)
+    try {
+      const linked = await window.api.linkSocialAccount('google', sessionToken)
+      setLinkStatus(linked ? 'success' : 'error')
+    } catch (error) {
+      console.error('Failed to link Google account:', error)
+      setLinkStatus('error')
+    } finally {
+      setIsLinkingGoogle(false)
+    }
   }
 
   return (
@@ -147,6 +169,27 @@ export function AccountView(): React.JSX.Element {
               <Button size="sm" variant="outline" onClick={handleOpenSettings}>
                 {notificationStatus === 'denied' ? 'Open System Settings' : 'Manage in System Settings'}
               </Button>
+            )}
+          </div>
+        </CollapsibleSection>
+
+        {/* Google Accounts — collapsible */}
+        <CollapsibleSection
+          title="Google Accounts"
+          icon={<Link className="h-5 w-5 text-muted-foreground" />}
+        >
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Link additional Google accounts to import multiple calendars.
+            </p>
+            <Button size="sm" onClick={handleLinkGoogleAccount} disabled={isLinkingGoogle}>
+              {isLinkingGoogle ? 'Linking...' : 'Link Google Account'}
+            </Button>
+            {linkStatus === 'success' && (
+              <p className="text-xs text-green-600">Account linked. Refresh Settings to select it.</p>
+            )}
+            {linkStatus === 'error' && (
+              <p className="text-xs text-red-600">Link failed. Please try again.</p>
             )}
           </div>
         </CollapsibleSection>

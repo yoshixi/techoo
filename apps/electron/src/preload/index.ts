@@ -61,7 +61,10 @@ const api = {
     ipcRenderer.invoke('notification:open-settings'),
   // OAuth social sign-in via popup BrowserWindow
   signInWithOAuth: (provider: string): Promise<string | null> =>
-    ipcRenderer.invoke('auth:social-sign-in', provider)
+    ipcRenderer.invoke('auth:social-sign-in', provider),
+  // Link additional social account for the current user
+  linkSocialAccount: (provider: string, sessionToken: string): Promise<boolean> =>
+    ipcRenderer.invoke('auth:social-link', provider, sessionToken)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

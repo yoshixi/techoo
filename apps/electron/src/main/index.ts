@@ -70,6 +70,12 @@ interface OAuthCallbackServer {
   close: () => void
 }
 
+interface OAuthLinkCallbackServer {
+  port: number
+  waitForResult: () => Promise<boolean>
+  close: () => void
+}
+
 function startOAuthCallbackServer(): Promise<OAuthCallbackServer> {
   return new Promise((resolveSetup) => {
     let resolveToken: ((token: string | null) => void) | null = null
@@ -116,6 +122,59 @@ function startOAuthCallbackServer(): Promise<OAuthCallbackServer> {
       resolveSetup({
         port,
         waitForToken: () => tokenPromise,
+        close: () => {
+          clearTimeout(timeout)
+          server.close()
+        },
+      })
+    })
+  })
+}
+
+function startOAuthLinkCallbackServer(): Promise<OAuthLinkCallbackServer> {
+  return new Promise((resolveSetup) => {
+    let resolveResult: ((linked: boolean) => void) | null = null
+    const resultPromise = new Promise<boolean>((resolve) => {
+      resolveResult = resolve
+    })
+
+    const timeout = setTimeout(() => {
+      if (resolveResult) {
+        resolveResult(false)
+        resolveResult = null
+      }
+    }, 5 * 60 * 1000)
+
+    const server: Server = createServer((req, res) => {
+      if (!req.url?.startsWith('/callback')) {
+        res.writeHead(404)
+        res.end()
+        return
+      }
+
+      const url = new URL(req.url, 'http://localhost')
+      const linked = url.searchParams.get('linked') === '1'
+
+      res.writeHead(200, { 'Content-Type': 'text/html' })
+      res.end(
+        linked
+          ? '<html><body style="font-family:system-ui;text-align:center;padding:3rem"><h1>Account linked</h1><p>You can close this window and return to the app.</p></body></html>'
+          : '<html><body style="font-family:system-ui;text-align:center;padding:3rem"><h1>Link failed</h1><p>Please close this window and try again.</p></body></html>'
+      )
+
+      clearTimeout(timeout)
+      if (resolveResult) {
+        resolveResult(linked)
+        resolveResult = null
+      }
+    })
+
+    server.listen(0, '127.0.0.1', () => {
+      const addr = server.address()
+      const port = typeof addr === 'object' && addr ? addr.port : 0
+      resolveSetup({
+        port,
+        waitForResult: () => resultPromise,
         close: () => {
           clearTimeout(timeout)
           server.close()
@@ -345,6 +404,54 @@ app.whenReady().then(() => {
       callbackServer.close()
     }
   })
+
+  ipcMain.handle(
+    'auth:social-link',
+    async (_event, provider: string, sessionToken: string) => {
+      const apiUrl = `${import.meta.env.MAIN_VITE_API_BASE_URL || 'http://localhost:8787'}/api`
+
+      const callbackServer = await startOAuthLinkCallbackServer()
+      const callbackURL = `http://127.0.0.1:${callbackServer.port}/callback?linked=1`
+
+      try {
+        const response = await fetch(`${apiUrl}/auth/link-social`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${sessionToken}`,
+            Cookie: `better-auth.session_token=${sessionToken}`
+          },
+          body: JSON.stringify({
+            provider,
+            callbackURL,
+            disableRedirect: true
+          })
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to start link flow: ${response.status}`)
+        }
+
+        const data = (await response.json()) as { url?: string }
+        if (!data.url) {
+          throw new Error('Missing OAuth URL for link flow')
+        }
+
+        shell.openExternal(data.url)
+
+        setTimeout(() => {
+          if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore()
+            mainWindow.focus()
+          }
+        }, 1000)
+
+        return await callbackServer.waitForResult()
+      } finally {
+        callbackServer.close()
+      }
+    }
+  )
 
   // Timer states updates from renderer for tray display (supports multiple timers)
   ipcMain.on(
