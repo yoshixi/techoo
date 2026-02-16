@@ -1,9 +1,24 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import useSwr from 'swr'
 import { Button } from './ui/button'
 import { Keyboard, Bell, CheckCircle, XCircle, AlertCircle, LogOut, User, ChevronDown, ChevronRight, Link } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { customInstance } from '../lib/api/mutator'
 
 type NotificationPermissionStatus = 'granted' | 'denied' | 'not-determined'
+
+type OAuthAccount = {
+  id: string
+  userId: string
+  providerType: string
+  accountId: string
+  createdAt: string
+  updatedAt: string
+}
+
+type OAuthAccountsResponse = {
+  accounts: OAuthAccount[]
+}
 
 const keyboardShortcuts = [
   { keys: ['⌘', 'N'], description: 'Create a new task' },
@@ -75,6 +90,20 @@ export function AccountView(): React.JSX.Element {
   const [isRequesting, setIsRequesting] = useState(false)
   const [isLinkingGoogle, setIsLinkingGoogle] = useState(false)
   const [linkStatus, setLinkStatus] = useState<'success' | 'error' | null>(null)
+  const {
+    data: googleAccountsData,
+    isLoading: isGoogleAccountsLoading,
+    mutate: refreshGoogleAccounts
+  } = useSwr(['/api/oauth/google/accounts'], () =>
+    customInstance<OAuthAccountsResponse>({
+      url: '/api/oauth/google/accounts',
+      method: 'GET'
+    })
+  )
+  const googleAccounts = useMemo(
+    () => googleAccountsData?.accounts ?? [],
+    [googleAccountsData?.accounts]
+  )
 
   useEffect(() => {
     window.api.getNotificationPermission().then(setNotificationStatus)
@@ -111,6 +140,9 @@ export function AccountView(): React.JSX.Element {
     try {
       const linked = await window.api.linkSocialAccount('google', sessionToken)
       setLinkStatus(linked ? 'success' : 'error')
+      if (linked) {
+        await refreshGoogleAccounts()
+      }
     } catch (error) {
       console.error('Failed to link Google account:', error)
       setLinkStatus('error')
@@ -182,6 +214,21 @@ export function AccountView(): React.JSX.Element {
             <p className="text-sm text-muted-foreground">
               Link additional Google accounts to import multiple calendars.
             </p>
+            <div className="space-y-2">
+              {isGoogleAccountsLoading ? (
+                <p className="text-xs text-muted-foreground">Loading linked accounts...</p>
+              ) : googleAccounts.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No Google accounts linked yet.</p>
+              ) : (
+                <div className="space-y-1">
+                  {googleAccounts.map((account, index) => (
+                    <div key={account.id} className="text-xs text-muted-foreground">
+                      Account {index + 1} • {account.accountId.slice(-6)}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <Button size="sm" onClick={handleLinkGoogleAccount} disabled={isLinkingGoogle}>
               {isLinkingGoogle ? 'Linking...' : 'Link Google Account'}
             </Button>

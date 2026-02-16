@@ -419,7 +419,8 @@ app.whenReady().then(() => {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${sessionToken}`,
-            Cookie: `better-auth.session_token=${sessionToken}`
+            Cookie: `better-auth.session_token=${sessionToken}`,
+            Origin: import.meta.env.MAIN_VITE_API_BASE_URL || 'http://localhost:8787'
           },
           body: JSON.stringify({
             provider,
