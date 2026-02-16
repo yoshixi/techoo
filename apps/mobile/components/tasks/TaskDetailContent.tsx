@@ -9,7 +9,6 @@ import {
   usePutApiTasksId,
   useDeleteApiTasksId,
   useGetApiTasksTaskIdTimers,
-  getGetApiTasksKey,
 } from '@/gen/api/endpoints/shuchuAPI.gen';
 import { Text } from '@/components/ui/text';
 import { Input, TextArea } from '@/components/ui/input';
@@ -27,6 +26,14 @@ import { formatDateTime } from '@/lib/time';
 export interface TaskDetailContentProps {
   taskId: string;
 }
+
+// Helper to refresh all task queries (including filtered ones)
+const refreshAllTasks = (mutate: ReturnType<typeof useSWRConfig>['mutate']) =>
+  mutate(
+    (key) => Array.isArray(key) && key[0] === '/api/tasks',
+    undefined,
+    { revalidate: true }
+  );
 
 export function TaskDetailContent({ taskId }: TaskDetailContentProps) {
   const router = useRouter();
@@ -57,7 +64,7 @@ export function TaskDetailContent({ taskId }: TaskDetailContentProps) {
     async (data: { title?: string; description?: string }) => {
       if (!task) return;
       await updateTask(data);
-      await mutate(getGetApiTasksKey());
+      await refreshAllTasks(mutate);
     },
     [task, updateTask, mutate]
   );
@@ -88,7 +95,7 @@ export function TaskDetailContent({ taskId }: TaskDetailContentProps) {
         style: 'destructive',
         onPress: async () => {
           await deleteTask({});
-          await mutate(getGetApiTasksKey());
+          await refreshAllTasks(mutate);
           router.back();
         },
       },
@@ -100,7 +107,7 @@ export function TaskDetailContent({ taskId }: TaskDetailContentProps) {
     await updateTask({
       completedAt: task.completedAt ? null : new Date().toISOString(),
     });
-    await mutate(getGetApiTasksKey());
+    await refreshAllTasks(mutate);
   }, [task, updateTask, mutate]);
 
   const handleDateChange = useCallback(
@@ -112,7 +119,7 @@ export function TaskDetailContent({ taskId }: TaskDetailContentProps) {
             ? { startAt: selectedDate.toISOString() }
             : { dueDate: selectedDate.toISOString() };
         await updateTask(update);
-        await mutate(getGetApiTasksKey());
+        await refreshAllTasks(mutate);
       }
     },
     [datePickerMode, task, updateTask, mutate]
@@ -121,7 +128,7 @@ export function TaskDetailContent({ taskId }: TaskDetailContentProps) {
   const handleClearDate = useCallback(
     async (field: 'startAt' | 'dueDate') => {
       await updateTask({ [field]: null });
-      await mutate(getGetApiTasksKey());
+      await refreshAllTasks(mutate);
     },
     [updateTask, mutate]
   );
@@ -129,7 +136,7 @@ export function TaskDetailContent({ taskId }: TaskDetailContentProps) {
   const handleTagsChange = useCallback(
     async (tagIds: string[]) => {
       await updateTask({ tagIds });
-      await mutate(getGetApiTasksKey());
+      await refreshAllTasks(mutate);
     },
     [updateTask, mutate]
   );

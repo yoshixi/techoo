@@ -3,7 +3,7 @@ import { View, Modal, Pressable, KeyboardAvoidingView, Platform } from 'react-na
 import { X, Calendar } from 'lucide-react-native';
 import { useSWRConfig } from 'swr';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { usePostApiTasks, getGetApiTasksKey } from '@/gen/api/endpoints/shuchuAPI.gen';
+import { usePostApiTasks } from '@/gen/api/endpoints/shuchuAPI.gen';
 import { Text } from '@/components/ui/text';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -52,7 +52,12 @@ export function CreateTaskSheet({
         startAt: startAt?.toISOString(),
         endAt: endAt?.toISOString(),
       });
-      await mutate(getGetApiTasksKey());
+      // Refresh all task queries (including filtered ones)
+      await mutate(
+        (key) => Array.isArray(key) && key[0] === '/api/tasks',
+        undefined,
+        { revalidate: true }
+      );
       setTitle('');
       setStartAt(null);
       setEndAt(null);

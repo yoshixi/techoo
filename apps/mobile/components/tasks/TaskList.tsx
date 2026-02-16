@@ -3,20 +3,25 @@ import { View, FlatList, RefreshControl, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { useSWRConfig } from 'swr';
-import { useGetApiTasks, useGetApiTimers, getGetApiTasksKey } from '@/gen/api/endpoints/shuchuAPI.gen';
+import { useGetApiTasks, useGetApiTimers } from '@/gen/api/endpoints/shuchuAPI.gen';
 import type { Task, TaskTimer } from '@/gen/api/schemas';
 import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TaskListItem } from './TaskListItem';
-import { TaskFilters, type FilterState, type SortState } from './TaskFilters';
+import { TaskFilterButton, type FilterState, type SortState } from './TaskFilters';
+import { FilterSheet } from './FilterSheet';
 import { InProgressSection } from './InProgressSection';
 import { CreateTaskSheet } from './CreateTaskSheet';
+import { QuickStartTask } from './QuickStartTask';
+import { TodayTasks } from './TodayTasks';
+import { startOfDay, addDays } from '@/lib/time';
 
 export function TaskList() {
   const router = useRouter();
   const { mutate } = useSWRConfig();
   const [showCreateSheet, setShowCreateSheet] = useState(false);
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     showCompleted: false,
     selectedTagIds: [],
@@ -57,13 +62,39 @@ export function TaskList() {
     return tasks.filter((task) => activeTimerByTaskId[task.id]);
   }, [tasks, activeTimerByTaskId]);
 
-  // Other tasks
+  // Today's tasks (scheduled for today, excluding in-progress)
+  const todayTasks = useMemo(() => {
+    const todayStart = startOfDay(new Date());
+    const todayEnd = addDays(todayStart, 1);
+
+    return tasks.filter((task) => {
+      if (activeTimerByTaskId[task.id]) return false; // Exclude in-progress
+      if (!task.startAt) return false;
+      const taskStart = new Date(task.startAt);
+      return taskStart >= todayStart && taskStart < todayEnd;
+    });
+  }, [tasks, activeTimerByTaskId]);
+
+  // Other tasks (not in-progress, not today)
   const otherTasks = useMemo(() => {
-    return tasks.filter((task) => !activeTimerByTaskId[task.id]);
+    const todayStart = startOfDay(new Date());
+    const todayEnd = addDays(todayStart, 1);
+
+    return tasks.filter((task) => {
+      if (activeTimerByTaskId[task.id]) return false; // Exclude in-progress
+      if (!task.startAt) return true; // Include unscheduled
+      const taskStart = new Date(task.startAt);
+      return taskStart < todayStart || taskStart >= todayEnd; // Exclude today
+    });
   }, [tasks, activeTimerByTaskId]);
 
   const handleRefresh = useCallback(async () => {
-    await mutate(getGetApiTasksKey());
+    // Mutate all task queries by using a filter function
+    await mutate(
+      (key) => Array.isArray(key) && key[0] === '/api/tasks',
+      undefined,
+      { revalidate: true }
+    );
   }, [mutate]);
 
   const handleTaskPress = useCallback(
@@ -105,13 +136,6 @@ export function TaskList() {
 
   return (
     <View className="flex-1">
-      <TaskFilters
-        filters={filters}
-        sort={sort}
-        onFiltersChange={setFilters}
-        onSortChange={setSort}
-      />
-
       {isLoading ? (
         <View className="p-4 gap-3">
           <Skeleton className="h-20 w-full rounded-lg" />
@@ -128,13 +152,34 @@ export function TaskList() {
             <RefreshControl refreshing={isValidating} onRefresh={handleRefresh} />
           }
           ListHeaderComponent={
-            inProgressTasks.length > 0 ? (
-              <InProgressSection
-                tasks={inProgressTasks}
+            <View>
+              <View className="flex-row items-center justify-between mb-2">
+                <Text className="text-lg font-semibold">Tasks</Text>
+                <TaskFilterButton
+                  filters={filters}
+                  sort={sort}
+                  onPress={() => setShowFilterSheet(true)}
+                />
+              </View>
+              <QuickStartTask />
+              {inProgressTasks.length > 0 && (
+                <InProgressSection
+                  tasks={inProgressTasks}
+                  activeTimerByTaskId={activeTimerByTaskId}
+                  onTaskPress={handleTaskPress}
+                />
+              )}
+              <TodayTasks
+                tasks={todayTasks}
                 activeTimerByTaskId={activeTimerByTaskId}
                 onTaskPress={handleTaskPress}
               />
-            ) : null
+              {otherTasks.length > 0 && (
+                <Text className="text-sm font-medium text-muted-foreground mb-2 mt-2">
+                  Other Tasks
+                </Text>
+              )}
+            </View>
           }
           ListEmptyComponent={
             <View className="items-center justify-center py-8">
@@ -155,6 +200,14 @@ export function TaskList() {
       </Pressable>
 
       <CreateTaskSheet visible={showCreateSheet} onClose={handleCreateClose} />
+      <FilterSheet
+        visible={showFilterSheet}
+        onClose={() => setShowFilterSheet(false)}
+        filters={filters}
+        sort={sort}
+        onFiltersChange={setFilters}
+        onSortChange={setSort}
+      />
     </View>
   );
 }
