@@ -180,7 +180,8 @@ app.get('/desktop-oauth', async (c) => {
   const baseUrl = url.origin
   const callbackURL = `${baseUrl}/api/desktop-auth-callback?port=${port}`
 
-  // Call better-auth internally to get the OAuth URL + state cookie
+  // Call better-auth handler in-process (no network hop) to generate the OAuth
+  // URL and set the state cookie on the browser response.
   const auth = createAuth()
   const authResponse = await auth.handler(
     new Request(`${baseUrl}/api/auth/sign-in/social`, {
