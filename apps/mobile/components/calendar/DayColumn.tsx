@@ -6,11 +6,12 @@ import Animated, {
   useAnimatedStyle,
   runOnJS,
 } from 'react-native-reanimated';
-import type { Task } from '@/gen/api/schemas';
+import type { Task, CalendarEvent } from '@/gen/api/schemas';
 import { Text } from '@/components/ui/text';
 import { TaskBlock } from './TaskBlock';
+import { EventBlock } from './EventBlock';
 import { isToday } from '@/lib/time';
-import { calculateTaskLayoutsForDay } from '@/lib/calendar-utils';
+import { calculateTaskLayoutsForDay, calculateEventLayoutsForDay } from '@/lib/calendar-utils';
 
 export interface TimeRange {
   startAt: Date;
@@ -20,7 +21,9 @@ export interface TimeRange {
 export interface DayColumnProps {
   date: Date;
   tasks: Task[];
-  activeTimerTaskIds: Set<string>;
+  events?: CalendarEvent[];
+  calendarColorMap?: Record<string, string | null>;
+  activeTimerTaskIds: Set<number>;
   hourHeight: number;
   columnWidth: number;
   onTaskPress: (task: Task) => void;
@@ -35,6 +38,8 @@ const SLOT_MINUTES = 15; // 15-minute increments
 export function DayColumn({
   date,
   tasks,
+  events = [],
+  calendarColorMap = {},
   activeTimerTaskIds,
   hourHeight,
   columnWidth,
@@ -50,6 +55,12 @@ export function DayColumn({
   const taskLayouts = useMemo(
     () => calculateTaskLayoutsForDay(tasks, date, SLOT_MINUTES),
     [tasks, date]
+  );
+
+  // Calculate event layouts
+  const eventLayouts = useMemo(
+    () => calculateEventLayoutsForDay(events, date, SLOT_MINUTES),
+    [events, date]
   );
 
   // Shared values for drag selection
@@ -210,6 +221,31 @@ export function DayColumn({
 
           {/* Selection preview */}
           <Animated.View style={selectionAnimatedStyle} pointerEvents="none" />
+
+          {/* Event blocks from Google Calendar */}
+          {eventLayouts.map((layout) => {
+            const { event, startDate: evStart, endDate: evEnd, lane, laneCount } = layout;
+            const evStartMinutes = evStart.getHours() * 60 + evStart.getMinutes();
+            const evTop = (evStartMinutes / 60) * hourHeight;
+            const evDuration = (evEnd.getTime() - evStart.getTime()) / 60000;
+            const evHeight = (evDuration / 60) * hourHeight;
+
+            const availableWidth = columnWidth - 4;
+            const evLaneWidth = availableWidth / laneCount;
+            const evLeft = 2 + lane * evLaneWidth;
+
+            return (
+              <EventBlock
+                key={`event-${event.id}`}
+                event={event}
+                top={evTop}
+                height={Math.max(evHeight, 20)}
+                width={evLaneWidth - 2}
+                left={evLeft}
+                calendarColor={calendarColorMap[event.calendarId]}
+              />
+            );
+          })}
 
           {/* Task blocks with lane-based layout for overlapping tasks */}
           {taskLayouts.map((layout) => {

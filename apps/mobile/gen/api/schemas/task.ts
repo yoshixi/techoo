@@ -8,8 +8,12 @@
 import type { Tag } from './tag';
 
 export interface Task {
-  /** Unique identifier for the task */
-  id: string;
+  /**
+   * Unique identifier for the task
+   * @minimum 0
+   * @exclusiveMinimum
+   */
+  id: number;
   /**
    * Title of the task
    * @minLength 1

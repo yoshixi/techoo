@@ -17,7 +17,7 @@ export const API_BASE_URL = getApiBaseUrl()
 export interface CustomRequestConfig {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
   url: string
-  params?: Record<string, string | number | boolean | null | undefined | string[]>
+  params?: Record<string, string | number | boolean | null | undefined | string[] | number[]>
   data?: unknown
   headers?: Record<string, string>
   responseType?: 'json' | 'text'

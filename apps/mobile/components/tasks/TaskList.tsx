@@ -50,7 +50,7 @@ export function TaskList() {
 
   // Map of taskId to active timer
   const activeTimerByTaskId = useMemo(() => {
-    const map: Record<string, TaskTimer> = {};
+    const map: Record<number, TaskTimer> = {};
     activeTimers.forEach((timer) => {
       map[timer.taskId] = timer;
     });
@@ -145,7 +145,7 @@ export function TaskList() {
       ) : (
         <FlatList
           data={otherTasks}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           renderItem={renderTask}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
           refreshControl={

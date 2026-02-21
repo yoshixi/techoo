@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatDateTime, formatElapsedTime, calculateDurationSeconds } from '@/lib/time';
 
 export interface ActivityTimelineProps {
-  taskId: string;
+  taskId: number;
 }
 
 export function ActivityTimeline({ taskId }: ActivityTimelineProps) {

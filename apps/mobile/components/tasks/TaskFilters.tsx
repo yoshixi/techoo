@@ -3,7 +3,7 @@ import { SlidersHorizontal } from 'lucide-react-native';
 
 export interface FilterState {
   showCompleted: boolean;
-  selectedTagIds: string[];
+  selectedTagIds: number[];
 }
 
 export interface SortState {

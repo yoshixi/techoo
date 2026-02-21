@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 
 export interface TimerControlsProps {
-  taskId: string;
+  taskId: number;
   activeTimer?: TaskTimer;
 }
 

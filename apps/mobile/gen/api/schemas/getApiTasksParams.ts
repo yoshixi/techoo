@@ -10,6 +10,7 @@ import type { GetApiTasksHasActiveTimer } from './getApiTasksHasActiveTimer';
 import type { GetApiTasksScheduled } from './getApiTasksScheduled';
 import type { GetApiTasksSortBy } from './getApiTasksSortBy';
 import type { GetApiTasksOrder } from './getApiTasksOrder';
+import type { GetApiTasksNullsLast } from './getApiTasksNullsLast';
 
 export type GetApiTasksParams = {
   /**
@@ -41,7 +42,11 @@ export type GetApiTasksParams = {
    */
   order?: GetApiTasksOrder;
   /**
+   * When true, tasks with null values for the sort field appear last. Useful for sorting by startAt to show scheduled tasks first, then unscheduled tasks
+   */
+  nullsLast?: GetApiTasksNullsLast;
+  /**
    * Filter tasks by tag IDs (comma-separated). Returns tasks with ANY of the specified tags (OR logic)
    */
-  tags?: string[];
+  tags?: number[];
 };

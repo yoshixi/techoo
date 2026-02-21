@@ -364,6 +364,65 @@ app.get('/mobile-auth-callback', async (c) => {
     `${redirectUri}${separator}session_token=${encodeURIComponent(sessionToken)}`
   )
 })
+
+// Mobile app account linking initiation: same as desktop-link but uses deep link redirect
+app.get('/mobile-link', async (c) => {
+  const provider = c.req.query('provider')
+  const redirectUri = c.req.query('redirect_uri')
+  const sessionToken = c.req.query('session_token')
+  if (!provider || !redirectUri || !sessionToken) {
+    return c.text('Missing provider, redirect_uri, or session_token parameter', 400)
+  }
+
+  const url = new URL(c.req.url)
+  const baseUrl = url.origin
+  const callbackURL = `${baseUrl}/api/mobile-link-callback?redirect_uri=${encodeURIComponent(redirectUri)}`
+
+  const auth = createAuth()
+  const authResponse = await auth.handler(
+    new Request(`${baseUrl}/api/auth/link-social`, {
+      method: 'POST',
+      headers: new Headers({
+        'Content-Type': 'application/json',
+        Origin: baseUrl,
+        Authorization: `Bearer ${sessionToken}`
+      }),
+      body: JSON.stringify({ provider, callbackURL, disableRedirect: true })
+    })
+  )
+
+  const setCookies = authResponse.headers.getSetCookie()
+
+  let oauthUrl: string | null = null
+  if (authResponse.ok) {
+    const data = (await authResponse.json()) as { url?: string }
+    oauthUrl = data?.url ?? null
+  }
+
+  if (!oauthUrl) {
+    return c.text('Failed to initiate link flow', 500)
+  }
+
+  const response = new Response(null, {
+    status: 302,
+    headers: { Location: oauthUrl }
+  })
+  for (const cookie of setCookies) {
+    response.headers.append('Set-Cookie', cookie)
+  }
+  return response
+})
+
+// Mobile app account linking callback: reads session cookie and redirects to deep link
+app.get('/mobile-link-callback', async (c) => {
+  const redirectUri = c.req.query('redirect_uri')
+  if (!redirectUri) {
+    return c.text('Missing redirect_uri parameter', 400)
+  }
+
+  const separator = redirectUri.includes('?') ? '&' : '?'
+  return c.redirect(`${redirectUri}${separator}linked=1`)
+})
 // JWT auth middleware — skip public routes
 app.use('/*', async (c, next) => {
   const path = c.req.path
@@ -377,6 +436,8 @@ app.use('/*', async (c, next) => {
     path === '/api/desktop-link' ||
     path === '/api/mobile-oauth' ||
     path === '/api/mobile-auth-callback' ||
+    path === '/api/mobile-link' ||
+    path === '/api/mobile-link-callback' ||
     path === '/api/health' ||
     path === '/api/doc'
   ) {

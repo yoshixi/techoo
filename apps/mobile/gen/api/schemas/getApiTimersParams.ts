@@ -10,5 +10,5 @@ export type GetApiTimersParams = {
   /**
    * IDs of the tasks to get timers for
    */
-  taskIds?: string[];
+  taskIds?: number[];
 };

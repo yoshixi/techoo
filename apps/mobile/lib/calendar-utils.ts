@@ -2,7 +2,7 @@
  * Shared calendar utilities for mobile app
  * Ported from apps/electron/src/renderer/src/lib/calendar-utils.ts
  */
-import type { Task } from '@/gen/api/schemas';
+import type { Task, CalendarEvent } from '@/gen/api/schemas';
 
 // ============================================================================
 // Constants
@@ -157,4 +157,85 @@ export const calculateTaskLayoutsForDay = (
   });
 
   return assignLanes(layouts);
+};
+
+// ============================================================================
+// Event Layout (for Google Calendar events)
+// ============================================================================
+
+export type EventLayout = {
+  event: CalendarEvent;
+  startSlot: number;
+  endSlot: number;
+  lane: number;
+  laneCount: number;
+  startDate: Date;
+  endDate: Date;
+};
+
+/**
+ * Calculates event layouts for a given day.
+ * Similar to calculateTaskLayoutsForDay but for CalendarEvent objects.
+ */
+export const calculateEventLayoutsForDay = (
+  events: CalendarEvent[],
+  baseDate: Date,
+  slotMinutes: number = 15
+): EventLayout[] => {
+  const slotCount = MINUTES_PER_DAY / slotMinutes;
+  const baseTime = startOfDay(baseDate).getTime();
+  const layouts: EventLayout[] = [];
+
+  events.forEach((event) => {
+    if (event.isAllDay) return;
+
+    const eventStart = new Date(event.startAt);
+    const eventEnd = new Date(event.endAt);
+    if (Number.isNaN(eventStart.getTime()) || Number.isNaN(eventEnd.getTime())) return;
+
+    const startDayTime = startOfDay(eventStart).getTime();
+    if (startDayTime !== baseTime) return;
+
+    const startMinutes = eventStart.getHours() * 60 + eventStart.getMinutes();
+    const endMinutesRaw = eventEnd.getHours() * 60 + eventEnd.getMinutes();
+    const endMinutes = clamp(
+      endMinutesRaw <= startMinutes ? startMinutes + slotMinutes : endMinutesRaw,
+      0,
+      MINUTES_PER_DAY
+    );
+
+    const startSlot = clamp(Math.floor(startMinutes / slotMinutes), 0, slotCount - 1);
+    const endSlot = clamp(Math.ceil(endMinutes / slotMinutes), startSlot + 1, slotCount);
+
+    layouts.push({
+      event,
+      startSlot,
+      endSlot,
+      lane: 0,
+      laneCount: 1,
+      startDate: eventStart,
+      endDate: eventEnd,
+    });
+  });
+
+  // Reuse the same lane assignment algorithm
+  const lanesEnd: number[] = [];
+  const sorted = [...layouts].sort((a, b) => {
+    if (a.startSlot === b.startSlot) return a.endSlot - b.endSlot;
+    return a.startSlot - b.startSlot;
+  });
+
+  sorted.forEach((item) => {
+    let laneIndex = lanesEnd.findIndex((endSlot) => item.startSlot >= endSlot);
+    if (laneIndex === -1) {
+      laneIndex = lanesEnd.length;
+      lanesEnd.push(item.endSlot);
+    } else {
+      lanesEnd[laneIndex] = item.endSlot;
+    }
+    item.lane = laneIndex;
+  });
+
+  const laneCount = Math.max(lanesEnd.length, 1);
+  return sorted.map((item) => ({ ...item, laneCount }));
 };

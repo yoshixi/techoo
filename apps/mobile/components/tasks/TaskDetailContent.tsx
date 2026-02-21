@@ -24,7 +24,7 @@ import { ActivityTimeline } from '@/components/activities/ActivityTimeline';
 import { formatDateTime } from '@/lib/time';
 
 export interface TaskDetailContentProps {
-  taskId: string;
+  taskId: number;
 }
 
 // Helper to refresh all task queries (including filtered ones)
@@ -134,7 +134,7 @@ export function TaskDetailContent({ taskId }: TaskDetailContentProps) {
   );
 
   const handleTagsChange = useCallback(
-    async (tagIds: string[]) => {
+    async (tagIds: number[]) => {
       await updateTask({ tagIds });
       await refreshAllTasks(mutate);
     },

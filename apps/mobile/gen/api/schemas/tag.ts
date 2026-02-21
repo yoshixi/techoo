@@ -7,8 +7,12 @@
  */
 
 export interface Tag {
-  /** Unique identifier for the tag */
-  id: string;
+  /**
+   * Unique identifier for the tag
+   * @minimum 0
+   * @exclusiveMinimum
+   */
+  id: number;
   /**
    * Name of the tag
    * @minLength 1

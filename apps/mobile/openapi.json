@@ -37,10 +37,11 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
             "description": "Unique identifier for the tag",
-            "example": "01234567-89ab-cdef-0123-456789abcdef"
+            "example": 1
           },
           "name": {
             "type": "string",
@@ -73,10 +74,11 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
             "description": "Unique identifier for the task",
-            "example": "01234567-89ab-cdef-0123-456789abcdef"
+            "example": 1
           },
           "title": {
             "type": "string",
@@ -243,10 +245,11 @@
           "tagIds": {
             "type": "array",
             "items": {
-              "type": "string",
-              "format": "uuid",
-              "description": "UUID format",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "description": "Numeric ID",
+              "example": 1
             },
             "description": "Array of tag IDs to associate with the task",
             "example": []
@@ -302,10 +305,11 @@
           "tagIds": {
             "type": "array",
             "items": {
-              "type": "string",
-              "format": "uuid",
-              "description": "UUID format",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "description": "Numeric ID",
+              "example": 1
             },
             "description": "Array of tag IDs to associate with the task. Replaces all existing tags",
             "example": []
@@ -316,22 +320,25 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
             "description": "Unique identifier for the comment",
-            "example": "01234567-89ab-cdef-0123-456789abcdef"
+            "example": 1
           },
           "taskId": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
             "description": "Task ID associated with this comment",
-            "example": "01234567-89ab-cdef-0123-456789abcdef"
+            "example": 1
           },
           "authorId": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
             "description": "Author (user) ID of the comment",
-            "example": "01234567-89ab-cdef-0123-456789abcdef"
+            "example": 1
           },
           "body": {
             "type": "string",
@@ -422,16 +429,18 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
             "description": "Unique identifier for the timer",
-            "example": "01234567-89ab-cdef-0123-456789abcdef"
+            "example": 1
           },
           "taskId": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
             "description": "ID of the associated task",
-            "example": "01234567-89ab-cdef-0123-456789abcdef"
+            "example": 1
           },
           "startTime": {
             "type": "string",
@@ -559,10 +568,11 @@
         "type": "object",
         "properties": {
           "taskId": {
-            "type": "string",
-            "format": "uuid",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
             "description": "ID of the task to start timer for",
-            "example": "01234567-89ab-cdef-0123-456789abcdef"
+            "example": 1
           },
           "startTime": {
             "type": "string",
@@ -653,6 +663,574 @@
             "example": "high-priority"
           }
         }
+      },
+      "OAuthStatusResponse": {
+        "type": "object",
+        "properties": {
+          "connected": {
+            "type": "boolean",
+            "description": "Whether the user has a valid OAuth connection"
+          },
+          "providerType": {
+            "type": "string",
+            "enum": [
+              "google",
+              "outlook",
+              "apple"
+            ],
+            "description": "The connected provider type"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Token expiration timestamp"
+          }
+        },
+        "required": [
+          "connected"
+        ]
+      },
+      "OAuthDisconnectResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the disconnect was successful"
+          },
+          "message": {
+            "type": "string",
+            "description": "Result message",
+            "example": "Google OAuth disconnected successfully"
+          }
+        },
+        "required": [
+          "success",
+          "message"
+        ]
+      },
+      "OAuthAccount": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the account record"
+          },
+          "userId": {
+            "type": "string",
+            "description": "User ID"
+          },
+          "providerType": {
+            "type": "string",
+            "enum": [
+              "google",
+              "outlook",
+              "apple"
+            ],
+            "description": "OAuth provider type",
+            "example": "google"
+          },
+          "accountId": {
+            "type": "string",
+            "description": "Provider-specific account ID"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email associated with the provider account"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Timestamp when the account was linked",
+            "example": "2024-01-01T10:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Timestamp when the account was last updated",
+            "example": "2024-01-01T15:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "providerType",
+          "accountId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "OAuthAccountsResponse": {
+        "type": "object",
+        "properties": {
+          "accounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OAuthAccount"
+            },
+            "description": "Linked OAuth accounts"
+          }
+        },
+        "required": [
+          "accounts"
+        ]
+      },
+      "AvailableCalendar": {
+        "type": "object",
+        "properties": {
+          "providerAccountId": {
+            "type": "string",
+            "description": "Provider-specific account ID",
+            "example": "google-oauth-sub"
+          },
+          "providerCalendarId": {
+            "type": "string",
+            "description": "Provider-specific calendar ID",
+            "example": "primary"
+          },
+          "name": {
+            "type": "string",
+            "description": "Calendar display name",
+            "example": "Work Calendar"
+          },
+          "color": {
+            "type": "string",
+            "description": "Calendar color",
+            "example": "#4285f4"
+          },
+          "isPrimary": {
+            "type": "boolean",
+            "description": "Whether this is the primary calendar",
+            "example": true
+          },
+          "isAlreadyAdded": {
+            "type": "boolean",
+            "description": "Whether this calendar has already been added",
+            "example": false
+          }
+        },
+        "required": [
+          "providerAccountId",
+          "providerCalendarId",
+          "name",
+          "isAlreadyAdded"
+        ]
+      },
+      "AvailableCalendarsResponse": {
+        "type": "object",
+        "properties": {
+          "calendars": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AvailableCalendar"
+            },
+            "description": "List of available calendars from provider"
+          }
+        },
+        "required": [
+          "calendars"
+        ]
+      },
+      "Calendar": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the calendar"
+          },
+          "userId": {
+            "type": "string",
+            "description": "User ID"
+          },
+          "providerType": {
+            "type": "string",
+            "enum": [
+              "google",
+              "outlook",
+              "apple"
+            ],
+            "description": "Calendar provider type",
+            "example": "google"
+          },
+          "providerAccountId": {
+            "type": "string",
+            "description": "Provider-specific account ID",
+            "example": "google-oauth-sub"
+          },
+          "providerCalendarId": {
+            "type": "string",
+            "description": "Provider-specific calendar ID",
+            "example": "primary"
+          },
+          "name": {
+            "type": "string",
+            "description": "Calendar display name",
+            "example": "Work Calendar"
+          },
+          "color": {
+            "type": "string",
+            "nullable": true,
+            "description": "Calendar color",
+            "example": "#4285f4"
+          },
+          "isEnabled": {
+            "type": "boolean",
+            "description": "Whether the calendar is enabled for sync",
+            "example": true
+          },
+          "lastSyncedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Timestamp of last sync",
+            "example": "2024-01-01T10:00:00.000Z"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Timestamp when the calendar was added",
+            "example": "2024-01-01T10:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Timestamp when the calendar was last updated",
+            "example": "2024-01-01T15:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "providerType",
+          "providerAccountId",
+          "providerCalendarId",
+          "name",
+          "color",
+          "isEnabled",
+          "lastSyncedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CalendarListResponse": {
+        "type": "object",
+        "properties": {
+          "calendars": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Calendar"
+            },
+            "description": "List of integrated calendars"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total number of calendars",
+            "example": 3
+          }
+        },
+        "required": [
+          "calendars",
+          "total"
+        ]
+      },
+      "CalendarResponse": {
+        "type": "object",
+        "properties": {
+          "calendar": {
+            "$ref": "#/components/schemas/Calendar"
+          }
+        },
+        "required": [
+          "calendar"
+        ]
+      },
+      "CreateCalendar": {
+        "type": "object",
+        "properties": {
+          "providerAccountId": {
+            "type": "string",
+            "description": "Provider-specific account ID",
+            "example": "google-oauth-sub"
+          },
+          "providerCalendarId": {
+            "type": "string",
+            "description": "Provider-specific calendar ID to add",
+            "example": "primary"
+          },
+          "name": {
+            "type": "string",
+            "description": "Custom display name (defaults to provider name)",
+            "example": "My Work Calendar"
+          },
+          "isEnabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to enable sync immediately",
+            "example": true
+          }
+        },
+        "required": [
+          "providerAccountId",
+          "providerCalendarId"
+        ]
+      },
+      "UpdateCalendar": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Updated display name",
+            "example": "My Personal Calendar"
+          },
+          "isEnabled": {
+            "type": "boolean",
+            "description": "Whether to enable/disable sync",
+            "example": true
+          }
+        }
+      },
+      "CalendarSyncResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the sync was successful"
+          },
+          "message": {
+            "type": "string",
+            "description": "Sync result message",
+            "example": "Synced 42 events"
+          },
+          "eventsCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of events synced",
+            "example": 42
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "eventsCount"
+        ]
+      },
+      "CalendarEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the event"
+          },
+          "calendarId": {
+            "type": "string",
+            "description": "Calendar ID this event belongs to"
+          },
+          "providerType": {
+            "type": "string",
+            "enum": [
+              "google",
+              "outlook",
+              "apple"
+            ],
+            "description": "Event provider type",
+            "example": "google"
+          },
+          "providerEventId": {
+            "type": "string",
+            "description": "Provider-specific event ID",
+            "example": "abc123xyz"
+          },
+          "title": {
+            "type": "string",
+            "description": "Event title",
+            "example": "Team Meeting"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Event description",
+            "example": "Weekly team sync"
+          },
+          "startAt": {
+            "type": "string",
+            "description": "Event start time",
+            "example": "2024-01-15T10:00:00.000Z"
+          },
+          "endAt": {
+            "type": "string",
+            "description": "Event end time",
+            "example": "2024-01-15T11:00:00.000Z"
+          },
+          "isAllDay": {
+            "type": "boolean",
+            "description": "Whether this is an all-day event",
+            "example": false
+          },
+          "location": {
+            "type": "string",
+            "nullable": true,
+            "description": "Event location",
+            "example": "Conference Room A"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Timestamp when the event was imported",
+            "example": "2024-01-01T10:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Timestamp when the event was last updated",
+            "example": "2024-01-01T15:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "calendarId",
+          "providerType",
+          "providerEventId",
+          "title",
+          "description",
+          "startAt",
+          "endAt",
+          "isAllDay",
+          "location",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CalendarEventListResponse": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalendarEvent"
+            },
+            "description": "List of calendar events"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total number of events",
+            "example": 15
+          }
+        },
+        "required": [
+          "events",
+          "total"
+        ]
+      },
+      "CalendarEventResponse": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "$ref": "#/components/schemas/CalendarEvent"
+          }
+        },
+        "required": [
+          "event"
+        ]
+      },
+      "WatchChannel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "calendarId": {
+            "type": "string"
+          },
+          "channelId": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string"
+          },
+          "providerType": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "token": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "calendarId",
+          "channelId",
+          "resourceId",
+          "providerType",
+          "expiresAt",
+          "token",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "WatchChannelResponse": {
+        "type": "object",
+        "properties": {
+          "watchChannel": {
+            "$ref": "#/components/schemas/WatchChannel"
+          }
+        },
+        "required": [
+          "watchChannel"
+        ]
+      },
+      "StopWatchResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "success",
+          "message"
+        ]
+      },
+      "WatchChannelStatus": {
+        "type": "object",
+        "properties": {
+          "isWatching": {
+            "type": "boolean"
+          },
+          "watchChannel": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WatchChannel"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "expiresIn": {
+            "type": "number",
+            "nullable": true,
+            "description": "Seconds until expiration"
+          }
+        },
+        "required": [
+          "isWatching",
+          "watchChannel",
+          "expiresIn"
+        ]
+      },
+      "WebhookResponse": {
+        "type": "object",
+        "properties": {}
       }
     },
     "parameters": {}
@@ -783,12 +1361,31 @@
           },
           {
             "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "When true, tasks with null values for the sort field appear last. Useful for sorting by startAt to show scheduled tasks first, then unscheduled tasks",
+              "example": true
+            },
+            "required": false,
+            "description": "When true, tasks with null values for the sort field appear last. Useful for sorting by startAt to show scheduled tasks first, then unscheduled tasks",
+            "name": "nullsLast",
+            "in": "query"
+          },
+          {
+            "schema": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "integer",
+                "minimum": 0,
+                "exclusiveMinimum": true,
+                "description": "Numeric ID",
+                "example": 1
               },
               "description": "Filter tasks by tag IDs (comma-separated). Returns tasks with ANY of the specified tags (OR logic)",
-              "example": "01234567-89ab-cdef-0123-456789abcdef,98765432-10ab-cdef-0123-456789abcdef"
+              "example": "1,2"
             },
             "required": false,
             "description": "Filter tasks by tag IDs (comma-separated). Returns tasks with ANY of the specified tags (OR logic)",
@@ -872,10 +1469,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID",
@@ -922,10 +1520,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID",
@@ -991,10 +1590,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID",
@@ -1042,10 +1642,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID for comment operations",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID for comment operations",
@@ -1091,10 +1692,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID for comment operations",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID for comment operations",
@@ -1161,10 +1763,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID for comment operations",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID for comment operations",
@@ -1173,10 +1776,11 @@
           },
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Comment ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Comment ID",
@@ -1222,10 +1826,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID for comment operations",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID for comment operations",
@@ -1234,10 +1839,11 @@
           },
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Comment ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Comment ID",
@@ -1302,10 +1908,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID for comment operations",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID for comment operations",
@@ -1314,10 +1921,11 @@
           },
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Comment ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Comment ID",
@@ -1365,10 +1973,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID",
@@ -1419,15 +2028,16 @@
             "schema": {
               "type": "array",
               "items": {
-                "type": "string",
-                "format": "uuid",
-                "description": "UUID format",
-                "example": "01234567-89ab-cdef-0123-456789abcdef"
+                "type": "integer",
+                "minimum": 0,
+                "exclusiveMinimum": true,
+                "description": "Numeric ID",
+                "example": 1
               },
               "description": "IDs of the tasks to get timers for",
               "example": [
-                "01234567-89ab-cdef-0123-456789abcdef",
-                "01234567-89ab-cdef-0123-456789abcdef"
+                1,
+                2
               ]
             },
             "required": false,
@@ -1522,10 +2132,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Task ID for timer operations",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Task ID for timer operations",
@@ -1574,10 +2185,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Timer ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Timer ID",
@@ -1624,10 +2236,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Timer ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Timer ID",
@@ -1683,10 +2296,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Timer ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Timer ID",
@@ -1808,10 +2422,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Tag ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Tag ID",
@@ -1858,10 +2473,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Tag ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Tag ID",
@@ -1927,10 +2543,11 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "description": "Tag ID",
-              "example": "01234567-89ab-cdef-0123-456789abcdef"
+              "example": 1
             },
             "required": true,
             "description": "Tag ID",
@@ -1968,6 +2585,836 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/oauth/google/status": {
+      "get": {
+        "summary": "Check Google OAuth status",
+        "description": "Check if the user has a valid Google OAuth connection (via better-auth)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Provider-specific account ID"
+            },
+            "required": false,
+            "description": "Provider-specific account ID",
+            "name": "accountId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OAuth status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthStatusResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to check OAuth status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth/google": {
+      "delete": {
+        "summary": "Disconnect Google Calendar data",
+        "description": "Removes all calendar data associated with the Google account. Note: To fully unlink the Google account, use better-auth unlinkAccount.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Provider-specific account ID"
+            },
+            "required": false,
+            "description": "Provider-specific account ID",
+            "name": "accountId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Google Calendar data disconnected successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthDisconnectResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Google OAuth connection found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to disconnect Google OAuth",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth/google/accounts": {
+      "get": {
+        "summary": "List linked Google accounts",
+        "description": "Retrieve linked Google accounts for the current user",
+        "responses": {
+          "200": {
+            "description": "Linked accounts retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthAccountsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to retrieve linked accounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/calendars/available": {
+      "get": {
+        "summary": "List available Google Calendars",
+        "description": "Retrieve available calendars from Google Calendar API that can be synced",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Provider-specific account ID"
+            },
+            "required": true,
+            "description": "Provider-specific account ID",
+            "name": "accountId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Available calendars retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailableCalendarsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Google OAuth not connected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to retrieve calendars",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/calendars": {
+      "get": {
+        "summary": "List integrated calendars",
+        "description": "Retrieve all calendars that have been added for syncing",
+        "responses": {
+          "200": {
+            "description": "Calendars retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to retrieve calendars",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add a calendar to sync",
+        "description": "Add a Google Calendar to be synced",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCalendar"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Calendar added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or calendar already added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Google OAuth not connected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to add calendar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/calendars/{id}": {
+      "get": {
+        "summary": "Get a calendar",
+        "description": "Retrieve a specific calendar by ID",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "description": "Calendar ID",
+              "example": 1
+            },
+            "required": true,
+            "description": "Calendar ID",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Calendar retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Calendar not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to retrieve calendar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update a calendar",
+        "description": "Update calendar settings (e.g., enable/disable sync)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "description": "Calendar ID",
+              "example": 1
+            },
+            "required": true,
+            "description": "Calendar ID",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCalendar"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Calendar updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Calendar not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to update calendar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove a calendar",
+        "description": "Remove a calendar and delete all its synced events",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "description": "Calendar ID",
+              "example": 1
+            },
+            "required": true,
+            "description": "Calendar ID",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Calendar removed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Calendar not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to remove calendar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/calendars/{id}/sync": {
+      "post": {
+        "summary": "Sync a calendar",
+        "description": "Trigger a sync for a specific calendar to import latest events",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "description": "Calendar ID",
+              "example": 1
+            },
+            "required": true,
+            "description": "Calendar ID",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Calendar synced successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarSyncResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Google OAuth not connected or token expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Calendar not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to sync calendar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/calendars/sync": {
+      "post": {
+        "summary": "Sync all calendars",
+        "description": "Trigger a sync for all enabled calendars",
+        "responses": {
+          "200": {
+            "description": "Calendars synced successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarSyncResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Google OAuth not connected or token expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to sync calendars",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events": {
+      "get": {
+        "summary": "List calendar events",
+        "description": "Retrieve calendar events with optional filters (calendarId, startDate, endDate)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "description": "Filter events by calendar ID",
+              "example": 1
+            },
+            "required": false,
+            "description": "Filter events by calendar ID",
+            "name": "calendarId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter events starting from this date (inclusive)",
+              "example": "2024-01-01T00:00:00.000Z"
+            },
+            "required": false,
+            "description": "Filter events starting from this date (inclusive)",
+            "name": "startDate",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter events ending before this date (inclusive)",
+              "example": "2024-01-31T23:59:59.000Z"
+            },
+            "required": false,
+            "description": "Filter events ending before this date (inclusive)",
+            "name": "endDate",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Events retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarEventListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to retrieve events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/{id}": {
+      "get": {
+        "summary": "Get an event",
+        "description": "Retrieve a specific calendar event by ID",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "description": "Event ID",
+              "example": 1
+            },
+            "required": true,
+            "description": "Event ID",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarEventResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Event not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to retrieve event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/calendars/{id}/watch": {
+      "post": {
+        "summary": "Watch calendar for changes",
+        "description": "Start watching a calendar for push notifications when events change",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "description": "Calendar ID",
+              "example": 1
+            },
+            "required": true,
+            "description": "Calendar ID",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Watch channel created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchChannelResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Google OAuth not connected or token expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Calendar not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to create watch channel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Stop watching calendar",
+        "description": "Stop receiving push notifications for a calendar",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "description": "Calendar ID",
+              "example": 1
+            },
+            "required": true,
+            "description": "Calendar ID",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Watch channel stopped successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StopWatchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Google OAuth not connected or token expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Calendar or watch channel not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to stop watch channel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get watch status",
+        "description": "Get the current watch channel status for a calendar",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "description": "Calendar ID",
+              "example": 1
+            },
+            "required": true,
+            "description": "Calendar ID",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Watch status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchChannelStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Calendar not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to retrieve watch status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhooks/google-calendar": {
+      "post": {
+        "summary": "Google Calendar webhook",
+        "description": "Receives push notifications from Google Calendar when events change",
+        "responses": {
+          "200": {
+            "description": "Notification received successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid notification"
           }
         }
       }

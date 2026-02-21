@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 export interface TagPickerProps {
-  selectedTagIds: string[];
-  onTagsChange: (tagIds: string[]) => void;
+  selectedTagIds: number[];
+  onTagsChange: (tagIds: number[]) => void;
 }
 
 export function TagPicker({ selectedTagIds, onTagsChange }: TagPickerProps) {
@@ -24,7 +24,7 @@ export function TagPicker({ selectedTagIds, onTagsChange }: TagPickerProps) {
   const selectedTags = tags.filter((t) => selectedTagIds.includes(t.id));
 
   const handleToggleTag = useCallback(
-    (tagId: string) => {
+    (tagId: number) => {
       const newIds = selectedTagIds.includes(tagId)
         ? selectedTagIds.filter((id) => id !== tagId)
         : [...selectedTagIds, tagId];
@@ -97,7 +97,7 @@ export function TagPicker({ selectedTagIds, onTagsChange }: TagPickerProps) {
 
           <FlatList
             data={tags}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => String(item.id)}
             contentContainerStyle={{ padding: 16 }}
             renderItem={({ item }) => {
               const isSelected = selectedTagIds.includes(item.id);

@@ -9,9 +9,10 @@ import {
   putApiTasksId,
   getGetApiTasksKey,
 } from '@/gen/api/endpoints/shuchuAPI.gen';
-import type { Task } from '@/gen/api/schemas';
+import type { Task, CalendarEvent, Calendar } from '@/gen/api/schemas';
 import { Text } from '@/components/ui/text';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCalendarEvents } from '@/hooks/useCalendarEvents';
 import { CalendarHeader } from './CalendarHeader';
 import { DayColumn, type TimeRange } from './DayColumn';
 import { CurrentTimeIndicator } from './CurrentTimeIndicator';
@@ -55,6 +56,35 @@ export function CalendarView() {
       return taskStart >= start && taskStart < end;
     });
   }, [tasks, selectedDate, viewMode]);
+
+  // Compute date range for calendar events
+  const eventDateRange = useMemo(() => {
+    const start = startOfDay(selectedDate);
+    const end = viewMode === 'day' ? addDays(start, 1) : addDays(start, 7);
+    return { startDate: start, endDate: end };
+  }, [selectedDate, viewMode]);
+
+  const { events: calendarEvents, calendars: syncedCalendars } = useCalendarEvents(eventDateRange);
+
+  // Group events by day
+  const eventsByDay = useMemo(() => {
+    const grouped: Record<string, CalendarEvent[]> = {};
+    calendarEvents.forEach((event) => {
+      const dayKey = startOfDay(new Date(event.startAt)).toISOString();
+      if (!grouped[dayKey]) grouped[dayKey] = [];
+      grouped[dayKey].push(event);
+    });
+    return grouped;
+  }, [calendarEvents]);
+
+  // Build calendar color map
+  const calendarColorMap = useMemo(() => {
+    const map: Record<string, string | null> = {};
+    syncedCalendars.forEach((cal) => {
+      map[cal.id] = cal.color;
+    });
+    return map;
+  }, [syncedCalendars]);
 
   // Group tasks by day (for week view)
   const tasksByDay = useMemo(() => {
@@ -175,6 +205,7 @@ export function CalendarView() {
             {days.map((day) => {
               const dayKey = startOfDay(day).toISOString();
               const dayTasks = tasksByDay[dayKey] || [];
+              const dayEvents = eventsByDay[dayKey] || [];
               const columnWidth =
                 viewMode === 'day'
                   ? SCREEN_WIDTH - 60
@@ -185,6 +216,8 @@ export function CalendarView() {
                   key={dayKey}
                   date={day}
                   tasks={dayTasks}
+                  events={dayEvents}
+                  calendarColorMap={calendarColorMap}
                   activeTimerTaskIds={activeTimerTaskIds}
                   hourHeight={HOUR_HEIGHT}
                   columnWidth={columnWidth}

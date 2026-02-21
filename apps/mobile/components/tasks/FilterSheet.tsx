@@ -42,7 +42,7 @@ export function FilterSheet({
     onFiltersChange({ ...filters, showCompleted: !filters.showCompleted });
   };
 
-  const handleToggleTag = (tagId: string) => {
+  const handleToggleTag = (tagId: number) => {
     const newSelectedTagIds = filters.selectedTagIds.includes(tagId)
       ? filters.selectedTagIds.filter((id) => id !== tagId)
       : [...filters.selectedTagIds, tagId];

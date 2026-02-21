@@ -12,14 +12,29 @@ import useSWRMutation from 'swr/mutation';
 import type { SWRMutationConfiguration } from 'swr/mutation';
 
 import type {
+  AvailableCalendarsResponse,
+  CalendarEventListResponse,
+  CalendarEventResponse,
+  CalendarListResponse,
+  CalendarResponse,
+  CalendarSyncResponse,
+  CreateCalendar,
   CreateTag,
   CreateTask,
   CreateTaskComment,
   CreateTimer,
+  DeleteApiOauthGoogleParams,
   ErrorResponse,
+  GetApiCalendarsAvailableParams,
+  GetApiEventsParams,
+  GetApiOauthGoogleStatusParams,
   GetApiTasksParams,
   GetApiTimersParams,
   HealthResponse,
+  OAuthAccountsResponse,
+  OAuthDisconnectResponse,
+  OAuthStatusResponse,
+  StopWatchResponse,
   TagListResponse,
   TagResponse,
   TaskActivitiesResponse,
@@ -29,10 +44,14 @@ import type {
   TaskResponse,
   TimerListResponse,
   TimerResponse,
+  UpdateCalendar,
   UpdateTag,
   UpdateTask,
   UpdateTaskComment,
   UpdateTimer,
+  WatchChannelResponse,
+  WatchChannelStatus,
+  WebhookResponse,
 } from '../schemas';
 
 import { customInstance } from '../../../lib/api/mutator';
@@ -165,11 +184,11 @@ export const usePostApiTasks = <TError = ErrorResponse | ErrorResponse>(options?
  * Retrieve a specific task by ID
  * @summary Get a task
  */
-export const getApiTasksId = (id: string) => {
+export const getApiTasksId = (id: number) => {
   return customInstance<TaskResponse>({ url: `/api/tasks/${id}`, method: 'GET' });
 };
 
-export const getGetApiTasksIdKey = (id: string) => [`/api/tasks/${id}`] as const;
+export const getGetApiTasksIdKey = (id: number) => [`/api/tasks/${id}`] as const;
 
 export type GetApiTasksIdQueryResult = NonNullable<Awaited<ReturnType<typeof getApiTasksId>>>;
 export type GetApiTasksIdQueryError = ErrorResponse | ErrorResponse;
@@ -178,7 +197,7 @@ export type GetApiTasksIdQueryError = ErrorResponse | ErrorResponse;
  * @summary Get a task
  */
 export const useGetApiTasksId = <TError = ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiTasksId>>, TError> & {
       swrKey?: Key;
@@ -204,7 +223,7 @@ export const useGetApiTasksId = <TError = ErrorResponse | ErrorResponse>(
  * Update an existing task by ID
  * @summary Update a task
  */
-export const putApiTasksId = (id: string, updateTask: UpdateTask) => {
+export const putApiTasksId = (id: number, updateTask: UpdateTask) => {
   return customInstance<TaskResponse>({
     url: `/api/tasks/${id}`,
     method: 'PUT',
@@ -213,12 +232,12 @@ export const putApiTasksId = (id: string, updateTask: UpdateTask) => {
   });
 };
 
-export const getPutApiTasksIdMutationFetcher = (id: string) => {
+export const getPutApiTasksIdMutationFetcher = (id: number) => {
   return (_: Key, { arg }: { arg: UpdateTask }) => {
     return putApiTasksId(id, arg);
   };
 };
-export const getPutApiTasksIdMutationKey = (id: string) => [`/api/tasks/${id}`] as const;
+export const getPutApiTasksIdMutationKey = (id: number) => [`/api/tasks/${id}`] as const;
 
 export type PutApiTasksIdMutationResult = NonNullable<Awaited<ReturnType<typeof putApiTasksId>>>;
 export type PutApiTasksIdMutationError = ErrorResponse | ErrorResponse | ErrorResponse;
@@ -227,7 +246,7 @@ export type PutApiTasksIdMutationError = ErrorResponse | ErrorResponse | ErrorRe
  * @summary Update a task
  */
 export const usePutApiTasksId = <TError = ErrorResponse | ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof putApiTasksId>>,
@@ -255,16 +274,16 @@ export const usePutApiTasksId = <TError = ErrorResponse | ErrorResponse | ErrorR
  * Delete a task by ID
  * @summary Delete a task
  */
-export const deleteApiTasksId = (id: string) => {
+export const deleteApiTasksId = (id: number) => {
   return customInstance<TaskResponse>({ url: `/api/tasks/${id}`, method: 'DELETE' });
 };
 
-export const getDeleteApiTasksIdMutationFetcher = (id: string) => {
+export const getDeleteApiTasksIdMutationFetcher = (id: number) => {
   return (_: Key, __: { arg: Arguments }) => {
     return deleteApiTasksId(id);
   };
 };
-export const getDeleteApiTasksIdMutationKey = (id: string) => [`/api/tasks/${id}`] as const;
+export const getDeleteApiTasksIdMutationKey = (id: number) => [`/api/tasks/${id}`] as const;
 
 export type DeleteApiTasksIdMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteApiTasksId>>
@@ -275,7 +294,7 @@ export type DeleteApiTasksIdMutationError = ErrorResponse | ErrorResponse;
  * @summary Delete a task
  */
 export const useDeleteApiTasksId = <TError = ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof deleteApiTasksId>>,
@@ -302,14 +321,14 @@ export const useDeleteApiTasksId = <TError = ErrorResponse | ErrorResponse>(
 /**
  * @summary List comments for a task
  */
-export const getApiTasksTaskIdComments = (taskId: string) => {
+export const getApiTasksTaskIdComments = (taskId: number) => {
   return customInstance<TaskCommentListResponse>({
     url: `/api/tasks/${taskId}/comments`,
     method: 'GET',
   });
 };
 
-export const getGetApiTasksTaskIdCommentsKey = (taskId: string) =>
+export const getGetApiTasksTaskIdCommentsKey = (taskId: number) =>
   [`/api/tasks/${taskId}/comments`] as const;
 
 export type GetApiTasksTaskIdCommentsQueryResult = NonNullable<
@@ -321,7 +340,7 @@ export type GetApiTasksTaskIdCommentsQueryError = ErrorResponse | ErrorResponse;
  * @summary List comments for a task
  */
 export const useGetApiTasksTaskIdComments = <TError = ErrorResponse | ErrorResponse>(
-  taskId: string,
+  taskId: number,
   options?: {
     swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiTasksTaskIdComments>>, TError> & {
       swrKey?: Key;
@@ -348,7 +367,7 @@ export const useGetApiTasksTaskIdComments = <TError = ErrorResponse | ErrorRespo
  * @summary Create a comment for a task
  */
 export const postApiTasksTaskIdComments = (
-  taskId: string,
+  taskId: number,
   createTaskComment: CreateTaskComment
 ) => {
   return customInstance<TaskCommentResponse>({
@@ -359,12 +378,12 @@ export const postApiTasksTaskIdComments = (
   });
 };
 
-export const getPostApiTasksTaskIdCommentsMutationFetcher = (taskId: string) => {
+export const getPostApiTasksTaskIdCommentsMutationFetcher = (taskId: number) => {
   return (_: Key, { arg }: { arg: CreateTaskComment }) => {
     return postApiTasksTaskIdComments(taskId, arg);
   };
 };
-export const getPostApiTasksTaskIdCommentsMutationKey = (taskId: string) =>
+export const getPostApiTasksTaskIdCommentsMutationKey = (taskId: number) =>
   [`/api/tasks/${taskId}/comments`] as const;
 
 export type PostApiTasksTaskIdCommentsMutationResult = NonNullable<
@@ -378,7 +397,7 @@ export type PostApiTasksTaskIdCommentsMutationError = ErrorResponse | ErrorRespo
 export const usePostApiTasksTaskIdComments = <
   TError = ErrorResponse | ErrorResponse | ErrorResponse,
 >(
-  taskId: string,
+  taskId: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof postApiTasksTaskIdComments>>,
@@ -405,14 +424,14 @@ export const usePostApiTasksTaskIdComments = <
 /**
  * @summary Get a single task comment
  */
-export const getApiTasksTaskIdCommentsCommentId = (taskId: string, commentId: string) => {
+export const getApiTasksTaskIdCommentsCommentId = (taskId: number, commentId: number) => {
   return customInstance<TaskCommentResponse>({
     url: `/api/tasks/${taskId}/comments/${commentId}`,
     method: 'GET',
   });
 };
 
-export const getGetApiTasksTaskIdCommentsCommentIdKey = (taskId: string, commentId: string) =>
+export const getGetApiTasksTaskIdCommentsCommentIdKey = (taskId: number, commentId: number) =>
   [`/api/tasks/${taskId}/comments/${commentId}`] as const;
 
 export type GetApiTasksTaskIdCommentsCommentIdQueryResult = NonNullable<
@@ -424,8 +443,8 @@ export type GetApiTasksTaskIdCommentsCommentIdQueryError = ErrorResponse | Error
  * @summary Get a single task comment
  */
 export const useGetApiTasksTaskIdCommentsCommentId = <TError = ErrorResponse | ErrorResponse>(
-  taskId: string,
-  commentId: string,
+  taskId: number,
+  commentId: number,
   options?: {
     swr?: SWRConfiguration<
       Awaited<ReturnType<typeof getApiTasksTaskIdCommentsCommentId>>,
@@ -453,8 +472,8 @@ export const useGetApiTasksTaskIdCommentsCommentId = <TError = ErrorResponse | E
  * @summary Update a task comment
  */
 export const patchApiTasksTaskIdCommentsCommentId = (
-  taskId: string,
-  commentId: string,
+  taskId: number,
+  commentId: number,
   updateTaskComment: UpdateTaskComment
 ) => {
   return customInstance<TaskCommentResponse>({
@@ -466,16 +485,16 @@ export const patchApiTasksTaskIdCommentsCommentId = (
 };
 
 export const getPatchApiTasksTaskIdCommentsCommentIdMutationFetcher = (
-  taskId: string,
-  commentId: string
+  taskId: number,
+  commentId: number
 ) => {
   return (_: Key, { arg }: { arg: UpdateTaskComment }) => {
     return patchApiTasksTaskIdCommentsCommentId(taskId, commentId, arg);
   };
 };
 export const getPatchApiTasksTaskIdCommentsCommentIdMutationKey = (
-  taskId: string,
-  commentId: string
+  taskId: number,
+  commentId: number
 ) => [`/api/tasks/${taskId}/comments/${commentId}`] as const;
 
 export type PatchApiTasksTaskIdCommentsCommentIdMutationResult = NonNullable<
@@ -492,8 +511,8 @@ export type PatchApiTasksTaskIdCommentsCommentIdMutationError =
 export const usePatchApiTasksTaskIdCommentsCommentId = <
   TError = ErrorResponse | ErrorResponse | ErrorResponse,
 >(
-  taskId: string,
-  commentId: string,
+  taskId: number,
+  commentId: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof patchApiTasksTaskIdCommentsCommentId>>,
@@ -521,7 +540,7 @@ export const usePatchApiTasksTaskIdCommentsCommentId = <
 /**
  * @summary Delete a task comment
  */
-export const deleteApiTasksTaskIdCommentsCommentId = (taskId: string, commentId: string) => {
+export const deleteApiTasksTaskIdCommentsCommentId = (taskId: number, commentId: number) => {
   return customInstance<TaskCommentResponse>({
     url: `/api/tasks/${taskId}/comments/${commentId}`,
     method: 'DELETE',
@@ -529,16 +548,16 @@ export const deleteApiTasksTaskIdCommentsCommentId = (taskId: string, commentId:
 };
 
 export const getDeleteApiTasksTaskIdCommentsCommentIdMutationFetcher = (
-  taskId: string,
-  commentId: string
+  taskId: number,
+  commentId: number
 ) => {
   return (_: Key, __: { arg: Arguments }) => {
     return deleteApiTasksTaskIdCommentsCommentId(taskId, commentId);
   };
 };
 export const getDeleteApiTasksTaskIdCommentsCommentIdMutationKey = (
-  taskId: string,
-  commentId: string
+  taskId: number,
+  commentId: number
 ) => [`/api/tasks/${taskId}/comments/${commentId}`] as const;
 
 export type DeleteApiTasksTaskIdCommentsCommentIdMutationResult = NonNullable<
@@ -550,8 +569,8 @@ export type DeleteApiTasksTaskIdCommentsCommentIdMutationError = ErrorResponse |
  * @summary Delete a task comment
  */
 export const useDeleteApiTasksTaskIdCommentsCommentId = <TError = ErrorResponse | ErrorResponse>(
-  taskId: string,
-  commentId: string,
+  taskId: number,
+  commentId: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof deleteApiTasksTaskIdCommentsCommentId>>,
@@ -579,14 +598,14 @@ export const useDeleteApiTasksTaskIdCommentsCommentId = <TError = ErrorResponse 
 /**
  * @summary Get combined task activity timeline
  */
-export const getApiTasksIdActivities = (id: string) => {
+export const getApiTasksIdActivities = (id: number) => {
   return customInstance<TaskActivitiesResponse>({
     url: `/api/tasks/${id}/activities`,
     method: 'GET',
   });
 };
 
-export const getGetApiTasksIdActivitiesKey = (id: string) =>
+export const getGetApiTasksIdActivitiesKey = (id: number) =>
   [`/api/tasks/${id}/activities`] as const;
 
 export type GetApiTasksIdActivitiesQueryResult = NonNullable<
@@ -598,7 +617,7 @@ export type GetApiTasksIdActivitiesQueryError = ErrorResponse | ErrorResponse;
  * @summary Get combined task activity timeline
  */
 export const useGetApiTasksIdActivities = <TError = ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiTasksIdActivities>>, TError> & {
       swrKey?: Key;
@@ -713,11 +732,11 @@ export const usePostApiTimers = <TError = ErrorResponse | ErrorResponse | ErrorR
  * Retrieve all timers for a specific task
  * @summary Get timers for a task
  */
-export const getApiTasksTaskIdTimers = (taskId: string) => {
+export const getApiTasksTaskIdTimers = (taskId: number) => {
   return customInstance<TimerListResponse>({ url: `/api/tasks/${taskId}/timers`, method: 'GET' });
 };
 
-export const getGetApiTasksTaskIdTimersKey = (taskId: string) =>
+export const getGetApiTasksTaskIdTimersKey = (taskId: number) =>
   [`/api/tasks/${taskId}/timers`] as const;
 
 export type GetApiTasksTaskIdTimersQueryResult = NonNullable<
@@ -729,7 +748,7 @@ export type GetApiTasksTaskIdTimersQueryError = ErrorResponse | ErrorResponse;
  * @summary Get timers for a task
  */
 export const useGetApiTasksTaskIdTimers = <TError = ErrorResponse | ErrorResponse>(
-  taskId: string,
+  taskId: number,
   options?: {
     swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiTasksTaskIdTimers>>, TError> & {
       swrKey?: Key;
@@ -756,11 +775,11 @@ export const useGetApiTasksTaskIdTimers = <TError = ErrorResponse | ErrorRespons
  * Retrieve a specific timer by its ID
  * @summary Get a timer by ID
  */
-export const getApiTimersId = (id: string) => {
+export const getApiTimersId = (id: number) => {
   return customInstance<TimerResponse>({ url: `/api/timers/${id}`, method: 'GET' });
 };
 
-export const getGetApiTimersIdKey = (id: string) => [`/api/timers/${id}`] as const;
+export const getGetApiTimersIdKey = (id: number) => [`/api/timers/${id}`] as const;
 
 export type GetApiTimersIdQueryResult = NonNullable<Awaited<ReturnType<typeof getApiTimersId>>>;
 export type GetApiTimersIdQueryError = ErrorResponse | ErrorResponse;
@@ -769,7 +788,7 @@ export type GetApiTimersIdQueryError = ErrorResponse | ErrorResponse;
  * @summary Get a timer by ID
  */
 export const useGetApiTimersId = <TError = ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiTimersId>>, TError> & {
       swrKey?: Key;
@@ -795,7 +814,7 @@ export const useGetApiTimersId = <TError = ErrorResponse | ErrorResponse>(
  * Update an existing timer (typically to set end time)
  * @summary Update a timer
  */
-export const putApiTimersId = (id: string, updateTimer: UpdateTimer) => {
+export const putApiTimersId = (id: number, updateTimer: UpdateTimer) => {
   return customInstance<TimerResponse>({
     url: `/api/timers/${id}`,
     method: 'PUT',
@@ -804,12 +823,12 @@ export const putApiTimersId = (id: string, updateTimer: UpdateTimer) => {
   });
 };
 
-export const getPutApiTimersIdMutationFetcher = (id: string) => {
+export const getPutApiTimersIdMutationFetcher = (id: number) => {
   return (_: Key, { arg }: { arg: UpdateTimer }) => {
     return putApiTimersId(id, arg);
   };
 };
-export const getPutApiTimersIdMutationKey = (id: string) => [`/api/timers/${id}`] as const;
+export const getPutApiTimersIdMutationKey = (id: number) => [`/api/timers/${id}`] as const;
 
 export type PutApiTimersIdMutationResult = NonNullable<Awaited<ReturnType<typeof putApiTimersId>>>;
 export type PutApiTimersIdMutationError = ErrorResponse | ErrorResponse;
@@ -818,7 +837,7 @@ export type PutApiTimersIdMutationError = ErrorResponse | ErrorResponse;
  * @summary Update a timer
  */
 export const usePutApiTimersId = <TError = ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof putApiTimersId>>,
@@ -846,16 +865,16 @@ export const usePutApiTimersId = <TError = ErrorResponse | ErrorResponse>(
  * Delete a timer
  * @summary Delete a timer
  */
-export const deleteApiTimersId = (id: string) => {
+export const deleteApiTimersId = (id: number) => {
   return customInstance<TimerResponse>({ url: `/api/timers/${id}`, method: 'DELETE' });
 };
 
-export const getDeleteApiTimersIdMutationFetcher = (id: string) => {
+export const getDeleteApiTimersIdMutationFetcher = (id: number) => {
   return (_: Key, __: { arg: Arguments }) => {
     return deleteApiTimersId(id);
   };
 };
-export const getDeleteApiTimersIdMutationKey = (id: string) => [`/api/timers/${id}`] as const;
+export const getDeleteApiTimersIdMutationKey = (id: number) => [`/api/timers/${id}`] as const;
 
 export type DeleteApiTimersIdMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteApiTimersId>>
@@ -866,7 +885,7 @@ export type DeleteApiTimersIdMutationError = ErrorResponse | ErrorResponse;
  * @summary Delete a timer
  */
 export const useDeleteApiTimersId = <TError = ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof deleteApiTimersId>>,
@@ -978,11 +997,11 @@ export const usePostApiTags = <TError = ErrorResponse | ErrorResponse>(options?:
  * Retrieve a specific tag by ID
  * @summary Get a tag
  */
-export const getApiTagsId = (id: string) => {
+export const getApiTagsId = (id: number) => {
   return customInstance<TagResponse>({ url: `/api/tags/${id}`, method: 'GET' });
 };
 
-export const getGetApiTagsIdKey = (id: string) => [`/api/tags/${id}`] as const;
+export const getGetApiTagsIdKey = (id: number) => [`/api/tags/${id}`] as const;
 
 export type GetApiTagsIdQueryResult = NonNullable<Awaited<ReturnType<typeof getApiTagsId>>>;
 export type GetApiTagsIdQueryError = ErrorResponse | ErrorResponse;
@@ -991,7 +1010,7 @@ export type GetApiTagsIdQueryError = ErrorResponse | ErrorResponse;
  * @summary Get a tag
  */
 export const useGetApiTagsId = <TError = ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiTagsId>>, TError> & {
       swrKey?: Key;
@@ -1017,7 +1036,7 @@ export const useGetApiTagsId = <TError = ErrorResponse | ErrorResponse>(
  * Update an existing tag by ID
  * @summary Update a tag
  */
-export const putApiTagsId = (id: string, updateTag: UpdateTag) => {
+export const putApiTagsId = (id: number, updateTag: UpdateTag) => {
   return customInstance<TagResponse>({
     url: `/api/tags/${id}`,
     method: 'PUT',
@@ -1026,12 +1045,12 @@ export const putApiTagsId = (id: string, updateTag: UpdateTag) => {
   });
 };
 
-export const getPutApiTagsIdMutationFetcher = (id: string) => {
+export const getPutApiTagsIdMutationFetcher = (id: number) => {
   return (_: Key, { arg }: { arg: UpdateTag }) => {
     return putApiTagsId(id, arg);
   };
 };
-export const getPutApiTagsIdMutationKey = (id: string) => [`/api/tags/${id}`] as const;
+export const getPutApiTagsIdMutationKey = (id: number) => [`/api/tags/${id}`] as const;
 
 export type PutApiTagsIdMutationResult = NonNullable<Awaited<ReturnType<typeof putApiTagsId>>>;
 export type PutApiTagsIdMutationError = ErrorResponse | ErrorResponse | ErrorResponse;
@@ -1040,7 +1059,7 @@ export type PutApiTagsIdMutationError = ErrorResponse | ErrorResponse | ErrorRes
  * @summary Update a tag
  */
 export const usePutApiTagsId = <TError = ErrorResponse | ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof putApiTagsId>>,
@@ -1068,16 +1087,16 @@ export const usePutApiTagsId = <TError = ErrorResponse | ErrorResponse | ErrorRe
  * Delete a tag by ID. This will also remove the tag from all associated tasks.
  * @summary Delete a tag
  */
-export const deleteApiTagsId = (id: string) => {
+export const deleteApiTagsId = (id: number) => {
   return customInstance<TagResponse>({ url: `/api/tags/${id}`, method: 'DELETE' });
 };
 
-export const getDeleteApiTagsIdMutationFetcher = (id: string) => {
+export const getDeleteApiTagsIdMutationFetcher = (id: number) => {
   return (_: Key, __: { arg: Arguments }) => {
     return deleteApiTagsId(id);
   };
 };
-export const getDeleteApiTagsIdMutationKey = (id: string) => [`/api/tags/${id}`] as const;
+export const getDeleteApiTagsIdMutationKey = (id: number) => [`/api/tags/${id}`] as const;
 
 export type DeleteApiTagsIdMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteApiTagsId>>
@@ -1088,7 +1107,7 @@ export type DeleteApiTagsIdMutationError = ErrorResponse | ErrorResponse;
  * @summary Delete a tag
  */
 export const useDeleteApiTagsId = <TError = ErrorResponse | ErrorResponse>(
-  id: string,
+  id: number,
   options?: {
     swr?: SWRMutationConfiguration<
       Awaited<ReturnType<typeof deleteApiTagsId>>,
@@ -1103,6 +1122,789 @@ export const useDeleteApiTagsId = <TError = ErrorResponse | ErrorResponse>(
 
   const swrKey = swrOptions?.swrKey ?? getDeleteApiTagsIdMutationKey(id);
   const swrFn = getDeleteApiTagsIdMutationFetcher(id);
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Check if the user has a valid Google OAuth connection (via better-auth)
+ * @summary Check Google OAuth status
+ */
+export const getApiOauthGoogleStatus = (params?: GetApiOauthGoogleStatusParams) => {
+  return customInstance<OAuthStatusResponse>({
+    url: `/api/oauth/google/status`,
+    method: 'GET',
+    params,
+  });
+};
+
+export const getGetApiOauthGoogleStatusKey = (params?: GetApiOauthGoogleStatusParams) =>
+  [`/api/oauth/google/status`, ...(params ? [params] : [])] as const;
+
+export type GetApiOauthGoogleStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getApiOauthGoogleStatus>>
+>;
+export type GetApiOauthGoogleStatusQueryError = ErrorResponse;
+
+/**
+ * @summary Check Google OAuth status
+ */
+export const useGetApiOauthGoogleStatus = <TError = ErrorResponse>(
+  params?: GetApiOauthGoogleStatusParams,
+  options?: {
+    swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiOauthGoogleStatus>>, TError> & {
+      swrKey?: Key;
+      enabled?: boolean;
+    };
+  }
+) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const isEnabled = swrOptions?.enabled !== false;
+  const swrKey =
+    swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiOauthGoogleStatusKey(params) : null));
+  const swrFn = () => getApiOauthGoogleStatus(params);
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Removes all calendar data associated with the Google account. Note: To fully unlink the Google account, use better-auth unlinkAccount.
+ * @summary Disconnect Google Calendar data
+ */
+export const deleteApiOauthGoogle = (params?: DeleteApiOauthGoogleParams) => {
+  return customInstance<OAuthDisconnectResponse>({
+    url: `/api/oauth/google`,
+    method: 'DELETE',
+    params,
+  });
+};
+
+export const getDeleteApiOauthGoogleMutationFetcher = (params?: DeleteApiOauthGoogleParams) => {
+  return (_: Key, __: { arg: Arguments }) => {
+    return deleteApiOauthGoogle(params);
+  };
+};
+export const getDeleteApiOauthGoogleMutationKey = (params?: DeleteApiOauthGoogleParams) =>
+  [`/api/oauth/google`, ...(params ? [params] : [])] as const;
+
+export type DeleteApiOauthGoogleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteApiOauthGoogle>>
+>;
+export type DeleteApiOauthGoogleMutationError = ErrorResponse | ErrorResponse;
+
+/**
+ * @summary Disconnect Google Calendar data
+ */
+export const useDeleteApiOauthGoogle = <TError = ErrorResponse | ErrorResponse>(
+  params?: DeleteApiOauthGoogleParams,
+  options?: {
+    swr?: SWRMutationConfiguration<
+      Awaited<ReturnType<typeof deleteApiOauthGoogle>>,
+      TError,
+      Key,
+      Arguments,
+      Awaited<ReturnType<typeof deleteApiOauthGoogle>>
+    > & { swrKey?: string };
+  }
+) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const swrKey = swrOptions?.swrKey ?? getDeleteApiOauthGoogleMutationKey(params);
+  const swrFn = getDeleteApiOauthGoogleMutationFetcher(params);
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Retrieve linked Google accounts for the current user
+ * @summary List linked Google accounts
+ */
+export const getApiOauthGoogleAccounts = () => {
+  return customInstance<OAuthAccountsResponse>({
+    url: `/api/oauth/google/accounts`,
+    method: 'GET',
+  });
+};
+
+export const getGetApiOauthGoogleAccountsKey = () => [`/api/oauth/google/accounts`] as const;
+
+export type GetApiOauthGoogleAccountsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getApiOauthGoogleAccounts>>
+>;
+export type GetApiOauthGoogleAccountsQueryError = ErrorResponse;
+
+/**
+ * @summary List linked Google accounts
+ */
+export const useGetApiOauthGoogleAccounts = <TError = ErrorResponse>(options?: {
+  swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiOauthGoogleAccounts>>, TError> & {
+    swrKey?: Key;
+    enabled?: boolean;
+  };
+}) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const isEnabled = swrOptions?.enabled !== false;
+  const swrKey =
+    swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiOauthGoogleAccountsKey() : null));
+  const swrFn = () => getApiOauthGoogleAccounts();
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Retrieve available calendars from Google Calendar API that can be synced
+ * @summary List available Google Calendars
+ */
+export const getApiCalendarsAvailable = (params: GetApiCalendarsAvailableParams) => {
+  return customInstance<AvailableCalendarsResponse>({
+    url: `/api/calendars/available`,
+    method: 'GET',
+    params,
+  });
+};
+
+export const getGetApiCalendarsAvailableKey = (params: GetApiCalendarsAvailableParams) =>
+  [`/api/calendars/available`, ...(params ? [params] : [])] as const;
+
+export type GetApiCalendarsAvailableQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getApiCalendarsAvailable>>
+>;
+export type GetApiCalendarsAvailableQueryError = ErrorResponse | ErrorResponse;
+
+/**
+ * @summary List available Google Calendars
+ */
+export const useGetApiCalendarsAvailable = <TError = ErrorResponse | ErrorResponse>(
+  params: GetApiCalendarsAvailableParams,
+  options?: {
+    swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiCalendarsAvailable>>, TError> & {
+      swrKey?: Key;
+      enabled?: boolean;
+    };
+  }
+) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const isEnabled = swrOptions?.enabled !== false;
+  const swrKey =
+    swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiCalendarsAvailableKey(params) : null));
+  const swrFn = () => getApiCalendarsAvailable(params);
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Retrieve all calendars that have been added for syncing
+ * @summary List integrated calendars
+ */
+export const getApiCalendars = () => {
+  return customInstance<CalendarListResponse>({ url: `/api/calendars`, method: 'GET' });
+};
+
+export const getGetApiCalendarsKey = () => [`/api/calendars`] as const;
+
+export type GetApiCalendarsQueryResult = NonNullable<Awaited<ReturnType<typeof getApiCalendars>>>;
+export type GetApiCalendarsQueryError = ErrorResponse;
+
+/**
+ * @summary List integrated calendars
+ */
+export const useGetApiCalendars = <TError = ErrorResponse>(options?: {
+  swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiCalendars>>, TError> & {
+    swrKey?: Key;
+    enabled?: boolean;
+  };
+}) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const isEnabled = swrOptions?.enabled !== false;
+  const swrKey = swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiCalendarsKey() : null));
+  const swrFn = () => getApiCalendars();
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Add a Google Calendar to be synced
+ * @summary Add a calendar to sync
+ */
+export const postApiCalendars = (createCalendar: CreateCalendar) => {
+  return customInstance<CalendarResponse>({
+    url: `/api/calendars`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createCalendar,
+  });
+};
+
+export const getPostApiCalendarsMutationFetcher = () => {
+  return (_: Key, { arg }: { arg: CreateCalendar }) => {
+    return postApiCalendars(arg);
+  };
+};
+export const getPostApiCalendarsMutationKey = () => [`/api/calendars`] as const;
+
+export type PostApiCalendarsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof postApiCalendars>>
+>;
+export type PostApiCalendarsMutationError = ErrorResponse | ErrorResponse | ErrorResponse;
+
+/**
+ * @summary Add a calendar to sync
+ */
+export const usePostApiCalendars = <
+  TError = ErrorResponse | ErrorResponse | ErrorResponse,
+>(options?: {
+  swr?: SWRMutationConfiguration<
+    Awaited<ReturnType<typeof postApiCalendars>>,
+    TError,
+    Key,
+    CreateCalendar,
+    Awaited<ReturnType<typeof postApiCalendars>>
+  > & { swrKey?: string };
+}) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const swrKey = swrOptions?.swrKey ?? getPostApiCalendarsMutationKey();
+  const swrFn = getPostApiCalendarsMutationFetcher();
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Retrieve a specific calendar by ID
+ * @summary Get a calendar
+ */
+export const getApiCalendarsId = (id: number) => {
+  return customInstance<CalendarResponse>({ url: `/api/calendars/${id}`, method: 'GET' });
+};
+
+export const getGetApiCalendarsIdKey = (id: number) => [`/api/calendars/${id}`] as const;
+
+export type GetApiCalendarsIdQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getApiCalendarsId>>
+>;
+export type GetApiCalendarsIdQueryError = ErrorResponse | ErrorResponse;
+
+/**
+ * @summary Get a calendar
+ */
+export const useGetApiCalendarsId = <TError = ErrorResponse | ErrorResponse>(
+  id: number,
+  options?: {
+    swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiCalendarsId>>, TError> & {
+      swrKey?: Key;
+      enabled?: boolean;
+    };
+  }
+) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const isEnabled = swrOptions?.enabled !== false && !!id;
+  const swrKey = swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiCalendarsIdKey(id) : null));
+  const swrFn = () => getApiCalendarsId(id);
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Update calendar settings (e.g., enable/disable sync)
+ * @summary Update a calendar
+ */
+export const patchApiCalendarsId = (id: number, updateCalendar: UpdateCalendar) => {
+  return customInstance<CalendarResponse>({
+    url: `/api/calendars/${id}`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateCalendar,
+  });
+};
+
+export const getPatchApiCalendarsIdMutationFetcher = (id: number) => {
+  return (_: Key, { arg }: { arg: UpdateCalendar }) => {
+    return patchApiCalendarsId(id, arg);
+  };
+};
+export const getPatchApiCalendarsIdMutationKey = (id: number) => [`/api/calendars/${id}`] as const;
+
+export type PatchApiCalendarsIdMutationResult = NonNullable<
+  Awaited<ReturnType<typeof patchApiCalendarsId>>
+>;
+export type PatchApiCalendarsIdMutationError = ErrorResponse | ErrorResponse;
+
+/**
+ * @summary Update a calendar
+ */
+export const usePatchApiCalendarsId = <TError = ErrorResponse | ErrorResponse>(
+  id: number,
+  options?: {
+    swr?: SWRMutationConfiguration<
+      Awaited<ReturnType<typeof patchApiCalendarsId>>,
+      TError,
+      Key,
+      UpdateCalendar,
+      Awaited<ReturnType<typeof patchApiCalendarsId>>
+    > & { swrKey?: string };
+  }
+) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const swrKey = swrOptions?.swrKey ?? getPatchApiCalendarsIdMutationKey(id);
+  const swrFn = getPatchApiCalendarsIdMutationFetcher(id);
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Remove a calendar and delete all its synced events
+ * @summary Remove a calendar
+ */
+export const deleteApiCalendarsId = (id: number) => {
+  return customInstance<CalendarResponse>({ url: `/api/calendars/${id}`, method: 'DELETE' });
+};
+
+export const getDeleteApiCalendarsIdMutationFetcher = (id: number) => {
+  return (_: Key, __: { arg: Arguments }) => {
+    return deleteApiCalendarsId(id);
+  };
+};
+export const getDeleteApiCalendarsIdMutationKey = (id: number) => [`/api/calendars/${id}`] as const;
+
+export type DeleteApiCalendarsIdMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteApiCalendarsId>>
+>;
+export type DeleteApiCalendarsIdMutationError = ErrorResponse | ErrorResponse;
+
+/**
+ * @summary Remove a calendar
+ */
+export const useDeleteApiCalendarsId = <TError = ErrorResponse | ErrorResponse>(
+  id: number,
+  options?: {
+    swr?: SWRMutationConfiguration<
+      Awaited<ReturnType<typeof deleteApiCalendarsId>>,
+      TError,
+      Key,
+      Arguments,
+      Awaited<ReturnType<typeof deleteApiCalendarsId>>
+    > & { swrKey?: string };
+  }
+) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const swrKey = swrOptions?.swrKey ?? getDeleteApiCalendarsIdMutationKey(id);
+  const swrFn = getDeleteApiCalendarsIdMutationFetcher(id);
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Trigger a sync for a specific calendar to import latest events
+ * @summary Sync a calendar
+ */
+export const postApiCalendarsIdSync = (id: number) => {
+  return customInstance<CalendarSyncResponse>({ url: `/api/calendars/${id}/sync`, method: 'POST' });
+};
+
+export const getPostApiCalendarsIdSyncMutationFetcher = (id: number) => {
+  return (_: Key, __: { arg: Arguments }) => {
+    return postApiCalendarsIdSync(id);
+  };
+};
+export const getPostApiCalendarsIdSyncMutationKey = (id: number) =>
+  [`/api/calendars/${id}/sync`] as const;
+
+export type PostApiCalendarsIdSyncMutationResult = NonNullable<
+  Awaited<ReturnType<typeof postApiCalendarsIdSync>>
+>;
+export type PostApiCalendarsIdSyncMutationError = ErrorResponse | ErrorResponse | ErrorResponse;
+
+/**
+ * @summary Sync a calendar
+ */
+export const usePostApiCalendarsIdSync = <TError = ErrorResponse | ErrorResponse | ErrorResponse>(
+  id: number,
+  options?: {
+    swr?: SWRMutationConfiguration<
+      Awaited<ReturnType<typeof postApiCalendarsIdSync>>,
+      TError,
+      Key,
+      Arguments,
+      Awaited<ReturnType<typeof postApiCalendarsIdSync>>
+    > & { swrKey?: string };
+  }
+) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const swrKey = swrOptions?.swrKey ?? getPostApiCalendarsIdSyncMutationKey(id);
+  const swrFn = getPostApiCalendarsIdSyncMutationFetcher(id);
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Trigger a sync for all enabled calendars
+ * @summary Sync all calendars
+ */
+export const postApiCalendarsSync = () => {
+  return customInstance<CalendarSyncResponse>({ url: `/api/calendars/sync`, method: 'POST' });
+};
+
+export const getPostApiCalendarsSyncMutationFetcher = () => {
+  return (_: Key, __: { arg: Arguments }) => {
+    return postApiCalendarsSync();
+  };
+};
+export const getPostApiCalendarsSyncMutationKey = () => [`/api/calendars/sync`] as const;
+
+export type PostApiCalendarsSyncMutationResult = NonNullable<
+  Awaited<ReturnType<typeof postApiCalendarsSync>>
+>;
+export type PostApiCalendarsSyncMutationError = ErrorResponse | ErrorResponse;
+
+/**
+ * @summary Sync all calendars
+ */
+export const usePostApiCalendarsSync = <TError = ErrorResponse | ErrorResponse>(options?: {
+  swr?: SWRMutationConfiguration<
+    Awaited<ReturnType<typeof postApiCalendarsSync>>,
+    TError,
+    Key,
+    Arguments,
+    Awaited<ReturnType<typeof postApiCalendarsSync>>
+  > & { swrKey?: string };
+}) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const swrKey = swrOptions?.swrKey ?? getPostApiCalendarsSyncMutationKey();
+  const swrFn = getPostApiCalendarsSyncMutationFetcher();
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Retrieve calendar events with optional filters (calendarId, startDate, endDate)
+ * @summary List calendar events
+ */
+export const getApiEvents = (params?: GetApiEventsParams) => {
+  return customInstance<CalendarEventListResponse>({ url: `/api/events`, method: 'GET', params });
+};
+
+export const getGetApiEventsKey = (params?: GetApiEventsParams) =>
+  [`/api/events`, ...(params ? [params] : [])] as const;
+
+export type GetApiEventsQueryResult = NonNullable<Awaited<ReturnType<typeof getApiEvents>>>;
+export type GetApiEventsQueryError = ErrorResponse;
+
+/**
+ * @summary List calendar events
+ */
+export const useGetApiEvents = <TError = ErrorResponse>(
+  params?: GetApiEventsParams,
+  options?: {
+    swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiEvents>>, TError> & {
+      swrKey?: Key;
+      enabled?: boolean;
+    };
+  }
+) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const isEnabled = swrOptions?.enabled !== false;
+  const swrKey = swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiEventsKey(params) : null));
+  const swrFn = () => getApiEvents(params);
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Retrieve a specific calendar event by ID
+ * @summary Get an event
+ */
+export const getApiEventsId = (id: number) => {
+  return customInstance<CalendarEventResponse>({ url: `/api/events/${id}`, method: 'GET' });
+};
+
+export const getGetApiEventsIdKey = (id: number) => [`/api/events/${id}`] as const;
+
+export type GetApiEventsIdQueryResult = NonNullable<Awaited<ReturnType<typeof getApiEventsId>>>;
+export type GetApiEventsIdQueryError = ErrorResponse | ErrorResponse;
+
+/**
+ * @summary Get an event
+ */
+export const useGetApiEventsId = <TError = ErrorResponse | ErrorResponse>(
+  id: number,
+  options?: {
+    swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiEventsId>>, TError> & {
+      swrKey?: Key;
+      enabled?: boolean;
+    };
+  }
+) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const isEnabled = swrOptions?.enabled !== false && !!id;
+  const swrKey = swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiEventsIdKey(id) : null));
+  const swrFn = () => getApiEventsId(id);
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Start watching a calendar for push notifications when events change
+ * @summary Watch calendar for changes
+ */
+export const postApiCalendarsIdWatch = (id: number) => {
+  return customInstance<WatchChannelResponse>({
+    url: `/api/calendars/${id}/watch`,
+    method: 'POST',
+  });
+};
+
+export const getPostApiCalendarsIdWatchMutationFetcher = (id: number) => {
+  return (_: Key, __: { arg: Arguments }) => {
+    return postApiCalendarsIdWatch(id);
+  };
+};
+export const getPostApiCalendarsIdWatchMutationKey = (id: number) =>
+  [`/api/calendars/${id}/watch`] as const;
+
+export type PostApiCalendarsIdWatchMutationResult = NonNullable<
+  Awaited<ReturnType<typeof postApiCalendarsIdWatch>>
+>;
+export type PostApiCalendarsIdWatchMutationError = ErrorResponse | ErrorResponse | ErrorResponse;
+
+/**
+ * @summary Watch calendar for changes
+ */
+export const usePostApiCalendarsIdWatch = <TError = ErrorResponse | ErrorResponse | ErrorResponse>(
+  id: number,
+  options?: {
+    swr?: SWRMutationConfiguration<
+      Awaited<ReturnType<typeof postApiCalendarsIdWatch>>,
+      TError,
+      Key,
+      Arguments,
+      Awaited<ReturnType<typeof postApiCalendarsIdWatch>>
+    > & { swrKey?: string };
+  }
+) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const swrKey = swrOptions?.swrKey ?? getPostApiCalendarsIdWatchMutationKey(id);
+  const swrFn = getPostApiCalendarsIdWatchMutationFetcher(id);
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Stop receiving push notifications for a calendar
+ * @summary Stop watching calendar
+ */
+export const deleteApiCalendarsIdWatch = (id: number) => {
+  return customInstance<StopWatchResponse>({ url: `/api/calendars/${id}/watch`, method: 'DELETE' });
+};
+
+export const getDeleteApiCalendarsIdWatchMutationFetcher = (id: number) => {
+  return (_: Key, __: { arg: Arguments }) => {
+    return deleteApiCalendarsIdWatch(id);
+  };
+};
+export const getDeleteApiCalendarsIdWatchMutationKey = (id: number) =>
+  [`/api/calendars/${id}/watch`] as const;
+
+export type DeleteApiCalendarsIdWatchMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteApiCalendarsIdWatch>>
+>;
+export type DeleteApiCalendarsIdWatchMutationError = ErrorResponse | ErrorResponse | ErrorResponse;
+
+/**
+ * @summary Stop watching calendar
+ */
+export const useDeleteApiCalendarsIdWatch = <
+  TError = ErrorResponse | ErrorResponse | ErrorResponse,
+>(
+  id: number,
+  options?: {
+    swr?: SWRMutationConfiguration<
+      Awaited<ReturnType<typeof deleteApiCalendarsIdWatch>>,
+      TError,
+      Key,
+      Arguments,
+      Awaited<ReturnType<typeof deleteApiCalendarsIdWatch>>
+    > & { swrKey?: string };
+  }
+) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const swrKey = swrOptions?.swrKey ?? getDeleteApiCalendarsIdWatchMutationKey(id);
+  const swrFn = getDeleteApiCalendarsIdWatchMutationFetcher(id);
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Get the current watch channel status for a calendar
+ * @summary Get watch status
+ */
+export const getApiCalendarsIdWatch = (id: number) => {
+  return customInstance<WatchChannelStatus>({ url: `/api/calendars/${id}/watch`, method: 'GET' });
+};
+
+export const getGetApiCalendarsIdWatchKey = (id: number) => [`/api/calendars/${id}/watch`] as const;
+
+export type GetApiCalendarsIdWatchQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getApiCalendarsIdWatch>>
+>;
+export type GetApiCalendarsIdWatchQueryError = ErrorResponse | ErrorResponse;
+
+/**
+ * @summary Get watch status
+ */
+export const useGetApiCalendarsIdWatch = <TError = ErrorResponse | ErrorResponse>(
+  id: number,
+  options?: {
+    swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiCalendarsIdWatch>>, TError> & {
+      swrKey?: Key;
+      enabled?: boolean;
+    };
+  }
+) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const isEnabled = swrOptions?.enabled !== false && !!id;
+  const swrKey =
+    swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiCalendarsIdWatchKey(id) : null));
+  const swrFn = () => getApiCalendarsIdWatch(id);
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Receives push notifications from Google Calendar when events change
+ * @summary Google Calendar webhook
+ */
+export const postApiWebhooksGoogleCalendar = () => {
+  return customInstance<WebhookResponse>({ url: `/api/webhooks/google-calendar`, method: 'POST' });
+};
+
+export const getPostApiWebhooksGoogleCalendarMutationFetcher = () => {
+  return (_: Key, __: { arg: Arguments }) => {
+    return postApiWebhooksGoogleCalendar();
+  };
+};
+export const getPostApiWebhooksGoogleCalendarMutationKey = () =>
+  [`/api/webhooks/google-calendar`] as const;
+
+export type PostApiWebhooksGoogleCalendarMutationResult = NonNullable<
+  Awaited<ReturnType<typeof postApiWebhooksGoogleCalendar>>
+>;
+export type PostApiWebhooksGoogleCalendarMutationError = void;
+
+/**
+ * @summary Google Calendar webhook
+ */
+export const usePostApiWebhooksGoogleCalendar = <TError = void>(options?: {
+  swr?: SWRMutationConfiguration<
+    Awaited<ReturnType<typeof postApiWebhooksGoogleCalendar>>,
+    TError,
+    Key,
+    Arguments,
+    Awaited<ReturnType<typeof postApiWebhooksGoogleCalendar>>
+  > & { swrKey?: string };
+}) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const swrKey = swrOptions?.swrKey ?? getPostApiWebhooksGoogleCalendarMutationKey();
+  const swrFn = getPostApiWebhooksGoogleCalendarMutationFetcher();
 
   const query = useSWRMutation(swrKey, swrFn, swrOptions);
 

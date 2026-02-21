@@ -17,7 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatDateTime } from '@/lib/time';
 
 export interface CommentsSectionProps {
-  taskId: string;
+  taskId: number;
 }
 
 export function CommentsSection({ taskId }: CommentsSectionProps) {

@@ -27,5 +27,5 @@ export interface CreateTask {
    */
   completedAt?: string | null;
   /** Array of tag IDs to associate with the task */
-  tagIds?: string[];
+  tagIds?: number[];
 }

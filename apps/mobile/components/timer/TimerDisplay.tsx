@@ -4,7 +4,7 @@ import { Text } from '@/components/ui/text';
 import { useTimer } from '@/hooks/useTimer';
 
 export interface TimerDisplayProps {
-  taskId: string;
+  taskId: number;
   activeTimer?: TaskTimer;
 }
 

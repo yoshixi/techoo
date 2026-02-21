@@ -13,7 +13,7 @@ export default function TaskDetailScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <View className="flex-1">
-        <TaskDetailContent taskId={id} />
+        <TaskDetailContent taskId={Number(id)} />
       </View>
     </SafeAreaView>
   );
