@@ -1,17 +1,12 @@
-import { describe, it, expect, beforeEach, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, afterAll, afterEach, vi } from 'vitest';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import type { AppBindings } from '../types';
-import { createD1TestContext, createTestRequest, type D1TestContext } from '../../../db/tests/d1TestUtils';
-import { betterAuth } from 'better-auth';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { bearer } from 'better-auth/plugins';
+import { createSqliteLibsqlTestContext, createTestRequest, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
+import { createAuth } from '../../../core/auth';
 import { SignJWT, jwtVerify } from 'jose';
-import {
-  usersTable,
-  sessionsTable,
-  accountsTable,
-  verificationsTable,
-} from '../../../db/schema/schema';
+import { googleCalendarProvider } from '../../../core/calendar-providers/google.service';
+import { accountsTable } from '../../../db/schema/schema';
+import { eq } from 'drizzle-orm';
 
 // Test JWT secret (only used in this test file)
 const TEST_JWT_SECRET = new TextEncoder().encode(
@@ -45,33 +40,21 @@ async function testVerifyJwt(token: string) {
 }
 
 describe('Auth & Token Endpoints', () => {
-  let testContext: D1TestContext;
+  let testContext: SqliteLibsqlTestContext;
+  let testAuth: ReturnType<typeof createAuth>;
   let app: OpenAPIHono<AppBindings>
   let request: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
   beforeAll(async () => {
-    testContext = await createD1TestContext();
+    process.env.BETTER_AUTH_SECRET = 'test-better-auth-secret-at-least-32-characters-long';
+    process.env.BETTER_AUTH_URL = 'http://localhost';
+    process.env.GOOGLE_CLIENT_ID = 'test-google-client-id';
+    process.env.GOOGLE_CLIENT_SECRET = 'test-google-client-secret';
+    process.env.TRUSTED_ORIGINS = 'http://localhost';
 
-    // Create a test-local better-auth instance with the test DB
-    const testAuth = betterAuth({
-      database: drizzleAdapter(testContext.db, {
-        provider: 'sqlite',
-        usePlural: true,
-        schema: {
-          users: usersTable,
-          sessions: sessionsTable,
-          accounts: accountsTable,
-          verifications: verificationsTable,
-        },
-      }),
-      emailAndPassword: { enabled: true },
-      plugins: [bearer()],
-      advanced: { database: { generateId: false } },
-      trustedOrigins: ['http://localhost'],
-      secret: 'test-better-auth-secret-at-least-32-chars-long',
-      baseURL: 'http://localhost',
-      basePath: '/api/auth',
-    });
+    testContext = await createSqliteLibsqlTestContext();
+
+    testAuth = createAuth();
 
     app = new OpenAPIHono<AppBindings>().basePath('/api')
     request = createTestRequest(testContext)(app)
@@ -168,6 +151,10 @@ describe('Auth & Token Endpoints', () => {
 
   beforeEach(async () => {
     await testContext.reset();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -523,6 +510,79 @@ describe('Auth & Token Endpoints', () => {
       expect(protectedRes.status).toBe(200);
       const data = await protectedRes.json();
       expect(data.user.email).toBe('lifecycle@example.com');
+    });
+  });
+
+  describe('OAuth Link Flow', () => {
+    it('should link a Google account and store providerEmail', async () => {
+      const signUpRes = await signUp(
+        'oauth@example.com',
+        'password123456',
+        'OAuth User'
+      );
+      expect(signUpRes.status).toBe(200);
+      const sessionToken = getSessionToken(signUpRes);
+      expect(sessionToken).toBeTruthy();
+
+      const authContext = await (testAuth as unknown as { $context: Promise<any> }).$context;
+      const provider = authContext.socialProviders.find((item: { id: string }) => item.id === 'google') as any;
+      expect(provider).toBeTruthy();
+
+      if (!provider.verifyIdToken) {
+        provider.verifyIdToken = async () => true;
+      }
+      if (!provider.getUserInfo) {
+        provider.getUserInfo = async () => null;
+      }
+
+      const verifySpy = vi
+        .spyOn(provider, 'verifyIdToken')
+        .mockResolvedValue(true);
+      const providerUserInfoSpy = vi
+        .spyOn(provider, 'getUserInfo')
+        .mockResolvedValue({
+          user: {
+            id: 'google-user-1',
+            email: 'oauth@example.com',
+            emailVerified: true,
+            name: 'OAuth User'
+          }
+        });
+
+      const getUserInfoSpy = vi
+        .spyOn(googleCalendarProvider, 'getUserInfo')
+        .mockResolvedValue({ email: 'oauth@example.com' });
+
+      const res = await request(
+        new Request('http://localhost/api/auth/link-social', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${sessionToken}`,
+            Origin: 'http://localhost'
+          },
+          body: JSON.stringify({
+            provider: 'google',
+            disableRedirect: true,
+            idToken: {
+              token: 'fake-id-token',
+              accessToken: 'oauth-access-token'
+            }
+          })
+        })
+      );
+
+      expect(res.status).toBe(200);
+      expect(verifySpy).toHaveBeenCalledTimes(1);
+      expect(providerUserInfoSpy).toHaveBeenCalledTimes(1);
+      expect(getUserInfoSpy).toHaveBeenCalledTimes(1);
+
+      const [account] = await testContext.db
+        .select()
+        .from(accountsTable)
+        .where(eq(accountsTable.accountId, 'google-user-1'));
+
+      expect(account?.providerEmail).toBe('oauth@example.com');
     });
   });
 });

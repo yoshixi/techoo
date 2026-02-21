@@ -8,7 +8,7 @@ import {
   updateCalendarLastSynced
 } from '../../../core/calendars.db'
 import { importEventsForCalendar } from '../../../core/events.db'
-import { getOAuthToken, updateOAuthToken } from '../../../core/oauth.db'
+import { getOAuthTokenForAccount, updateOAuthToken } from '../../../core/oauth.db'
 import {
   googleCalendarProvider,
   getValidGoogleTokens
@@ -85,7 +85,12 @@ export const googleCalendarWebhookHandler: RouteHandler<
     }
 
     // Get OAuth tokens from accounts table (populated by better-auth)
-    const account = await getOAuthToken(db, userId, 'google')
+    const account = await getOAuthTokenForAccount(
+      db,
+      userId,
+      'google',
+      calendar.providerAccountId
+    )
     if (!account || !account.accessToken) {
       console.warn('Google account not found for user:', userId)
       return c.json({}, 200)
@@ -103,7 +108,7 @@ export const googleCalendarWebhookHandler: RouteHandler<
 
       // Update tokens if refreshed
       if (validTokens.accessToken !== account.accessToken) {
-        await updateOAuthToken(db, userId, 'google', {
+        await updateOAuthToken(db, userId, 'google', calendar.providerAccountId, {
           accessToken: validTokens.accessToken,
           refreshToken: validTokens.refreshToken,
           expiresAt: validTokens.expiresAt

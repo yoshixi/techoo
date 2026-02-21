@@ -3,7 +3,7 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import type { AppBindings } from '../types';
 import { healthRoute } from '../routes/health';
 import { healthHandler } from './index';
-import { createD1TestContext, createTestRequest, type D1TestContext } from '../../../db/tests/d1TestUtils';
+import { createSqliteLibsqlTestContext, createTestRequest, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
 
 // Create a test app with the health endpoint
 const createTestApp = () => {
@@ -29,12 +29,12 @@ const createTestApp = () => {
 };
 
 describe('Health Handler', () => {
-  let testContext: D1TestContext;
+  let testContext: SqliteLibsqlTestContext;
   let app: OpenAPIHono<AppBindings>
   let request: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
   beforeAll(async () => {
-    testContext = await createD1TestContext();
+    testContext = await createSqliteLibsqlTestContext();
     app = createTestApp();
     request = createTestRequest(testContext)(app);
   });

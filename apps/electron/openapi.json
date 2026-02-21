@@ -708,9 +708,79 @@
           "message"
         ]
       },
+      "OAuthAccount": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the account record"
+          },
+          "userId": {
+            "type": "string",
+            "description": "User ID"
+          },
+          "providerType": {
+            "type": "string",
+            "enum": [
+              "google",
+              "outlook",
+              "apple"
+            ],
+            "description": "OAuth provider type",
+            "example": "google"
+          },
+          "accountId": {
+            "type": "string",
+            "description": "Provider-specific account ID"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email associated with the provider account"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Timestamp when the account was linked",
+            "example": "2024-01-01T10:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Timestamp when the account was last updated",
+            "example": "2024-01-01T15:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "providerType",
+          "accountId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "OAuthAccountsResponse": {
+        "type": "object",
+        "properties": {
+          "accounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OAuthAccount"
+            },
+            "description": "Linked OAuth accounts"
+          }
+        },
+        "required": [
+          "accounts"
+        ]
+      },
       "AvailableCalendar": {
         "type": "object",
         "properties": {
+          "providerAccountId": {
+            "type": "string",
+            "description": "Provider-specific account ID",
+            "example": "google-oauth-sub"
+          },
           "providerCalendarId": {
             "type": "string",
             "description": "Provider-specific calendar ID",
@@ -738,6 +808,7 @@
           }
         },
         "required": [
+          "providerAccountId",
           "providerCalendarId",
           "name",
           "isAlreadyAdded"
@@ -778,6 +849,11 @@
             ],
             "description": "Calendar provider type",
             "example": "google"
+          },
+          "providerAccountId": {
+            "type": "string",
+            "description": "Provider-specific account ID",
+            "example": "google-oauth-sub"
           },
           "providerCalendarId": {
             "type": "string",
@@ -821,6 +897,7 @@
           "id",
           "userId",
           "providerType",
+          "providerAccountId",
           "providerCalendarId",
           "name",
           "color",
@@ -866,6 +943,11 @@
       "CreateCalendar": {
         "type": "object",
         "properties": {
+          "providerAccountId": {
+            "type": "string",
+            "description": "Provider-specific account ID",
+            "example": "google-oauth-sub"
+          },
           "providerCalendarId": {
             "type": "string",
             "description": "Provider-specific calendar ID to add",
@@ -884,6 +966,7 @@
           }
         },
         "required": [
+          "providerAccountId",
           "providerCalendarId"
         ]
       },
@@ -1063,17 +1146,20 @@
             "type": "string"
           },
           "expiresAt": {
-            "type": "number"
+            "type": "string",
+            "format": "date-time"
           },
           "token": {
             "type": "string",
             "nullable": true
           },
           "createdAt": {
-            "type": "number"
+            "type": "string",
+            "format": "date-time"
           },
           "updatedAt": {
-            "type": "number"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -2507,6 +2593,18 @@
       "get": {
         "summary": "Check Google OAuth status",
         "description": "Check if the user has a valid Google OAuth connection (via better-auth)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Provider-specific account ID"
+            },
+            "required": false,
+            "description": "Provider-specific account ID",
+            "name": "accountId",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OAuth status retrieved successfully",
@@ -2535,6 +2633,18 @@
       "delete": {
         "summary": "Disconnect Google Calendar data",
         "description": "Removes all calendar data associated with the Google account. Note: To fully unlink the Google account, use better-auth unlinkAccount.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Provider-specific account ID"
+            },
+            "required": false,
+            "description": "Provider-specific account ID",
+            "name": "accountId",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Google Calendar data disconnected successfully",
@@ -2569,10 +2679,50 @@
         }
       }
     },
+    "/api/oauth/google/accounts": {
+      "get": {
+        "summary": "List linked Google accounts",
+        "description": "Retrieve linked Google accounts for the current user",
+        "responses": {
+          "200": {
+            "description": "Linked accounts retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthAccountsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to retrieve linked accounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/calendars/available": {
       "get": {
         "summary": "List available Google Calendars",
         "description": "Retrieve available calendars from Google Calendar API that can be synced",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Provider-specific account ID"
+            },
+            "required": true,
+            "description": "Provider-specific account ID",
+            "name": "accountId",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Available calendars retrieved successfully",

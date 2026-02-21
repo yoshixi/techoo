@@ -67,6 +67,11 @@ export interface CalendarProvider {
     endDate: Date
   ): Promise<ProviderEvent[]>
 
+  // Optional user info (email, profile)
+  getUserInfo?(
+    tokens: ProviderTokens
+  ): Promise<{ email?: string; name?: string; picture?: string }>
+
   // Watch methods (push notifications)
   watchCalendar?(
     tokens: ProviderTokens,

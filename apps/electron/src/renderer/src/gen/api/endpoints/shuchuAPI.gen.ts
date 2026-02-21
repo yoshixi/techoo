@@ -23,11 +23,15 @@ import type {
   CreateTask,
   CreateTaskComment,
   CreateTimer,
+  DeleteApiOauthGoogleParams,
   ErrorResponse,
+  GetApiCalendarsAvailableParams,
   GetApiEventsParams,
+  GetApiOauthGoogleStatusParams,
   GetApiTasksParams,
   GetApiTimersParams,
   HealthResponse,
+  OAuthAccountsResponse,
   OAuthDisconnectResponse,
   OAuthStatusResponse,
   StopWatchResponse,
@@ -1129,11 +1133,16 @@ export const useDeleteApiTagsId = <TError = ErrorResponse | ErrorResponse>(
  * Check if the user has a valid Google OAuth connection (via better-auth)
  * @summary Check Google OAuth status
  */
-export const getApiOauthGoogleStatus = () => {
-  return customInstance<OAuthStatusResponse>({ url: `/api/oauth/google/status`, method: 'GET' })
+export const getApiOauthGoogleStatus = (params?: GetApiOauthGoogleStatusParams) => {
+  return customInstance<OAuthStatusResponse>({
+    url: `/api/oauth/google/status`,
+    method: 'GET',
+    params
+  })
 }
 
-export const getGetApiOauthGoogleStatusKey = () => [`/api/oauth/google/status`] as const
+export const getGetApiOauthGoogleStatusKey = (params?: GetApiOauthGoogleStatusParams) =>
+  [`/api/oauth/google/status`, ...(params ? [params] : [])] as const
 
 export type GetApiOauthGoogleStatusQueryResult = NonNullable<
   Awaited<ReturnType<typeof getApiOauthGoogleStatus>>
@@ -1143,17 +1152,21 @@ export type GetApiOauthGoogleStatusQueryError = ErrorResponse
 /**
  * @summary Check Google OAuth status
  */
-export const useGetApiOauthGoogleStatus = <TError = ErrorResponse>(options?: {
-  swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiOauthGoogleStatus>>, TError> & {
-    swrKey?: Key
-    enabled?: boolean
+export const useGetApiOauthGoogleStatus = <TError = ErrorResponse>(
+  params?: GetApiOauthGoogleStatusParams,
+  options?: {
+    swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiOauthGoogleStatus>>, TError> & {
+      swrKey?: Key
+      enabled?: boolean
+    }
   }
-}) => {
+) => {
   const { swr: swrOptions } = options ?? {}
 
   const isEnabled = swrOptions?.enabled !== false
-  const swrKey = swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiOauthGoogleStatusKey() : null))
-  const swrFn = () => getApiOauthGoogleStatus()
+  const swrKey =
+    swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiOauthGoogleStatusKey(params) : null))
+  const swrFn = () => getApiOauthGoogleStatus(params)
 
   const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
 
@@ -1167,16 +1180,21 @@ export const useGetApiOauthGoogleStatus = <TError = ErrorResponse>(options?: {
  * Removes all calendar data associated with the Google account. Note: To fully unlink the Google account, use better-auth unlinkAccount.
  * @summary Disconnect Google Calendar data
  */
-export const deleteApiOauthGoogle = () => {
-  return customInstance<OAuthDisconnectResponse>({ url: `/api/oauth/google`, method: 'DELETE' })
+export const deleteApiOauthGoogle = (params?: DeleteApiOauthGoogleParams) => {
+  return customInstance<OAuthDisconnectResponse>({
+    url: `/api/oauth/google`,
+    method: 'DELETE',
+    params
+  })
 }
 
-export const getDeleteApiOauthGoogleMutationFetcher = () => {
+export const getDeleteApiOauthGoogleMutationFetcher = (params?: DeleteApiOauthGoogleParams) => {
   return (_: Key, __: { arg: Arguments }) => {
-    return deleteApiOauthGoogle()
+    return deleteApiOauthGoogle(params)
   }
 }
-export const getDeleteApiOauthGoogleMutationKey = () => [`/api/oauth/google`] as const
+export const getDeleteApiOauthGoogleMutationKey = (params?: DeleteApiOauthGoogleParams) =>
+  [`/api/oauth/google`, ...(params ? [params] : [])] as const
 
 export type DeleteApiOauthGoogleMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteApiOauthGoogle>>
@@ -1186,21 +1204,63 @@ export type DeleteApiOauthGoogleMutationError = ErrorResponse | ErrorResponse
 /**
  * @summary Disconnect Google Calendar data
  */
-export const useDeleteApiOauthGoogle = <TError = ErrorResponse | ErrorResponse>(options?: {
-  swr?: SWRMutationConfiguration<
-    Awaited<ReturnType<typeof deleteApiOauthGoogle>>,
-    TError,
-    Key,
-    Arguments,
-    Awaited<ReturnType<typeof deleteApiOauthGoogle>>
-  > & { swrKey?: string }
+export const useDeleteApiOauthGoogle = <TError = ErrorResponse | ErrorResponse>(
+  params?: DeleteApiOauthGoogleParams,
+  options?: {
+    swr?: SWRMutationConfiguration<
+      Awaited<ReturnType<typeof deleteApiOauthGoogle>>,
+      TError,
+      Key,
+      Arguments,
+      Awaited<ReturnType<typeof deleteApiOauthGoogle>>
+    > & { swrKey?: string }
+  }
+) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getDeleteApiOauthGoogleMutationKey(params)
+  const swrFn = getDeleteApiOauthGoogleMutationFetcher(params)
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * Retrieve linked Google accounts for the current user
+ * @summary List linked Google accounts
+ */
+export const getApiOauthGoogleAccounts = () => {
+  return customInstance<OAuthAccountsResponse>({ url: `/api/oauth/google/accounts`, method: 'GET' })
+}
+
+export const getGetApiOauthGoogleAccountsKey = () => [`/api/oauth/google/accounts`] as const
+
+export type GetApiOauthGoogleAccountsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getApiOauthGoogleAccounts>>
+>
+export type GetApiOauthGoogleAccountsQueryError = ErrorResponse
+
+/**
+ * @summary List linked Google accounts
+ */
+export const useGetApiOauthGoogleAccounts = <TError = ErrorResponse>(options?: {
+  swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiOauthGoogleAccounts>>, TError> & {
+    swrKey?: Key
+    enabled?: boolean
+  }
 }) => {
   const { swr: swrOptions } = options ?? {}
 
-  const swrKey = swrOptions?.swrKey ?? getDeleteApiOauthGoogleMutationKey()
-  const swrFn = getDeleteApiOauthGoogleMutationFetcher()
+  const isEnabled = swrOptions?.enabled !== false
+  const swrKey =
+    swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiOauthGoogleAccountsKey() : null))
+  const swrFn = () => getApiOauthGoogleAccounts()
 
-  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
 
   return {
     swrKey,
@@ -1212,14 +1272,16 @@ export const useDeleteApiOauthGoogle = <TError = ErrorResponse | ErrorResponse>(
  * Retrieve available calendars from Google Calendar API that can be synced
  * @summary List available Google Calendars
  */
-export const getApiCalendarsAvailable = () => {
+export const getApiCalendarsAvailable = (params: GetApiCalendarsAvailableParams) => {
   return customInstance<AvailableCalendarsResponse>({
     url: `/api/calendars/available`,
-    method: 'GET'
+    method: 'GET',
+    params
   })
 }
 
-export const getGetApiCalendarsAvailableKey = () => [`/api/calendars/available`] as const
+export const getGetApiCalendarsAvailableKey = (params: GetApiCalendarsAvailableParams) =>
+  [`/api/calendars/available`, ...(params ? [params] : [])] as const
 
 export type GetApiCalendarsAvailableQueryResult = NonNullable<
   Awaited<ReturnType<typeof getApiCalendarsAvailable>>
@@ -1229,17 +1291,21 @@ export type GetApiCalendarsAvailableQueryError = ErrorResponse | ErrorResponse
 /**
  * @summary List available Google Calendars
  */
-export const useGetApiCalendarsAvailable = <TError = ErrorResponse | ErrorResponse>(options?: {
-  swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiCalendarsAvailable>>, TError> & {
-    swrKey?: Key
-    enabled?: boolean
+export const useGetApiCalendarsAvailable = <TError = ErrorResponse | ErrorResponse>(
+  params: GetApiCalendarsAvailableParams,
+  options?: {
+    swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiCalendarsAvailable>>, TError> & {
+      swrKey?: Key
+      enabled?: boolean
+    }
   }
-}) => {
+) => {
   const { swr: swrOptions } = options ?? {}
 
   const isEnabled = swrOptions?.enabled !== false
-  const swrKey = swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiCalendarsAvailableKey() : null))
-  const swrFn = () => getApiCalendarsAvailable()
+  const swrKey =
+    swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiCalendarsAvailableKey(params) : null))
+  const swrFn = () => getApiCalendarsAvailable(params)
 
   const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
 

@@ -13,6 +13,9 @@ export type SqliteLibsqlTestContext = {
   stop: () => void
 }
 
+type RequestInput = RequestInfo | URL
+type TestResponse = Response & { json: () => Promise<any> }
+
 /**
  * Creates a test user with email (required after auth schema migration).
  * Returns the created user row.
@@ -20,6 +23,15 @@ export type SqliteLibsqlTestContext = {
 export async function createTestUser(db: DB, name = 'Test User', email = 'test@example.com') {
   const [user] = await db.insert(schema.usersTable).values({ name, email }).returning()
   return user!
+}
+
+export const createTestRequest = (context: SqliteLibsqlTestContext) => {
+  return (app: { request: (...args: any[]) => Response | Promise<Response> }) => {
+    return async (input: RequestInput, init?: RequestInit): Promise<TestResponse> => {
+      const response = await app.request(input, init, {})
+      return response as TestResponse
+    }
+  }
 }
 
 const IN_MEMORY_URL = 'file::memory:?cache=shared'

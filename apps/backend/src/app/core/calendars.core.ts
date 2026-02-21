@@ -14,6 +14,10 @@ export const CalendarModel = z.object({
     description: 'Calendar provider type',
     example: 'google'
   }),
+  providerAccountId: z.string().openapi({
+    description: 'Provider-specific account ID',
+    example: 'google-oauth-sub'
+  }),
   providerCalendarId: z.string().openapi({
     description: 'Provider-specific calendar ID',
     example: 'primary'
@@ -46,6 +50,10 @@ export const CalendarModel = z.object({
 
 // Available calendar from provider (for selection)
 export const AvailableCalendarModel = z.object({
+  providerAccountId: z.string().openapi({
+    description: 'Provider-specific account ID',
+    example: 'google-oauth-sub'
+  }),
   providerCalendarId: z.string().openapi({
     description: 'Provider-specific calendar ID',
     example: 'primary'
@@ -70,6 +78,10 @@ export const AvailableCalendarModel = z.object({
 
 // Create calendar input
 export const CreateCalendarModel = z.object({
+  providerAccountId: z.string().openapi({
+    description: 'Provider-specific account ID',
+    example: 'google-oauth-sub'
+  }),
   providerCalendarId: z.string().openapi({
     description: 'Provider-specific calendar ID to add',
     example: 'primary'
@@ -145,6 +157,16 @@ export const CalendarIdParamModel = z.object({
   })
 }).openapi('CalendarIdParam')
 
+export const CalendarAccountIdQueryModel = z.object({
+  accountId: z.string().openapi({
+    description: 'Provider-specific account ID',
+    param: {
+      name: 'accountId',
+      in: 'query'
+    }
+  })
+}).openapi('CalendarAccountIdQuery')
+
 // Export types
 export type Calendar = z.infer<typeof CalendarModel>
 export type AvailableCalendar = z.infer<typeof AvailableCalendarModel>
@@ -155,3 +177,4 @@ export type AvailableCalendarsResponse = z.infer<typeof AvailableCalendarsRespon
 export type CalendarResponse = z.infer<typeof CalendarResponseModel>
 export type CalendarSyncResponse = z.infer<typeof CalendarSyncResponseModel>
 export type CalendarIdParam = z.infer<typeof CalendarIdParamModel>
+export type CalendarAccountIdQuery = z.infer<typeof CalendarAccountIdQueryModel>

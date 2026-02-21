@@ -19,7 +19,7 @@ import {
 } from './timers';
 import { createTaskRoute } from '../routes/tasks';
 import { createTaskHandler } from './tasks';
-import { createD1TestContext, createTestRequest, createTestUser, type D1TestContext } from '../../../db/tests/d1TestUtils';
+import { createSqliteLibsqlTestContext, createTestRequest, createTestUser, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
 
 type TestUser = { id: number; email: string; name: string };
 
@@ -64,14 +64,14 @@ const createTestApp = (getUser: () => TestUser | null) => {
 };
 
 describe('Timer Handlers (Simplified)', () => {
-  let testContext: D1TestContext;
+  let testContext: SqliteLibsqlTestContext;
   let app: OpenAPIHono<AppBindings>
   let request: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
   let sampleTaskId: number;
   let testUser: TestUser | null = null;
 
   beforeAll(async () => {
-    testContext = await createD1TestContext();
+    testContext = await createSqliteLibsqlTestContext();
     app = createTestApp(() => testUser);
     request = createTestRequest(testContext)(app);
   });

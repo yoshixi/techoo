@@ -39,9 +39,12 @@ export const accountsTable = sqliteTable('accounts', {
   refreshTokenExpiresAt: integer('refresh_token_expires_at', { mode: 'timestamp' }),
   scope: text('scope'),
   password: text('password'),
+  providerEmail: text('provider_email'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-});
+}, (table) => ({
+  uniqueProviderAccount: unique().on(table.providerId, table.accountId),
+}));
 
 // Verifications table (better-auth)
 export const verificationsTable = sqliteTable('verifications', {
@@ -113,6 +116,7 @@ export const calendarsTable = sqliteTable('calendars', {
   id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
   userId: integer('user_id', { mode: 'number' }).notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
   providerType: text('provider_type').notNull(), // 'google' | 'outlook' | 'apple'
+  providerAccountId: text('provider_account_id').notNull(),
   providerCalendarId: text('provider_calendar_id').notNull(), // Provider's calendar ID
   name: text('name').notNull(), // Display name
   color: text('color'), // Calendar color
@@ -121,7 +125,12 @@ export const calendarsTable = sqliteTable('calendars', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 }, (table) => ({
-  uniqueUserProviderCalendar: unique().on(table.userId, table.providerType, table.providerCalendarId),
+  uniqueUserProviderCalendar: unique().on(
+    table.userId,
+    table.providerType,
+    table.providerAccountId,
+    table.providerCalendarId
+  ),
 }));
 
 // Calendar Events table (provider-agnostic)
@@ -149,6 +158,7 @@ export const calendarWatchChannelsTable = sqliteTable('calendar_watch_channels',
   channelId: text('channel_id').notNull(), // UUID sent to Google for identifying the channel
   resourceId: text('resource_id').notNull(), // Resource ID returned by Google
   providerType: text('provider_type').notNull(), // 'google' | 'outlook' | 'apple'
+  providerAccountId: text('provider_account_id').notNull(),
   expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
   token: text('token'), // Optional verification token
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),

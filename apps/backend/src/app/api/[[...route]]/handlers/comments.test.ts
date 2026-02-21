@@ -27,7 +27,7 @@ import { getTaskActivitiesRoute } from '../routes/activities'
 import { getTaskActivitiesHandler } from './activities'
 import { createTimerRoute } from '../routes/timers'
 import { createTimerHandler } from './timers'
-import { createD1TestContext, createTestRequest, createTestUser, type D1TestContext } from '../../../db/tests/d1TestUtils'
+import { createSqliteLibsqlTestContext, createTestRequest, createTestUser, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils'
 
 type TestUser = { id: number; email: string; name: string }
 
@@ -69,14 +69,14 @@ const createTestApp = (getUser: () => TestUser | null) => {
 }
 
 describe('Task comment handlers', () => {
-  let testContext: D1TestContext
+  let testContext: SqliteLibsqlTestContext
   let app: OpenAPIHono<AppBindings>
   let request: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
   let testUser: TestUser | null = null
   let taskId: number
 
   beforeAll(async () => {
-    testContext = await createD1TestContext()
+    testContext = await createSqliteLibsqlTestContext()
     app = createTestApp(() => testUser)
     request = createTestRequest(testContext)(app)
   })

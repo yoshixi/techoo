@@ -196,6 +196,27 @@ export const googleCalendarProvider: CalendarProvider = {
     return events
   },
 
+  // This is not part of the CalendarProvider interface but is used elsewhere.
+  async getUserInfo(tokens: ProviderTokens): Promise<{ email?: string; name?: string; picture?: string }> {
+    const response = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+      headers: {
+        Authorization: `Bearer ${tokens.accessToken}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Google user info: ${response.status}`)
+    }
+
+    const data = (await response.json()) as {
+      email?: string
+      name?: string
+      picture?: string
+    }
+
+    return data
+  },
+
   // Watch a calendar for changes (push notifications)
   async watchCalendar(
     tokens: ProviderTokens,

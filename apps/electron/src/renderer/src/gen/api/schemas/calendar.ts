@@ -14,6 +14,8 @@ export interface Calendar {
   userId: string
   /** Calendar provider type */
   providerType: CalendarProviderType
+  /** Provider-specific account ID */
+  providerAccountId: string
   /** Provider-specific calendar ID */
   providerCalendarId: string
   /** Calendar display name */

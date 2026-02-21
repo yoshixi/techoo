@@ -6,7 +6,8 @@ import {
   CalendarSyncResponseModel,
   CreateCalendarModel,
   UpdateCalendarModel,
-  CalendarIdParamModel
+  CalendarIdParamModel,
+  CalendarAccountIdQueryModel
 } from '../../../core/calendars.core'
 import { ErrorResponseModel } from '../../../core/common.core'
 import {
@@ -21,6 +22,9 @@ export const listAvailableCalendarsRoute = createRoute({
   path: '/calendars/available',
   summary: 'List available Google Calendars',
   description: 'Retrieve available calendars from Google Calendar API that can be synced',
+  request: {
+    query: CalendarAccountIdQueryModel
+  },
   responses: {
     200: {
       content: {

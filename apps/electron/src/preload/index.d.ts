@@ -22,6 +22,7 @@ declare global {
       requestNotificationPermission: () => Promise<NotificationPermissionStatus>
       openNotificationSettings: () => Promise<void>
       signInWithOAuth: (provider: string) => Promise<string | null>
+      linkSocialAccount: (provider: string, sessionToken: string) => Promise<boolean>
     }
   }
 }

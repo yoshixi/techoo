@@ -7,6 +7,8 @@
  */
 
 export interface AvailableCalendar {
+  /** Provider-specific account ID */
+  providerAccountId: string
   /** Provider-specific calendar ID */
   providerCalendarId: string
   /** Calendar display name */

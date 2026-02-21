@@ -1,7 +1,9 @@
 import { createRoute } from '@hono/zod-openapi'
 import {
   OAuthStatusResponseModel,
-  OAuthDisconnectResponseModel
+  OAuthDisconnectResponseModel,
+  OAuthAccountsResponseModel,
+  OAuthAccountIdQueryModel
 } from '../../../core/oauth.core'
 import { ErrorResponseModel } from '../../../core/common.core'
 
@@ -15,6 +17,9 @@ export const getGoogleAuthStatusRoute = createRoute({
   path: '/oauth/google/status',
   summary: 'Check Google OAuth status',
   description: 'Check if the user has a valid Google OAuth connection (via better-auth)',
+  request: {
+    query: OAuthAccountIdQueryModel
+  },
   responses: {
     200: {
       content: {
@@ -41,6 +46,9 @@ export const deleteGoogleAuthRoute = createRoute({
   path: '/oauth/google',
   summary: 'Disconnect Google Calendar data',
   description: 'Removes all calendar data associated with the Google account. Note: To fully unlink the Google account, use better-auth unlinkAccount.',
+  request: {
+    query: OAuthAccountIdQueryModel
+  },
   responses: {
     200: {
       content: {
@@ -65,6 +73,32 @@ export const deleteGoogleAuthRoute = createRoute({
         }
       },
       description: 'Failed to disconnect Google OAuth'
+    }
+  }
+})
+
+// GET /oauth/google/accounts - List linked Google OAuth accounts
+export const listGoogleAccountsRoute = createRoute({
+  method: 'get',
+  path: '/oauth/google/accounts',
+  summary: 'List linked Google accounts',
+  description: 'Retrieve linked Google accounts for the current user',
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: OAuthAccountsResponseModel
+        }
+      },
+      description: 'Linked accounts retrieved successfully'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: ErrorResponseModel
+        }
+      },
+      description: 'Failed to retrieve linked accounts'
     }
   }
 })

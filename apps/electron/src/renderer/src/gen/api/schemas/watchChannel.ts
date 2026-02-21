@@ -12,9 +12,9 @@ export interface WatchChannel {
   channelId: string
   resourceId: string
   providerType: string
-  expiresAt: number
+  expiresAt: string
   /** @nullable */
   token: string | null
-  createdAt: number
-  updatedAt: number
+  createdAt: string
+  updatedAt: string
 }

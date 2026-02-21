@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import {
   CalendarDays,
   CheckCircle,
@@ -10,8 +10,18 @@ import {
 } from 'lucide-react'
 import { Button } from './ui/button'
 import { Switch } from './ui/switch'
-import { useCalendarSettings } from '../hooks/useCalendarSettings'
-import type { AvailableCalendar, Calendar } from '../gen/api'
+import {
+  useCalendarSettings,
+  type AvailableCalendarWithAccount,
+  type CalendarWithAccount
+} from '../hooks/useCalendarSettings'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from './ui/select'
 
 function CollapsibleSection({
   title,
@@ -59,11 +69,13 @@ function CalendarColorDot({ color }: { color?: string | null }): React.JSX.Eleme
 function AvailableCalendarItem({
   calendar,
   onAdd,
-  isAdding
+  isAdding,
+  accountLabel
 }: {
-  calendar: AvailableCalendar
+  calendar: AvailableCalendarWithAccount
   onAdd: () => void
   isAdding: boolean
+  accountLabel?: string
 }): React.JSX.Element {
   return (
     <div className="flex items-center gap-3 py-2 border-b last:border-b-0">
@@ -96,6 +108,9 @@ function AvailableCalendarItem({
             <span className="ml-2 text-xs text-muted-foreground">(Primary)</span>
           )}
         </p>
+        {accountLabel && (
+          <p className="text-xs text-muted-foreground">Account: {accountLabel}</p>
+        )}
       </div>
     </div>
   )
@@ -107,14 +122,16 @@ function SyncedCalendarItem({
   onSync,
   onRemove,
   isSyncing,
-  isRemoving
+  isRemoving,
+  accountLabel
 }: {
-  calendar: Calendar
+  calendar: CalendarWithAccount
   onToggleEnabled: (enabled: boolean) => void
   onSync: () => void
   onRemove: () => void
   isSyncing: boolean
   isRemoving: boolean
+  accountLabel?: string
 }): React.JSX.Element {
   const lastSynced = calendar.lastSyncedAt
     ? new Date(calendar.lastSyncedAt).toLocaleString()
@@ -127,6 +144,9 @@ function SyncedCalendarItem({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium truncate">{calendar.name}</p>
           <p className="text-xs text-muted-foreground">Last synced: {lastSynced}</p>
+          {accountLabel && (
+            <p className="text-xs text-muted-foreground">Account: {accountLabel}</p>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -161,23 +181,57 @@ function SyncedCalendarItem({
 }
 
 export function SettingsView(): React.JSX.Element {
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
   const {
     isGoogleConnected,
     isLoading,
+    googleAccounts,
+    selectedAccountStatus,
     availableCalendars,
     syncedCalendars,
     addCalendar,
     removeCalendar,
     toggleCalendarEnabled,
     syncCalendar
-  } = useCalendarSettings()
+  } = useCalendarSettings(selectedAccountId ?? undefined)
 
   const [addingCalendarId, setAddingCalendarId] = useState<string | null>(null)
   const [syncingCalendarId, setSyncingCalendarId] = useState<string | null>(null)
   const [removingCalendarId, setRemovingCalendarId] = useState<string | null>(null)
 
-  const handleAddCalendar = async (calendar: AvailableCalendar): Promise<void> => {
-    setAddingCalendarId(calendar.providerCalendarId)
+  useEffect(() => {
+    if (!selectedAccountId && googleAccounts.length > 0) {
+      setSelectedAccountId(googleAccounts[0].accountId)
+    }
+  }, [googleAccounts, selectedAccountId])
+
+  const accountOptions = useMemo(
+    () =>
+      googleAccounts.map((account, index) => ({
+        id: account.accountId,
+        label: account.email
+          ? account.email
+          : `Account ${index + 1} • ${account.accountId.slice(-6)}`
+      })),
+    [googleAccounts]
+  )
+
+  const accountLabelById = useMemo(() => {
+    const map = new Map<string, string>()
+    accountOptions.forEach((option) => {
+      map.set(option.id, option.label)
+    })
+    return map
+  }, [accountOptions])
+
+  const isSelectedAccountConnected =
+    selectedAccountId ? isGoogleConnected : googleAccounts.length > 0
+
+  const handleAddCalendar = async (
+    calendar: AvailableCalendarWithAccount
+  ): Promise<void> => {
+    const key = `${calendar.providerAccountId}:${calendar.providerCalendarId}`
+    setAddingCalendarId(key)
     try {
       await addCalendar(calendar.providerCalendarId, calendar.name)
     } catch (error) {
@@ -230,7 +284,7 @@ export function SettingsView(): React.JSX.Element {
       <div className="mt-8 space-y-6">
         {/* Google Calendar Connection Status */}
         <div className="border rounded-lg px-6 py-5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <CalendarDays className="h-5 w-5 text-muted-foreground" />
               <div>
@@ -238,13 +292,13 @@ export function SettingsView(): React.JSX.Element {
                 <p className="text-xs text-muted-foreground">
                   {isLoading
                     ? 'Checking connection...'
-                    : isGoogleConnected
-                      ? 'Connected'
+                    : googleAccounts.length > 0
+                      ? `Connected (${googleAccounts.length} account${googleAccounts.length === 1 ? '' : 's'})`
                       : 'Not connected'}
                 </p>
               </div>
             </div>
-            {isGoogleConnected ? (
+            {googleAccounts.length > 0 ? (
               <span className="flex items-center gap-1.5 text-green-600 text-sm">
                 <CheckCircle className="h-4 w-4" />
                 Connected
@@ -255,16 +309,45 @@ export function SettingsView(): React.JSX.Element {
               </p>
             )}
           </div>
+          {googleAccounts.length > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <div className="text-sm text-muted-foreground">Linked account</div>
+              <Select
+                value={selectedAccountId ?? undefined}
+                onValueChange={(value) => setSelectedAccountId(value)}
+              >
+                <SelectTrigger className="w-64">
+                  <SelectValue placeholder="Select account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accountOptions.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedAccountStatus && (
+                <span className="text-xs text-muted-foreground">
+                  {selectedAccountStatus.connected ? 'Active' : 'Needs reconnect'}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Available Calendars - only show when connected */}
-        {isGoogleConnected && (
+        {googleAccounts.length > 0 && selectedAccountId && (
           <CollapsibleSection
             title="Available Calendars"
             icon={<Plus className="h-5 w-5 text-muted-foreground" />}
             defaultOpen={syncedCalendars.length === 0}
           >
-            {isLoading ? (
+            {!isSelectedAccountConnected ? (
+              <p className="text-sm text-muted-foreground py-2">
+                Selected account needs reconnect before listing calendars.
+              </p>
+            ) : isLoading ? (
               <p className="text-sm text-muted-foreground py-2">Loading calendars...</p>
             ) : availableCalendars.length === 0 ? (
               <p className="text-sm text-muted-foreground py-2">
@@ -274,10 +357,17 @@ export function SettingsView(): React.JSX.Element {
               <div className="divide-y">
                 {availableCalendars.map((calendar) => (
                   <AvailableCalendarItem
-                    key={calendar.providerCalendarId}
+                    key={`${calendar.providerAccountId}:${calendar.providerCalendarId}`}
                     calendar={calendar}
                     onAdd={() => handleAddCalendar(calendar)}
-                    isAdding={addingCalendarId === calendar.providerCalendarId}
+                    isAdding={
+                      addingCalendarId ===
+                      `${calendar.providerAccountId}:${calendar.providerCalendarId}`
+                    }
+                    accountLabel={
+                      accountLabelById.get(calendar.providerAccountId) ??
+                      calendar.providerAccountId
+                    }
                   />
                 ))}
               </div>
@@ -286,7 +376,7 @@ export function SettingsView(): React.JSX.Element {
         )}
 
         {/* Synced Calendars - only show when connected and has calendars */}
-        {isGoogleConnected && syncedCalendars.length > 0 && (
+        {googleAccounts.length > 0 && selectedAccountId && syncedCalendars.length > 0 && (
           <CollapsibleSection
             title="Synced Calendars"
             icon={<CalendarDays className="h-5 w-5 text-muted-foreground" />}
@@ -302,6 +392,10 @@ export function SettingsView(): React.JSX.Element {
                   onRemove={() => handleRemoveCalendar(calendar.id)}
                   isSyncing={syncingCalendarId === calendar.id}
                   isRemoving={removingCalendarId === calendar.id}
+                  accountLabel={
+                    accountLabelById.get(calendar.providerAccountId) ??
+                    calendar.providerAccountId
+                  }
                 />
               ))}
             </div>

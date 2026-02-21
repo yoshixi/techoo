@@ -11,6 +11,7 @@ export function convertDbCalendarToApi(dbCalendar: SelectCalendar): Calendar {
     id: dbCalendar.id.toString(),
     userId: dbCalendar.userId.toString(),
     providerType: dbCalendar.providerType as ProviderType,
+    providerAccountId: dbCalendar.providerAccountId,
     providerCalendarId: dbCalendar.providerCalendarId,
     name: dbCalendar.name,
     color: dbCalendar.color,
@@ -27,9 +28,21 @@ export function convertDbCalendarToApi(dbCalendar: SelectCalendar): Calendar {
 export async function getAllCalendars(
   db: DB,
   userId: number,
-  providerType?: ProviderType
+  providerType?: ProviderType,
+  providerAccountId?: string
 ): Promise<Calendar[]> {
   let query = db.select().from(calendarsTable)
+
+  if (providerType && providerAccountId) {
+    const dbCalendars = await query.where(
+      and(
+        eq(calendarsTable.userId, userId),
+        eq(calendarsTable.providerType, providerType),
+        eq(calendarsTable.providerAccountId, providerAccountId)
+      )
+    )
+    return dbCalendars.map(convertDbCalendarToApi)
+  }
 
   if (providerType) {
     const dbCalendars = await query.where(
@@ -49,8 +62,24 @@ export async function getAllCalendars(
 export async function getEnabledCalendars(
   db: DB,
   userId: number,
-  providerType?: ProviderType
+  providerType?: ProviderType,
+  providerAccountId?: string
 ): Promise<Calendar[]> {
+  if (providerType && providerAccountId) {
+    const dbCalendars = await db
+      .select()
+      .from(calendarsTable)
+      .where(
+        and(
+          eq(calendarsTable.userId, userId),
+          eq(calendarsTable.providerType, providerType),
+          eq(calendarsTable.providerAccountId, providerAccountId),
+          eq(calendarsTable.isEnabled, 1)
+        )
+      )
+    return dbCalendars.map(convertDbCalendarToApi)
+  }
+
   if (providerType) {
     const dbCalendars = await db
       .select()
@@ -96,6 +125,7 @@ export async function getCalendarByProviderId(
   db: DB,
   userId: number,
   providerType: ProviderType,
+  providerAccountId: string,
   providerCalendarId: string
 ): Promise<Calendar | null> {
   const [dbCalendar] = await db
@@ -105,6 +135,7 @@ export async function getCalendarByProviderId(
       and(
         eq(calendarsTable.userId, userId),
         eq(calendarsTable.providerType, providerType),
+        eq(calendarsTable.providerAccountId, providerAccountId),
         eq(calendarsTable.providerCalendarId, providerCalendarId)
       )
     )
@@ -118,6 +149,7 @@ export async function createCalendar(
   db: DB,
   userId: number,
   providerType: ProviderType,
+  providerAccountId: string,
   data: CreateCalendar,
   providerName: string,
   providerColor?: string
@@ -128,6 +160,7 @@ export async function createCalendar(
   const calendarData: Omit<InsertCalendar, 'id'> = {
     userId,
     providerType,
+    providerAccountId,
     providerCalendarId: data.providerCalendarId,
     name: data.name || providerName,
     color: providerColor || null,
@@ -223,8 +256,24 @@ export async function deleteCalendar(
 export async function deleteAllCalendarsForProvider(
   db: DB,
   userId: number,
-  providerType: ProviderType
+  providerType: ProviderType,
+  providerAccountId?: string
 ): Promise<number> {
+  if (providerAccountId) {
+    const result = await db
+      .delete(calendarsTable)
+      .where(
+        and(
+          eq(calendarsTable.userId, userId),
+          eq(calendarsTable.providerType, providerType),
+          eq(calendarsTable.providerAccountId, providerAccountId)
+        )
+      )
+      .returning()
+
+    return result.length
+  }
+
   const result = await db
     .delete(calendarsTable)
     .where(

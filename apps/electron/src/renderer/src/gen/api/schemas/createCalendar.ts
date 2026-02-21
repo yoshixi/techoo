@@ -7,6 +7,8 @@
  */
 
 export interface CreateCalendar {
+  /** Provider-specific account ID */
+  providerAccountId: string
   /** Provider-specific calendar ID to add */
   providerCalendarId: string
   /** Custom display name (defaults to provider name) */

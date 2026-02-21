@@ -1,9 +1,25 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import useSwr from 'swr'
 import { Button } from './ui/button'
-import { Keyboard, Bell, CheckCircle, XCircle, AlertCircle, LogOut, User, ChevronDown, ChevronRight } from 'lucide-react'
+import { Keyboard, Bell, CheckCircle, XCircle, AlertCircle, LogOut, User, ChevronDown, ChevronRight, Link } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { customInstance } from '../lib/api/mutator'
 
 type NotificationPermissionStatus = 'granted' | 'denied' | 'not-determined'
+
+type OAuthAccount = {
+  id: string
+  userId: string
+  providerType: string
+  accountId: string
+  email?: string
+  createdAt: string
+  updatedAt: string
+}
+
+type OAuthAccountsResponse = {
+  accounts: OAuthAccount[]
+}
 
 const keyboardShortcuts = [
   { keys: ['⌘', 'N'], description: 'Create a new task' },
@@ -73,6 +89,22 @@ export function AccountView(): React.JSX.Element {
   const { user, signOut } = useAuth()
   const [notificationStatus, setNotificationStatus] = useState<NotificationPermissionStatus>('not-determined')
   const [isRequesting, setIsRequesting] = useState(false)
+  const [isLinkingGoogle, setIsLinkingGoogle] = useState(false)
+  const [linkStatus, setLinkStatus] = useState<'success' | 'error' | null>(null)
+  const {
+    data: googleAccountsData,
+    isLoading: isGoogleAccountsLoading,
+    mutate: refreshGoogleAccounts
+  } = useSwr(['/api/oauth/google/accounts'], () =>
+    customInstance<OAuthAccountsResponse>({
+      url: '/api/oauth/google/accounts',
+      method: 'GET'
+    })
+  )
+  const googleAccounts = useMemo(
+    () => googleAccountsData?.accounts ?? [],
+    [googleAccountsData?.accounts]
+  )
 
   useEffect(() => {
     window.api.getNotificationPermission().then(setNotificationStatus)
@@ -95,6 +127,29 @@ export function AccountView(): React.JSX.Element {
   const handleSignOut = async (): Promise<void> => {
     await signOut()
     window.location.reload()
+  }
+
+  const handleLinkGoogleAccount = async (): Promise<void> => {
+    setLinkStatus(null)
+    const sessionToken = localStorage.getItem('session_token')
+    if (!sessionToken) {
+      setLinkStatus('error')
+      return
+    }
+
+    setIsLinkingGoogle(true)
+    try {
+      const linked = await window.api.linkSocialAccount('google', sessionToken)
+      setLinkStatus(linked ? 'success' : 'error')
+      if (linked) {
+        await refreshGoogleAccounts()
+      }
+    } catch (error) {
+      console.error('Failed to link Google account:', error)
+      setLinkStatus('error')
+    } finally {
+      setIsLinkingGoogle(false)
+    }
   }
 
   return (
@@ -147,6 +202,44 @@ export function AccountView(): React.JSX.Element {
               <Button size="sm" variant="outline" onClick={handleOpenSettings}>
                 {notificationStatus === 'denied' ? 'Open System Settings' : 'Manage in System Settings'}
               </Button>
+            )}
+          </div>
+        </CollapsibleSection>
+
+        {/* Google Accounts — collapsible */}
+        <CollapsibleSection
+          title="Google Accounts"
+          icon={<Link className="h-5 w-5 text-muted-foreground" />}
+        >
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Link additional Google accounts to import multiple calendars.
+            </p>
+            <div className="space-y-2">
+              {isGoogleAccountsLoading ? (
+                <p className="text-xs text-muted-foreground">Loading linked accounts...</p>
+              ) : googleAccounts.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No Google accounts linked yet.</p>
+              ) : (
+                <div className="space-y-1">
+                  {googleAccounts.map((account, index) => (
+                    <div key={account.id} className="text-xs text-muted-foreground">
+                      {account.email
+                        ? account.email
+                        : `Account ${index + 1} • ${account.accountId.slice(-6)}`}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <Button size="sm" onClick={handleLinkGoogleAccount} disabled={isLinkingGoogle}>
+              {isLinkingGoogle ? 'Linking...' : 'Link Google Account'}
+            </Button>
+            {linkStatus === 'success' && (
+              <p className="text-xs text-green-600">Account linked. Refresh Settings to select it.</p>
+            )}
+            {linkStatus === 'error' && (
+              <p className="text-xs text-red-600">Link failed. Please try again.</p>
             )}
           </div>
         </CollapsibleSection>

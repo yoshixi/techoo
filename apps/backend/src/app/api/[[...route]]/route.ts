@@ -32,6 +32,7 @@ import {
   // Google OAuth routes (status/disconnect only - auth handled by better-auth)
   getGoogleAuthStatusRoute,
   deleteGoogleAuthRoute,
+  listGoogleAccountsRoute,
   // Calendar routes
   listAvailableCalendarsRoute,
   listCalendarsRoute,
@@ -80,6 +81,7 @@ import {
   // Google OAuth handlers (status/disconnect only - auth handled by better-auth)
   getGoogleAuthStatusHandler,
   deleteGoogleAuthHandler,
+  listGoogleAccountsHandler,
   // Calendar handlers
   listAvailableCalendarsHandler,
   listCalendarsHandler,
@@ -178,7 +180,8 @@ app.get('/desktop-oauth', async (c) => {
   const baseUrl = url.origin
   const callbackURL = `${baseUrl}/api/desktop-auth-callback?port=${port}`
 
-  // Call better-auth internally to get the OAuth URL + state cookie
+  // Call better-auth handler in-process (no network hop) to generate the OAuth
+  // URL and set the state cookie on the browser response.
   const auth = createAuth()
   const authResponse = await auth.handler(
     new Request(`${baseUrl}/api/auth/sign-in/social`, {
@@ -242,6 +245,54 @@ app.get('/desktop-auth-callback', async (c) => {
   )
 })
 
+// Desktop app account linking initiation: ensures OAuth state cookie is set in the browser.
+app.get('/desktop-link', async (c) => {
+  const provider = c.req.query('provider')
+  const port = c.req.query('port')
+  const sessionToken = c.req.query('session_token')
+  if (!provider || !port || !sessionToken) {
+    return c.text('Missing provider, port, or session token', 400)
+  }
+
+  const url = new URL(c.req.url)
+  const baseUrl = url.origin
+  const callbackURL = `http://127.0.0.1:${port}/callback?linked=1`
+
+  const auth = createAuth()
+  const authResponse = await auth.handler(
+    new Request(`${baseUrl}/api/auth/link-social`, {
+      method: 'POST',
+      headers: new Headers({
+        'Content-Type': 'application/json',
+        Origin: baseUrl,
+        Authorization: `Bearer ${sessionToken}`
+      }),
+      body: JSON.stringify({ provider, callbackURL, disableRedirect: true })
+    })
+  )
+
+  const setCookies = authResponse.headers.getSetCookie()
+
+  let oauthUrl: string | null = null
+  if (authResponse.ok) {
+    const data = (await authResponse.json()) as { url?: string }
+    oauthUrl = data?.url ?? null
+  }
+
+  if (!oauthUrl) {
+    return c.text('Failed to initiate link flow', 500)
+  }
+
+  const response = new Response(null, {
+    status: 302,
+    headers: { Location: oauthUrl }
+  })
+  for (const cookie of setCookies) {
+    response.headers.append('Set-Cookie', cookie)
+  }
+  return response
+})
+
 // JWT auth middleware — skip public routes
 app.use('/*', async (c, next) => {
   const path = c.req.path
@@ -252,6 +303,7 @@ app.use('/*', async (c, next) => {
     path === '/api/session' ||
     path === '/api/desktop-oauth' ||
     path === '/api/desktop-auth-callback' ||
+    path === '/api/desktop-link' ||
     path === '/api/health' ||
     path === '/api/doc'
   ) {
@@ -314,6 +366,7 @@ app.openapi(deleteTagRoute, deleteTagHandler)
 // Register Google OAuth routes (status/disconnect only - auth handled by better-auth)
 app.openapi(getGoogleAuthStatusRoute, getGoogleAuthStatusHandler)
 app.openapi(deleteGoogleAuthRoute, deleteGoogleAuthHandler)
+app.openapi(listGoogleAccountsRoute, listGoogleAccountsHandler)
 
 // Register calendar routes
 app.openapi(listAvailableCalendarsRoute, listAvailableCalendarsHandler)
@@ -346,6 +399,7 @@ app.doc('/doc', {
     description: 'API for the Shuchu task management application with OpenAPI documentation'
   }
 })
+console.log(`starting the server`)
 
 // Export the app for use by the OpenAPI schema generator
 export { app as honoApp }
