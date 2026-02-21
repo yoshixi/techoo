@@ -9,7 +9,7 @@ update_at: "2026-01-25"
 
 ## ✅ **Migration Issue Resolved**
 
-**Problem**: The `drizzle:migrate` command was failing due to SQL syntax incompatibilities between old Turso-generated migrations and local SQLite.
+**Problem**: Migrations generated for Turso/LibSQL were not compatible with local SQLite.
 
 **Solution**: Use `drizzle:push` instead of `drizzle:migrate` for development, which directly synchronizes the schema.
 
@@ -17,19 +17,19 @@ update_at: "2026-01-25"
 
 ### Database Setup (One-time)
 ```bash
-cd apps/web
+cd apps/backend
 pnpm drizzle:push    # Creates/updates database schema
 ```
 
 ### Development Workflow
 ```bash
-# Web API Development
-cd apps/web
-pnpm dev             # Runs on http://localhost:3000
+# Backend API Development
+cd apps/backend
+pnpm dev             # Runs via Wrangler (see output for local URL)
 ```
 
 ```bash
-# Electron App Development  
+# Electron App Development
 cd apps/electron
 pnpm run dev:build   # Build and launch app
 ```
@@ -46,7 +46,7 @@ pnpm run dev:build   # Build and launch app
 
 ## 🗄️ **Database Configuration**
 
-- **Development**: Local SQLite at `apps/web/tmp/local.db` (auto-created)
+- **Development**: Local SQLite at `apps/backend/tmp/local.db` (auto-created)
 - **Production**: Turso cloud database (when env vars are set)
 - **Tests**: In-memory SQLite for isolation
 
@@ -59,9 +59,9 @@ pnpm run dev:build   # Build and launch app
 
 ## 🎯 **All Requested Features Complete**
 
-- ❌ **Task Status Fields**: Completely removed from web and electron apps
+- ❌ **Task Status Fields**: Completely removed from backend and electron apps
 - 🔄 **Hybrid Database**: SQLite for development, Turso for production
 - 📁 **Auto Setup**: Directories and databases created automatically  
-- 🚀 **Working Development**: Both web and electron apps fully functional
+- 🚀 **Working Development**: Both backend and electron apps fully functional
 
 **The project is now ready for development with all requested modifications implemented successfully!** 🎊

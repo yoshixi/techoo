@@ -7,13 +7,13 @@ update_at: "2026-02-21"
 
 # Authentication
 
-Shuchu uses a **hybrid session + JWT** architecture. A long-lived session token (~7 days) is exchanged for a short-lived JWT (~15 min) that is sent with every API request. The JWT is verified server-side with zero database access (HMAC-SHA256 via `jose`).
+Shuchu uses a **hybrid session + JWT** architecture. A long-lived session token (managed by better-auth defaults) is exchanged for a short-lived JWT (~15 min) that is sent with every API request. The JWT is verified server-side with zero database access (HMAC-SHA256 via `jose`).
 
 ## Token Architecture
 
 | Token | Lifetime | Stored in | Used for | DB access on use |
 |-------|----------|-----------|----------|------------------|
-| Session token | ~7 days | Client persistent storage | Refreshing JWTs via `POST /api/token` | Yes (1 lookup per refresh) |
+| Session token | better-auth default | Client persistent storage | Refreshing JWTs via `POST /api/token` | Yes (1 lookup per refresh) |
 | JWT | 15 min | Client memory (cache) | All API requests (`Authorization: Bearer`) | No (stateless verification) |
 
 ## Server-Side

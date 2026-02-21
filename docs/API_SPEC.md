@@ -8,7 +8,7 @@ update_at: "2026-02-08"
 # Shuchu API Specification
 
 ## Overview
-This document describes the REST API for the Shuchu task management application. The API provides endpoints for managing tasks and their associated focus timers. The API is built using Hono with OpenAPI integration and includes automatic schema validation using Zod schemas.
+This document describes the REST API for the Shuchu task management application. The API provides endpoints for tasks, timers, comments, tags, calendar sync, and activity feeds. The API is built with Hono + OpenAPI integration and uses Zod schemas for validation.
 
 ## Base URL
 ```
@@ -27,27 +27,23 @@ Interactive API documentation is available at `/api/doc` when the server is runn
 ### Technology Stack
 - **Framework**: Hono with OpenAPI extension
 - **Schema Validation**: Zod with OpenAPI integration (@hono/zod-openapi)
-- **Database**: LibSQL (Turso) with Drizzle ORM
+- **Database**: LibSQL (local file by default; Turso when env vars are set) with Drizzle ORM
 - **ID Strategy**: SQLite integer IDs with auto-increment
 
 ### Code Organization
 ```
-apps/web/app/
+apps/backend/src/app/
 ├── api/[[...route]]/
 │   ├── route.ts              # Main API router with OpenAPIHono
 │   ├── handlers/             # Request handlers (business logic)
-│   │   ├── health.ts         # Health check handler
-│   │   ├── tasks.ts          # Task CRUD handlers
-│   │   └── timers.ts         # Timer CRUD handlers
 │   └── routes/               # Route definitions with OpenAPI schemas
-│       ├── health.ts         # Health route definitions
-│       ├── tasks.ts          # Task route definitions
-│       └── timers.ts         # Timer route definitions
 ├── core/                     # Core business logic and database access
 │   ├── common.core.ts        # Shared utility functions
-│   ├── common.db.ts          # Database connection and helpers.
-│   ├── $resource.core.ts(such as users.core.ts)         #  Resource-related business logic and core models defined by Zod/openapi.
-│   ├── $resource.db.ts (such as users.db.ts)             # Resource database operations
+│   ├── common.db.ts          # Database connection and helpers
+│   ├── *.core.ts             # Zod/OpenAPI models
+│   └── *.db.ts               # Resource database operations
+└── db/
+    └── schema/               # Drizzle schema
 ```
 
 
@@ -76,16 +72,24 @@ The API supports Cross-Origin Resource Sharing (CORS) for all routes:
 ## Implementation Notes
 
 1. **Integer IDs**: SQLite auto-incremented IDs for simpler storage and queries
-2. **Automatic User Management**: A default user is automatically created and used for all operations
-3. **Status Derivation**: Task status is derived from completion state and active timers
-4. **Cascade Deletion**: Deleting a task automatically deletes all associated timers
-5. **Timestamp Handling**: 
+2. **JWT Auth**: Clients exchange a session token for a short-lived JWT (`POST /api/token`)
+3. **Cascade Deletion**: Deleting a task automatically deletes all associated timers/comments
+4. **Timestamp Handling**:
    - Database stores Unix timestamps for efficiency
    - API returns ISO 8601 strings for client compatibility
-   - Due dates are stored as Unix timestamps but accept ISO 8601 input
-6. **Schema Validation**: All requests are validated using Zod schemas before processing
-7. **Error Handling**: Comprehensive error handling with descriptive messages
-8. **OpenAPI Integration**: Full OpenAPI 3.0 specification with interactive documentation
+5. **Schema Validation**: All requests are validated using Zod schemas before processing
+6. **Error Handling**: Descriptive JSON errors with appropriate HTTP status codes
+7. **OpenAPI Integration**: Full OpenAPI 3.0 specification with interactive documentation
+
+## Core Endpoints (High Level)
+
+- **Tasks**: `/api/tasks`, `/api/tasks/{id}`
+- **Timers**: `/api/timers`, `/api/tasks/{taskId}/timers`, `/api/timers/{id}`
+- **Comments**: `/api/tasks/{taskId}/comments`, `/api/tasks/{taskId}/comments/{commentId}`
+- **Activities**: `/api/tasks/{id}/activities`
+- **Tags**: `/api/tags`, `/api/tags/{id}`
+- **Calendars & Events**: `/api/calendars`, `/api/calendars/available`, `/api/events`
+- **OAuth/Calendar**: `/api/oauth/google/*`, `/api/webhooks/google-calendar`
 
 ## Development & Testing
 
@@ -98,24 +102,14 @@ This project uses [devenv](https://devenv.sh/) for development environment manag
    devenv shell
    ```
 
-2. **Navigate to the web application:**
+2. **Run backend tests:**
    ```bash
-   cd apps/web
+   pnpm --filter backend test
    ```
 
-3. **Run all tests:**
+3. **Run tests in watch mode:**
    ```bash
-   pnpm test
-   ```
-
-4. **Run tests in watch mode:**
-   ```bash
-   pnpm test --watch
-   ```
-
-5. **Run tests with coverage:**
-   ```bash
-   pnpm test --coverage
+   pnpm --filter backend test:watch
    ```
 
 
@@ -129,15 +123,14 @@ The test suite includes:
 
 **Test Files Location:**
 ```
-apps/web/app/
+apps/backend/src/app/
 ├── api/[[...route]]/handlers/
-│   ├── health.test.ts           # Health endpoint tests (5 tests)
-│   ├── tasks-simple.test.ts     # Task handler tests (5 tests) 
-│   └── timers-simple.test.ts    # Timer handler tests (7 tests)
+│   ├── health.test.ts           # Health endpoint tests
+│   ├── tasks-simple.test.ts     # Task handler tests
+│   └── timers-simple.test.ts    # Timer handler tests
 ├── core/
 │   └── *.test.ts               # Database operation tests
 └── db/
-    ├── createUser.test.ts      # User creation tests (2 tests)
     └── tests/                  # Database test utilities
 ```
 

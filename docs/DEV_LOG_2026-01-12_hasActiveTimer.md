@@ -17,24 +17,23 @@ Added `hasActiveTimer` query parameter to the tasks API to filter tasks by wheth
 
 ### Backend
 
-1. **`apps/web/app/core/tasks.core.ts`**
+1. **`apps/backend/src/app/core/tasks.core.ts`**
    - Added `hasActiveTimer` to `TaskQueryParamsModel` using the existing `BooleanQueryParam` pattern
 
-2. **`apps/web/app/core/tasks.db.ts`**
+2. **`apps/backend/src/app/core/tasks.db.ts`**
    - Added `exists`, `notExists`, and `sql` imports from drizzle-orm
    - Implemented filtering using EXISTS/NOT EXISTS subqueries
 
-3. **`apps/web/app/api/[[...route]]/handlers/tasks.ts`**
+3. **`apps/backend/src/app/api/[[...route]]/handlers/tasks.ts`**
    - Updated handler to extract and pass `hasActiveTimer` parameter
 
 ### Frontend
 
-1. **`apps/electron/src/renderer/src/App.tsx`**
-   - Refactored to use two separate API queries:
-     - `hasActiveTimer: 'true'` for "In Progress" section
-     - `hasActiveTimer: 'false'` for "Tasks" section
-   - Added optimistic UI updates for timer start/stop (moves tasks between lists)
-   - Updated all task mutations to use appropriate mutators
+1. **`apps/electron/src/renderer/src/hooks/useTasksData.ts`**
+   - Uses two separate API queries:
+     - `hasActiveTimer: 'true'` for active tasks
+     - `hasActiveTimer: 'false'` for inactive tasks
+   - Centralizes SWR fetch config for task lists
 
 ## Bug Fix: Blob Comparison Issue (Historical)
 
@@ -160,7 +159,7 @@ baseConditions.push(exists(tagFilterSubquery))
 
 ## Test Fixes
 
-Fixed type errors in `apps/web/app/core/timers.db.test.ts` by adding proper null checks before accessing array elements (TypeScript strict null checks).
+Fixed type errors in `apps/backend/src/app/core/timers.db.test.ts` by adding proper null checks before accessing array elements (TypeScript strict null checks).
 
 ## API Usage
 
@@ -174,16 +173,15 @@ GET /api/tasks                       # All tasks (no filter)
 
 ```bash
 # Tasks with active timers
-curl "http://localhost:3000/api/tasks?hasActiveTimer=true"
+curl "http://<backend-host>/api/tasks?hasActiveTimer=true"
 
 # Tasks without active timers
-curl "http://localhost:3000/api/tasks?hasActiveTimer=false"
+curl "http://<backend-host>/api/tasks?hasActiveTimer=false"
 ```
 
 ## Files Modified
 
-- `apps/web/app/core/tasks.core.ts`
-- `apps/web/app/core/tasks.db.ts`
-- `apps/web/app/api/[[...route]]/handlers/tasks.ts`
-- `apps/electron/src/renderer/src/App.tsx`
-- `apps/electron/src/renderer/src/components/Sidebar.tsx` (removed unused import)
+- `apps/backend/src/app/core/tasks.core.ts`
+- `apps/backend/src/app/core/tasks.db.ts`
+- `apps/backend/src/app/api/[[...route]]/handlers/tasks.ts`
+- `apps/electron/src/renderer/src/hooks/useTasksData.ts`

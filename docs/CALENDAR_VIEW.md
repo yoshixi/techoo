@@ -27,8 +27,8 @@ The Calendar view shows all tasks on a day/week timeline, supports drag-to-creat
 ## Behavior Summary
 
 - Views: day and week.
-- Slot granularity: 15 minutes.
-- Visible range: 06:00 - 18:00, auto-scrolled to that range on open.
+- Slot granularity: dynamic (changes with zoom level).
+- Visible range: 06:00 - 12:00, auto-scrolled to that range on open.
 - Tasks:
   - Scheduled tasks are placed by startAt/endAt (endAt defaults to +30 minutes when missing).
   - Unscheduled tasks are not displayed in the calendar view.
@@ -37,6 +37,9 @@ The Calendar view shows all tasks on a day/week timeline, supports drag-to-creat
 - Drag behaviors:
   - Drag empty space to create a new time range (calls onCreateRange).
   - Drag a task block to move it; duration is preserved (calls onTaskMove).
+  - Drag top/bottom edges to resize a task.
+- Zoom:
+  - Use buttons or Cmd/Ctrl + scroll wheel to zoom in/out.
 - Current time line:
   - A red horizontal line with a dot appears in today's column and updates every minute.
 

@@ -89,8 +89,8 @@ The sidebar provides persistent context regardless of which view you're in. Acti
 
 ## Technical Context
 
-- **Desktop app** (Electron) with a Next.js/Hono API backend
-- **Offline-capable** with local SQLite, sync to Turso for cloud backup
+- **Desktop app** (Electron) with a Hono API backend (Cloudflare Workers)
+- **Offline-capable** with local SQLite by default; can point to Turso via env vars
 - **Auto-generated API client** from OpenAPI spec keeps frontend and backend in sync
 - **SWR** for data fetching with optimistic updates so the UI never feels slow
 

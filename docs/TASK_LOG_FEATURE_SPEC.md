@@ -41,7 +41,7 @@ update_at: "2026-02-08"
 | `task_id`        | INTEGER (FK tasks.id) | Required, cascades on delete. |
 | `body`           | TEXT                | Markdown/plain text body (1–2000 chars). |
 | `created_at`     | DATETIME            | Default `CURRENT_TIMESTAMP`. |
-| `updated_at`     | DATETIME            | For edits; nullable until first edit. |
+| `updated_at`     | DATETIME            | Updated on create and edit. |
 | `author_id`      | INTEGER (FK users.id) | Defaults to the single-user context today, future-proofed for multi-user. |
 
 Indexes:
@@ -50,7 +50,7 @@ Indexes:
 ## API Touchpoints
 - **CRUD for comments:**
   - `POST /api/tasks/:taskId/comments` accepts `{ body }`.
-  - `GET /api/tasks/:taskId/comments` returns paginated `task_comments` ordered by `created_at DESC`.
+  - `GET /api/tasks/:taskId/comments` returns `task_comments` ordered by `created_at DESC` (no pagination yet).
   - `PATCH /api/tasks/:taskId/comments/:commentId` allows editing the body.
   - `DELETE /api/tasks/:taskId/comments/:commentId`.
 - **Unified activity feed:** `GET /api/tasks/:taskId/activities` returns both timers and comments sorted by their timestamps (newest first). Timers use `started_at` (or `ended_at` fallback) while comments use `created_at`, so the API must normalize those values before sorting. Response rows look like:
@@ -70,7 +70,7 @@ Indexes:
 
 ## Implementation Notes
 - Extend Drizzle schema and run migration to add `task_comments`.
-- Update `apps/web/app/core/tasks.core.ts` (or equivalent) to aggregate timers and comments before returning to the client and to build the `/activities` response.
+- Update `apps/backend/src/app/core/tasks.db.ts` (or equivalent) to aggregate timers and comments before returning to the client and to build the `/activities` response.
 - Frontend should normalize timeline items: `{ type: 'timer', data: FocusTimer } | { type: 'comment', data: TaskComment }`.
 - Electron/desktop clients can mirror the same API; no extra store layer is required if they already fetch task detail JSON.
 

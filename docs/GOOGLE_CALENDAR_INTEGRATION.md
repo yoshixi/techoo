@@ -476,7 +476,7 @@ OAuth tokens are stored in the `accounts` table managed by better-auth.
 ### File Structure
 
 ```
-apps/web/app/
+apps/backend/src/app/
 ├── api/[[...route]]/
 │   ├── handlers/
 │   │   ├── google-auth.ts   # OAuth status handlers
