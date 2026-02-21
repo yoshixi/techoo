@@ -1,3 +1,10 @@
+---
+title: "Development Environment"
+brief_description: "This project uses [devenv](https://devenv.sh/) to manage the development environment. This ensures that all developers use the same versions of tools like Node.js and pnpm."
+created_at: "2025-12-26"
+update_at: "2026-01-25"
+---
+
 # Development Environment
 
 This project uses [devenv](https://devenv.sh/) to manage the development environment. This ensures that all developers use the same versions of tools like Node.js and pnpm.

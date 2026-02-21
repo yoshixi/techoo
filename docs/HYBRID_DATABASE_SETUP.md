@@ -1,3 +1,10 @@
+---
+title: "Hybrid Database Setup Complete! 🎉"
+brief_description: "Hybrid Database Setup Complete! 🎉"
+created_at: "2025-12-20"
+update_at: "2026-01-25"
+---
+
 # Hybrid Database Setup Complete! 🎉
 
 ## Summary of Changes
@@ -6,25 +13,24 @@ I have successfully configured your project to use **local SQLite for developmen
 
 ### 🔧 **Core Changes**
 
-1. **Hybrid Database Connection** (`app/core/common.db.ts`):
-   - **Development**: Uses `better-sqlite3` with local file `tmp/local.db`
-   - **Production**: Uses Turso when `NODE_ENV=production` + credentials are set
+1. **Hybrid Database Connection** (`apps/backend/src/app/core/common.db.ts`):
+   - **Development**: Uses LibSQL file DB at `apps/backend/tmp/local.db`
+   - **Production**: Uses Turso when credentials are set
    - **Auto-creation**: Automatically creates `tmp/` directory before opening database
-   - Automatic environment detection with console logging
+   - Environment-based selection using `TURSO_CONNECTION_URL` + `TURSO_AUTH_TOKEN`
 
-2. **Smart Drizzle Configuration** (`drizzle.config.ts`):
-   - **Development**: SQLite dialect pointing to `./tmp/local.db` 
+2. **Smart Drizzle Configuration** (`apps/backend/drizzle.config.ts`):
+   - **Development**: SQLite/LibSQL dialect pointing to `./tmp/local.db`
    - **Production**: Turso dialect with environment credentials
    - Environment-aware configuration switching
 
-3. **Enhanced Package Scripts** (`package.json`):
+3. **Package Scripts** (`apps/backend/package.json`):
    - `pnpm drizzle:push` - Local SQLite schema
-   - `pnpm drizzle:push:prod` - Production Turso schema  
-   - `pnpm drizzle:generate:prod` - Production migrations
+   - `pnpm drizzle:generate` - Generate migrations
 
 ### 🛠️ **Fixed Issues**
 
-- **Directory Auto-Creation**: The `tmp/` directory is now automatically created before opening the SQLite database
+- **Directory Auto-Creation**: The `tmp/` directory is automatically created before opening the SQLite database
 - **Clean Checkout Support**: Works immediately on fresh git clones without manual setup
 - **Test Isolation**: Test utilities also handle directory creation for file-based test databases
 
@@ -32,7 +38,6 @@ I have successfully configured your project to use **local SQLite for developmen
 
 - `.env.local.example` - Development environment template
 - `.env.production.example` - Production environment template
-- `LOCAL_SQLITE_SETUP.md` - Comprehensive documentation
 
 ### 🚀 **How to Use**
 
@@ -40,20 +45,19 @@ I have successfully configured your project to use **local SQLite for developmen
 ```bash
 # No environment setup needed!
 pnpm install
-pnpm drizzle:push     # Creates local SQLite schema
-pnpm dev             # Starts with local database
+pnpm --filter backend drizzle:push     # Creates local SQLite schema
+pnpm --filter backend dev              # Starts with local database
 ```
 
 #### Production Deployment
 ```bash
 # Set environment variables:
-export NODE_ENV=production
 export TURSO_CONNECTION_URL=your-turso-url
 export TURSO_AUTH_TOKEN=your-turso-token
 
-pnpm drizzle:push:prod  # Apply schema to Turso
-pnpm build
-pnpm start
+pnpm --filter backend drizzle:push  # Apply schema to Turso
+pnpm --filter backend build
+pnpm --filter backend deploy
 ```
 
 ### ✨ **Benefits**
@@ -66,7 +70,7 @@ pnpm start
 
 ### 🗄️ **Database Locations**
 
-- **Development**: `apps/web/tmp/local.db` (auto-created)
+- **Development**: `apps/backend/tmp/local.db` (auto-created)
 - **Production**: Your Turso database 
 - **Tests**: In-memory SQLite for speed
 

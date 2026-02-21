@@ -1,3 +1,10 @@
+---
+title: "Multi-Account Google Calendar Linking"
+brief_description: "This document describes how the app links and syncs Google calendars across multiple Google accounts."
+created_at: "2026-02-19"
+update_at: "2026-02-19"
+---
+
 # Multi-Account Google Calendar Linking
 
 This document describes how the app links and syncs Google calendars across multiple Google accounts.

@@ -1,3 +1,10 @@
+---
+title: "Timer API Specification"
+brief_description: "This document describes the Timer API endpoints for the Shuchu application."
+created_at: "2026-01-16"
+update_at: "2026-02-08"
+---
+
 # Timer API Specification
 
 This document describes the Timer API endpoints for the Shuchu application.
@@ -233,22 +240,21 @@ A timer is considered "active" (running) when `endTime` is `null`.
 
 The internal function `stopActiveTimersForTask(taskId)` stops all active timers for a task by setting their `endTime` to the current timestamp. This is used when:
 - A task is completed
-- Switching to a different task (if exclusive timer mode is enabled)
 
 ### Timestamp Handling
 
-- **API → Database:** ISO 8601 strings are parsed and converted to Unix seconds
-- **Database → API:** Unix seconds are multiplied by 1000 and formatted as ISO 8601
+- **API → Database:** ISO 8601 strings are parsed into `Date` objects
+- **Database → API:** `Date` objects are formatted as ISO 8601
 
 ```typescript
 // Database to API
-formatTimestamp(timestamp: number): string {
-  return new Date(timestamp * 1000).toISOString()
+formatTimestamp(timestamp: Date): string {
+  return timestamp.toISOString()
 }
 
 // API to Database
-parseISOToUnixTimestamp(isoString: string): number {
-  return Math.floor(new Date(isoString).getTime() / 1000)
+parseISOToDate(isoString: string): Date {
+  return new Date(isoString)
 }
 ```
 
@@ -259,7 +265,7 @@ The API is self-documented via OpenAPI. Access the interactive documentation at:
 
 ## Related Files
 
-- Routes: `apps/web/app/api/[[...route]]/routes/timers.ts`
-- Handlers: `apps/web/app/api/[[...route]]/handlers/timers.ts`
-- Database logic: `apps/web/app/core/timers.db.ts`
-- Schema: `apps/web/app/db/schema/schema.ts`
+- Routes: `apps/backend/src/app/api/[[...route]]/routes/timers.ts`
+- Handlers: `apps/backend/src/app/api/[[...route]]/handlers/timers.ts`
+- Database logic: `apps/backend/src/app/core/timers.db.ts`
+- Schema: `apps/backend/src/app/db/schema/schema.ts`

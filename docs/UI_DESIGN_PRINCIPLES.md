@@ -1,3 +1,10 @@
+---
+title: "UI Design Principles"
+brief_description: "This document captures general UI preferences for this project."
+created_at: "2026-01-17"
+update_at: "2026-01-25"
+---
+
 # UI Design Principles
 
 This document captures general UI preferences for this project.

@@ -1,3 +1,10 @@
+---
+title: "Google Calendar Integration"
+brief_description: "This document describes the Google Calendar integration feature for the Shuchu application."
+created_at: "2026-01-31"
+update_at: "2026-02-14"
+---
+
 # Google Calendar Integration
 
 This document describes the Google Calendar integration feature for the Shuchu application.
@@ -469,7 +476,7 @@ OAuth tokens are stored in the `accounts` table managed by better-auth.
 ### File Structure
 
 ```
-apps/web/app/
+apps/backend/src/app/
 ├── api/[[...route]]/
 │   ├── handlers/
 │   │   ├── google-auth.ts   # OAuth status handlers

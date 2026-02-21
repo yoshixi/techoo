@@ -59,8 +59,8 @@
     "@electron-toolkit/eslint-config-ts": "^3.1.0",
     "@electron-toolkit/tsconfig": "^2.0.0",
     "@types/node": "^22.18.10",
-    "@types/react": "19.2.6",
-    "@types/react-dom": "19.2.3",
+    "@types/react": "19.1.17",
+    "@types/react-dom": "19.1.1",
     "@vitejs/plugin-react": "^5.0.3",
     "electron": "^38.1.2",
     "electron-builder": "^25.1.8",
@@ -71,8 +71,8 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "orval": "^7.17.0",
     "prettier": "^3.6.2",
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.6"
   }

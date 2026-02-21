@@ -19,9 +19,10 @@
       "Bash(pnpm --filter web run test)",
       "Bash(gh pr:*)",
       "Bash(gh api:*)",
+      "Bash(tree:*)",
+      "Bash(pnpm --filter mobile add:*)",
       "Bash(grep:*)",
       "Bash(sips:*)",
-      "WebSearch",
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git rev-parse:*)",
@@ -29,6 +30,8 @@
       "Bash(pnpm --filter electron list:*)",
       "Bash(pnpm --filter electron exec npm view:*)",
       "Bash(git restore:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
       "WebFetch(domain:www.better-auth.com)",
       "Bash(xargs:*)",
       "Bash(pnpm --filter web add:*)",
@@ -41,7 +44,10 @@
       "Bash(pnpm --filter electron add:*)",
       "Bash(sqlite3:*)",
       "Bash(pnpm run test:*)",
-      "Bash(sort:*)"
+      "Bash(sort:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)",
+      "Bash(xcode-select:*)"
     ]
   }
 }

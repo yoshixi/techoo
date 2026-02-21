@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --filter='!mobile'",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
@@ -26,10 +26,6 @@
       "sharp"
     ],
     "overrides": {
-      "@types/react": "19.2.6",
-      "@types/react-dom": "19.2.3",
-      "react": "19.2.0",
-      "react-dom": "19.2.0",
       "esbuild": "0.25.10",
       "zod": "4.3.6",
       "hono": "4.10.6"
