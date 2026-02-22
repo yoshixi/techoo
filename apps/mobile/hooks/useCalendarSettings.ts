@@ -14,7 +14,7 @@ import {
   postApiCalendarsIdSync,
   getGetApiCalendarsKey,
   getGetApiEventsKey,
-} from '@/gen/api/endpoints/shuchuAPI.gen'
+} from '@/gen/api/endpoints/comoriAPI.gen'
 import type {
   Calendar,
   AvailableCalendar,

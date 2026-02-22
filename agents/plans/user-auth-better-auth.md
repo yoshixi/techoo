@@ -2,7 +2,7 @@
 
 ## Context
 
-Shuchu is a task management app with a Hono API backend (Next.js) and Electron desktop client. Currently there is **no authentication** — all operations use a hardcoded "Default User" via `ensureDefaultUser()`. We need multi-user auth to support desktop and future mobile clients.
+Comori is a task management app with a Hono API backend (Next.js) and Electron desktop client. Currently there is **no authentication** — all operations use a hardcoded "Default User" via `ensureDefaultUser()`. We need multi-user auth to support desktop and future mobile clients.
 
 **Requirements:**
 - Email/Password + OAuth (Google, GitHub, Apple)

@@ -4,7 +4,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { Check, Clock } from 'lucide-react-native';
 import { useSWRConfig } from 'swr';
 import type { Task, TaskTimer } from '@/gen/api/schemas';
-import { putApiTasksId } from '@/gen/api/endpoints/shuchuAPI.gen';
+import { putApiTasksId } from '@/gen/api/endpoints/comoriAPI.gen';
 import { Text } from '@/components/ui/text';
 import { Badge } from '@/components/ui/badge';
 import { useTimer } from '@/hooks/useTimer';

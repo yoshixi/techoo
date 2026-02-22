@@ -7,7 +7,7 @@ import {
   postApiTimers,
   getGetApiTasksKey,
   getGetApiTimersKey,
-} from '@/gen/api/endpoints/shuchuAPI.gen';
+} from '@/gen/api/endpoints/comoriAPI.gen';
 import { Text } from '@/components/ui/text';
 import { THEME } from '@/lib/theme';
 

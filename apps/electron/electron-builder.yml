@@ -41,4 +41,4 @@ npmRebuild: false
 publish:
   provider: github
   owner: yoshixi
-  repo: shuchu
+  repo: comori

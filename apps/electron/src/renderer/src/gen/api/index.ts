@@ -1,2 +1,2 @@
-export * from './endpoints/shuchuAPI.gen'
+export * from './endpoints/comoriAPI.gen'
 export * from './schemas'

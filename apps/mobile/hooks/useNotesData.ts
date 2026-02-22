@@ -6,7 +6,7 @@ import {
   putApiNotesId,
   postApiNotesIdTaskConversions,
   useGetApiNotes,
-} from '@/gen/api/endpoints/shuchuAPI.gen'
+} from '@/gen/api/endpoints/comoriAPI.gen'
 import type { Note } from '@/gen/api/schemas'
 
 /** Split raw text into title (first line) and content (rest). */

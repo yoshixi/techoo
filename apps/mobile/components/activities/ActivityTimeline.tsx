@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 import { Clock, MessageSquare } from 'lucide-react-native';
-import { useGetApiTasksIdActivities } from '@/gen/api/endpoints/shuchuAPI.gen';
+import { useGetApiTasksIdActivities } from '@/gen/api/endpoints/comoriAPI.gen';
 import { Text } from '@/components/ui/text';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDateTime, formatElapsedTime, calculateDurationSeconds } from '@/lib/time';

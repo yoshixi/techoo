@@ -1,6 +1,6 @@
 import { View, Modal, Pressable, ScrollView } from 'react-native';
 import { X, Check } from 'lucide-react-native';
-import { useGetApiTags } from '@/gen/api/endpoints/shuchuAPI.gen';
+import { useGetApiTags } from '@/gen/api/endpoints/comoriAPI.gen';
 import { Text } from '@/components/ui/text';
 import { Switch } from '@/components/ui/switch';
 import { PressableBadge } from '@/components/ui/badge';
