@@ -47,7 +47,8 @@
       "Bash(sort:*)",
       "Bash(git fetch:*)",
       "Bash(git merge:*)",
-      "Bash(xcode-select:*)"
+      "Bash(xcode-select:*)",
+      "Bash(pnpm:*)"
     ]
   }
 }
