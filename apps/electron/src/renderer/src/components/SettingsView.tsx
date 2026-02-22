@@ -183,7 +183,7 @@ function SyncedCalendarItem({
 export function SettingsView(): React.JSX.Element {
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
   const {
-    isGoogleConnected,
+    isExplicitlyDisconnected,
     isLoading,
     googleAccounts,
     selectedAccountStatus,
@@ -225,7 +225,7 @@ export function SettingsView(): React.JSX.Element {
   }, [accountOptions])
 
   const isSelectedAccountConnected =
-    selectedAccountId ? isGoogleConnected : googleAccounts.length > 0
+    selectedAccountId ? !isExplicitlyDisconnected : googleAccounts.length > 0
 
   const handleAddCalendar = async (
     calendar: AvailableCalendarWithAccount

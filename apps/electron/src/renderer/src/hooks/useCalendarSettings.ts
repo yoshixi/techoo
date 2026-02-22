@@ -49,6 +49,8 @@ export type CalendarWithAccount = Calendar & {
 interface UseCalendarSettingsReturn {
   /** Whether Google OAuth is connected */
   isGoogleConnected: boolean
+  /** Whether the selected account is explicitly disconnected (status loaded and says disconnected) */
+  isExplicitlyDisconnected: boolean
   /** Whether data is loading */
   isLoading: boolean
   /** Linked Google accounts */
@@ -107,12 +109,21 @@ export function useCalendarSettings(
     }
   )
 
+  // Whether the selected account is explicitly disconnected (token expired, etc.)
+  const isExplicitlyDisconnected = useMemo(() => {
+    if (!providerAccountId) return false
+    // Only treat as disconnected when status has loaded and says so
+    return statusData !== undefined && statusData?.connected === false
+  }, [providerAccountId, statusData])
+
   const isGoogleConnected = useMemo(() => {
     if (providerAccountId) {
-      return statusData?.connected === true
+      // Treat as connected while status is loading (optimistic)
+      // Only false when status explicitly says disconnected
+      return !isExplicitlyDisconnected
     }
     return googleAccounts.length > 0
-  }, [googleAccounts.length, providerAccountId, statusData?.connected])
+  }, [googleAccounts.length, providerAccountId, isExplicitlyDisconnected])
 
   // Get available calendars from Google
   const { data: availableData, isLoading: isAvailableLoading } =
@@ -198,6 +209,7 @@ export function useCalendarSettings(
 
   return {
     isGoogleConnected,
+    isExplicitlyDisconnected,
     isLoading:
       isAccountsLoading || isStatusLoading || isAvailableLoading || isSyncedLoading,
     googleAccounts,
