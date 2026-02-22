@@ -31,6 +31,11 @@ export interface UseTasksDataReturn {
   allTasks: Task[]
   sidebarActiveTasks: Task[]
 
+  // Review tab data (unfiltered)
+  reviewTasks: Task[]
+  reviewTimers: TaskTimer[]
+  reviewTimersByTaskId: Map<number, TaskTimer[]>
+
   // Loading/error state
   tasksLoading: boolean
   tasksError: unknown
@@ -199,12 +204,37 @@ export function useTasksData(options: TasksDataOptions): UseTasksDataReturn {
   const tasksLoading = activeTasksLoading || inactiveTasksLoading
   const tasksError = activeTasksError || inactiveTasksError
 
-  const mutateBothTaskLists = useCallback(() => {
-    return Promise.all([mutateActiveTasks(), mutateInactiveTasks(), mutateSidebarActiveTasks()])
-  }, [mutateActiveTasks, mutateInactiveTasks, mutateSidebarActiveTasks])
+  // Review tab: fetch tasks from the last 14 days (including completed) for review charts
+  const reviewDateRange = useMemo(() => {
+    const now = new Date()
+    const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 13)
+    return { startAtFrom: from.toISOString() }
+  }, [currentTime])
+  const reviewTaskQuery = useMemo(
+    () => ({
+      startAtFrom: reviewDateRange.startAtFrom,
+      sortBy: 'startAt' as const,
+      order: 'asc' as const
+    }),
+    [reviewDateRange]
+  )
+  const {
+    data: reviewTasksResponse,
+    mutate: mutateReviewTasks
+  } = useGetApiTasks(reviewTaskQuery)
+  const reviewTasks = reviewTasksResponse?.tasks ?? []
 
-  // Timers
-  const taskIds = useMemo(() => allTasks.map((task) => task.id), [allTasks])
+  const mutateBothTaskLists = useCallback(() => {
+    return Promise.all([mutateActiveTasks(), mutateInactiveTasks(), mutateSidebarActiveTasks(), mutateReviewTasks()])
+  }, [mutateActiveTasks, mutateInactiveTasks, mutateSidebarActiveTasks, mutateReviewTasks])
+
+  // Timers — include review task IDs so we get timer data for the Review tab
+  const taskIds = useMemo(() => {
+    const idSet = new Set<number>()
+    for (const task of allTasks) idSet.add(task.id)
+    for (const task of reviewTasks) idSet.add(task.id)
+    return Array.from(idSet)
+  }, [allTasks, reviewTasks])
   const shouldFetchTimer = useMemo(() => taskIds.length > 0, [taskIds])
 
   const {
@@ -252,6 +282,18 @@ export function useTasksData(options: TasksDataOptions): UseTasksDataReturn {
     })
     return map
   }, [timers])
+
+  // Review-specific timer grouping (uses all timers, grouped by review task IDs)
+  const reviewTimersByTaskId = useMemo(() => {
+    const map = new Map<number, TaskTimer[]>()
+    const reviewTaskIds = new Set(reviewTasks.map((t) => t.id))
+    timers.forEach((timer) => {
+      if (!reviewTaskIds.has(timer.taskId)) return
+      const existing = map.get(timer.taskId) || []
+      map.set(timer.taskId, [...existing, timer])
+    })
+    return map
+  }, [timers, reviewTasks])
 
   // Sync active timer states to main process
   useEffect(() => {
@@ -591,6 +633,9 @@ export function useTasksData(options: TasksDataOptions): UseTasksDataReturn {
     displayTasks,
     allTasks,
     sidebarActiveTasks,
+    reviewTasks,
+    reviewTimers: timers,
+    reviewTimersByTaskId,
     tasksLoading,
     tasksError,
     timersLoading,

@@ -26,6 +26,16 @@ function formatDateKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
+function getCutoffDate(days: number): Date {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() - days + 1)
+}
+
+function filterTimersByDays(timers: TaskTimer[], days: number): TaskTimer[] {
+  const cutoff = getCutoffDate(days)
+  return timers.filter((t) => new Date(t.startTime) >= cutoff)
+}
+
 export function aggregateDailyTimers(timers: TaskTimer[], days: number = 14): DailyTimerData[] {
   const now = new Date()
   const buckets = new Map<string, number>()
@@ -36,14 +46,9 @@ export function aggregateDailyTimers(timers: TaskTimer[], days: number = 14): Da
     buckets.set(formatDateKey(d), 0)
   }
 
-  const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days + 1)
-
-  for (const timer of timers) {
-    const start = new Date(timer.startTime)
-    if (start < cutoff) continue
-
+  for (const timer of filterTimersByDays(timers, days)) {
     const durationMs = timerDurationMs(timer)
-    const key = formatDateKey(start)
+    const key = formatDateKey(new Date(timer.startTime))
     if (buckets.has(key)) {
       buckets.set(key, (buckets.get(key) ?? 0) + durationMs)
     }
@@ -57,12 +62,13 @@ export function aggregateDailyTimers(timers: TaskTimer[], days: number = 14): Da
 
 export function aggregateTimersByTag(
   tasks: Task[],
-  timersByTaskId: Map<number, TaskTimer[]>
+  timersByTaskId: Map<number, TaskTimer[]>,
+  days: number = 14
 ): TagTimerData[] {
   const tagTotals = new Map<string, number>()
 
   for (const task of tasks) {
-    const taskTimers = timersByTaskId.get(task.id) ?? []
+    const taskTimers = filterTimersByDays(timersByTaskId.get(task.id) ?? [], days)
     const totalMs = taskTimers.reduce((sum, t) => sum + timerDurationMs(t), 0)
     if (totalMs === 0) continue
 
@@ -83,11 +89,12 @@ export function aggregateTimersByTag(
 
 export function aggregateTaskTimerSummaries(
   tasks: Task[],
-  timersByTaskId: Map<number, TaskTimer[]>
+  timersByTaskId: Map<number, TaskTimer[]>,
+  days: number = 14
 ): TaskTimerSummary[] {
   return tasks
     .map((task) => {
-      const taskTimers = timersByTaskId.get(task.id) ?? []
+      const taskTimers = filterTimersByDays(timersByTaskId.get(task.id) ?? [], days)
       const totalMs = taskTimers.reduce((sum, t) => sum + timerDurationMs(t), 0)
       return { task, totalMs, sessionCount: taskTimers.length }
     })

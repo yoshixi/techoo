@@ -62,9 +62,9 @@ export function TasksView({
 
           <TabsContent value="review" className="flex-1 min-h-0 overflow-auto">
             <ReviewTab
-              allTasks={data.allTasks}
-              timers={data.timers}
-              timersByTaskId={data.timersByTaskId}
+              allTasks={data.reviewTasks}
+              timers={data.reviewTimers}
+              timersByTaskId={data.reviewTimersByTaskId}
               onTaskSelect={onTaskSelect}
             />
           </TabsContent>
