@@ -36,9 +36,9 @@ export const HealthCheck: React.FC = () => {
   }
 
   return (
-    <div className="p-4 border rounded-lg bg-green-50 border-green-200">
-      <h3 className="text-green-800 font-semibold mb-2">🟢 API Status</h3>
-      <div className="text-sm text-green-700">
+    <div className="p-4 border rounded-lg bg-green-100 border-green-300">
+      <h3 className="text-green-900 font-semibold mb-2">🟢 API Status</h3>
+      <div className="text-sm text-green-800">
         <p>
           <strong>Status:</strong> {data?.status}
         </p>
@@ -50,7 +50,7 @@ export const HealthCheck: React.FC = () => {
           {data?.timestamp ? new Date(data.timestamp).toLocaleString() : 'N/A'}
         </p>
       </div>
-      <div className="text-xs text-green-600 mt-2">✨ Powered by fetch API + SWR</div>
+      <div className="text-xs text-green-700 mt-2">✨ Powered by fetch API + SWR</div>
     </div>
   )
 }

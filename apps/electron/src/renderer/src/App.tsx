@@ -344,8 +344,8 @@ function App(): React.JSX.Element {
                 </div>
               )}
               {!tasksLoading && tasksError ? (
-                <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
-                  Failed to load tasks. {getErrorMessage(tasksError)}
+                <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                  Hmm, couldn&apos;t load tasks. {getErrorMessage(tasksError)}
                 </div>
               ) : null}
               {!tasksLoading && !tasksError && (
@@ -411,7 +411,7 @@ function App(): React.JSX.Element {
           <div className="space-y-4">
             <div className="text-lg font-semibold">New task</div>
             {calendarCreateError && (
-              <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+              <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
                 {calendarCreateError}
               </div>
             )}
@@ -510,7 +510,7 @@ function App(): React.JSX.Element {
           if (!open) setSelectedTask(null)
         }}
       >
-        <DialogContent className="max-w-3xl w-[95vw] border-none bg-transparent p-0 shadow-none focus-visible:outline-none">
+        <DialogContent className="max-w-3xl w-[95vw] border-none bg-transparent p-0 focus-visible:outline-none">
           {selectedTask ? (
             <TaskSideMenu
               task={selectedTask}

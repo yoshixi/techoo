@@ -9,11 +9,13 @@ import {
   getGetApiTimersKey,
 } from '@/gen/api/endpoints/shuchuAPI.gen';
 import { Text } from '@/components/ui/text';
+import { THEME } from '@/lib/theme';
 
 export function QuickStartTask() {
   const { mutate } = useSWRConfig();
   const [title, setTitle] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   const handleQuickStart = useCallback(async () => {
     if (!title.trim() || isCreating) return;
@@ -56,24 +58,30 @@ export function QuickStartTask() {
   }, [title, isCreating, mutate]);
 
   return (
-    <View className="bg-card border border-border rounded-lg p-3 mb-4">
+    <View className="bg-card border border-border/60 rounded-xl p-3 mb-4">
       <Text className="text-sm font-medium mb-2">Quick Start</Text>
       <View className="flex-row items-center gap-2">
         <TextInput
           value={title}
           onChangeText={setTitle}
-          placeholder="What are you working on?"
+          placeholder="What would you like to focus on?"
           placeholderTextColor="#9ca3af"
-          className="flex-1 bg-muted px-3 py-2 rounded-md text-foreground"
+          className="flex-1 bg-white px-3 py-2 rounded-xl text-foreground"
+          style={{
+            borderWidth: 1,
+            borderColor: isFocused ? THEME.light.primary : THEME.light.border,
+          }}
           returnKeyType="go"
           onSubmitEditing={handleQuickStart}
           editable={!isCreating}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
         />
         <Pressable
           onPress={handleQuickStart}
           disabled={!title.trim() || isCreating}
           className={`h-10 w-10 rounded-full items-center justify-center ${
-            title.trim() && !isCreating ? 'bg-green-500' : 'bg-muted'
+            title.trim() && !isCreating ? 'bg-green-700' : 'bg-muted'
           }`}
         >
           {isCreating ? (
@@ -84,7 +92,7 @@ export function QuickStartTask() {
         </Pressable>
       </View>
       <Text className="text-xs text-muted-foreground mt-2">
-        Creates a task and starts the timer immediately
+        Creates a task and starts your focus session
       </Text>
     </View>
   );

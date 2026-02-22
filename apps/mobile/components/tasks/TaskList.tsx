@@ -183,9 +183,9 @@ export function TaskList() {
           }
           ListEmptyComponent={
             <View className="items-center justify-center py-8">
-              <Text className="text-muted-foreground">No tasks yet</Text>
+              <Text className="text-muted-foreground">Your slate is clean!</Text>
               <Text className="text-muted-foreground text-sm mt-1">
-                Tap the + button to create one
+                Tap + to add something you'd like to focus on
               </Text>
             </View>
           }
@@ -194,7 +194,7 @@ export function TaskList() {
 
       <Pressable
         onPress={handleCreatePress}
-        className="absolute bottom-6 right-6 h-14 w-14 rounded-full bg-primary items-center justify-center shadow-lg active:opacity-80"
+        className="absolute bottom-6 right-6 h-14 w-14 rounded-full bg-primary items-center justify-center active:opacity-80"
       >
         <Plus size={24} color="white" />
       </Pressable>

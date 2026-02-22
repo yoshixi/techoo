@@ -169,7 +169,7 @@ export const TagCombobox: React.FC<TagComboboxProps> = ({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md animate-slide-up">
+        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground animate-slide-up">
           <div className="max-h-60 overflow-y-auto p-1">
             {filteredTags.length === 0 && !searchValue && (
               <div className="py-2 px-3 text-sm text-muted-foreground">

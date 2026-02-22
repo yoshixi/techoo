@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { authClient, getJwt } from '../lib/auth'
+import { CharacterIllustration } from './CharacterIllustration'
 
 type AuthMode = 'signin' | 'signup'
 
@@ -103,13 +104,15 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps): React.JSX.Elem
           backgroundColor: 'white',
           padding: '2rem',
           borderRadius: '8px',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
           width: '100%',
           maxWidth: '400px'
         }}
       >
+        <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+          <CharacterIllustration mood="idle" size="lg" className="mx-auto" />
+        </div>
         <h1 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          {mode === 'signin' ? 'Sign In' : 'Sign Up'}
+          Welcome to Comori
         </h1>
 
         <form onSubmit={handleSubmit}>
@@ -176,11 +179,11 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps): React.JSX.Elem
           {error && (
             <div
               style={{
-                color: '#dc2626',
+                color: '#b45309',
                 fontSize: '0.875rem',
                 marginBottom: '1rem',
                 padding: '0.5rem',
-                backgroundColor: '#fef2f2',
+                backgroundColor: '#fffbeb',
                 borderRadius: '4px'
               }}
             >

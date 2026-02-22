@@ -47,12 +47,12 @@ export function ActivityTimeline({ taskId }: ActivityTimelineProps) {
             >
               <View
                 className={`h-8 w-8 rounded-full items-center justify-center ${
-                  isActive ? 'bg-green-100 dark:bg-green-900' : 'bg-muted'
+                  isActive ? 'bg-green-200 dark:bg-green-900' : 'bg-muted'
                 }`}
               >
                 <Clock
                   size={14}
-                  className={isActive ? 'text-green-600' : 'text-muted-foreground'}
+                  className={isActive ? 'text-green-700' : 'text-muted-foreground'}
                 />
               </View>
               <View className="flex-1">

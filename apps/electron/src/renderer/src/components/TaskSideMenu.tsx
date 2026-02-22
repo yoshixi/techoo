@@ -11,6 +11,7 @@ import { formatDateTimeInput, normalizeDateTime } from '../lib/time'
 import { CommentsPanel } from './CommentsPanel'
 import { TaskActivities } from './TaskActivities'
 import { TaskTimeRangePicker } from './TaskTimeRangePicker'
+import { CompletionCelebration } from './CompletionCelebration'
 
 const AUTO_SAVE_DELAY_MS = 800
 
@@ -45,6 +46,7 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
   const [isSaving, setIsSaving] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
   const [showSaved, setShowSaved] = useState(false)
+  const [showCelebration, setShowCelebration] = useState(false)
   const [isScheduleOpen, setIsScheduleOpen] = useState(false)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const savedIndicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -181,9 +183,10 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
       })
       setLocalTask(response.task)
       onTaskUpdated?.(response.task)
-      // Close the detail view when completing a task
+      // Show celebration and close the detail view when completing a task
       if (isCompletingTask) {
-        onClose()
+        setShowCelebration(true)
+        setTimeout(() => onClose(), 1500)
       }
     } catch (error) {
       console.error('Failed to update completion status:', error)
@@ -205,7 +208,8 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
   }
 
   return (
-    <div className="flex h-full max-h-[80vh] flex-col rounded-[32px] bg-white/95 shadow-[0_40px_120px_rgba(15,23,42,0.2)] ring-1 ring-black/5">
+    <div className="flex h-full max-h-[80vh] flex-col rounded-[32px] bg-card ring-1 ring-border">
+      <CompletionCelebration show={showCelebration} onComplete={() => setShowCelebration(false)} />
       <header className="flex items-center justify-between gap-4 px-6 py-5">
         <div className="flex flex-1 items-center gap-4">
           <div className="min-w-0 space-y-2 flex-1">
@@ -276,7 +280,7 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
                   </Button>
                 </div>
                 {isScheduleOpen && (
-                  <div className="absolute z-40 mt-2 w-[min(520px,90vw)] rounded-md border bg-white p-3 shadow-lg">
+                  <div className="absolute z-40 mt-2 w-[min(520px,90vw)] rounded-md border bg-card p-3">
                     <TaskTimeRangePicker
                       startAt={localTask?.startAt}
                       endAt={localTask?.endAt}
@@ -317,7 +321,7 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
           <div className="h-6 flex items-center">
             {isSaving && <span className="text-xs text-muted-foreground">Saving...</span>}
             {showSaved && !isSaving && (
-              <span className="text-xs text-green-600 flex items-center gap-1">
+              <span className="text-xs text-success flex items-center gap-1">
                 <Check className="h-3 w-3" />
                 Saved
               </span>

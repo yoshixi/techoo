@@ -286,12 +286,12 @@ export function SettingsContent() {
             </View>
           </Button>
           {linkStatus === 'success' && (
-            <Text className="text-xs text-green-600">
+            <Text className="text-xs text-green-700">
               Account linked successfully.
             </Text>
           )}
           {linkStatus === 'error' && (
-            <Text className="text-xs text-red-600">
+            <Text className="text-xs text-destructive">
               Link failed. Please try again.
             </Text>
           )}
@@ -316,8 +316,8 @@ export function SettingsContent() {
           </View>
           {googleAccounts.length > 0 ? (
             <View className="flex-row items-center gap-1">
-              <CheckCircle size={16} color="#16a34a" />
-              <Text className="text-sm text-green-600">Connected</Text>
+              <CheckCircle size={16} color="#15803d" />
+              <Text className="text-sm text-green-700">Connected</Text>
             </View>
           ) : (
             <Text className="text-xs text-muted-foreground">
@@ -384,8 +384,8 @@ export function SettingsContent() {
                     <View className="w-16">
                       {cal.isAlreadyAdded ? (
                         <View className="flex-row items-center gap-1">
-                          <CheckCircle size={12} color="#16a34a" />
-                          <Text className="text-xs text-green-600">Added</Text>
+                          <CheckCircle size={12} color="#15803d" />
+                          <Text className="text-xs text-green-700">Added</Text>
                         </View>
                       ) : (
                         <Button
@@ -501,7 +501,7 @@ export function SettingsContent() {
       {/* About — minimal footer */}
       <View className="pt-2 items-center">
         <Text className="text-sm text-muted-foreground">
-          Shuchu v{appVersion} — Focus-driven task management
+          Comori v{appVersion} — Your cozy focus companion
         </Text>
       </View>
     </View>

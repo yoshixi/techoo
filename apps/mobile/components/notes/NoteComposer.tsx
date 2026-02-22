@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { View, TextInput } from 'react-native';
 import { Text } from '@/components/ui/text';
+import { THEME } from '@/lib/theme';
 
 export interface NoteComposerProps {
   onCreateNote: (text: string) => void;
@@ -8,6 +9,7 @@ export interface NoteComposerProps {
 
 export function NoteComposer({ onCreateNote }: NoteComposerProps) {
   const [text, setText] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
 
   const handleSubmit = useCallback(() => {
     if (!text.trim()) return;
@@ -23,10 +25,16 @@ export function NoteComposer({ onCreateNote }: NoteComposerProps) {
         onChangeText={setText}
         placeholder="Capture an idea..."
         placeholderTextColor="#9ca3af"
-        className="bg-muted px-3 py-2 rounded-md text-foreground native:text-base"
+        className="bg-white px-3 py-2 rounded-md text-foreground native:text-base"
+        style={{
+          borderWidth: 1,
+          borderColor: isFocused ? THEME.light.primary : THEME.light.border,
+        }}
         returnKeyType="done"
         blurOnSubmit
         onSubmitEditing={handleSubmit}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
       />
       <Text className="text-xs text-muted-foreground mt-2">
         First line becomes the title

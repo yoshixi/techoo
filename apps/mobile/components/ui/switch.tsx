@@ -38,7 +38,7 @@ function Switch({ checked, onCheckedChange, disabled = false, className, ...prop
     >
       <Animated.View
         style={thumbStyle}
-        className="h-5 w-5 rounded-full bg-background shadow-sm"
+        className="h-5 w-5 rounded-full bg-background"
       />
     </Pressable>
   );

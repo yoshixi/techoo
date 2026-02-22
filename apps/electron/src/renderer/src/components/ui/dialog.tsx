@@ -19,7 +19,7 @@ const DialogOverlay = forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      'fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=closed]:animate-fade-in data-[state=open]:animate-fade-in',
+      'fixed inset-0 z-50 bg-foreground/30 backdrop-blur-sm data-[state=closed]:animate-fade-in data-[state=open]:animate-fade-in',
       className
     )}
     {...props}
@@ -36,7 +36,7 @@ const DialogContent = forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border bg-card p-6 shadow-lg outline-none animate-slide-up',
+        'fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-3xl border bg-card p-6 outline-none animate-slide-up',
         className
       )}
       {...props}

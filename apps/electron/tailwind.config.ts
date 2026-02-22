@@ -68,13 +68,28 @@ const config: Config = {
         'slide-up': {
           from: { transform: 'translateY(6px)', opacity: '0' },
           to: { transform: 'translateY(0)', opacity: '1' }
+        },
+        breathe: {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.03)' }
+        },
+        'gentle-bounce': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-4px)' }
+        },
+        'soft-glow': {
+          '0%, 100%': { opacity: '0.8' },
+          '50%': { opacity: '1' }
         }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'fade-in': 'fade-in 0.2s ease-out',
-        'slide-up': 'slide-up 0.2s ease-out'
+        'slide-up': 'slide-up 0.2s ease-out',
+        breathe: 'breathe 3s ease-in-out infinite',
+        'gentle-bounce': 'gentle-bounce 2s ease-in-out infinite',
+        'soft-glow': 'soft-glow 2s ease-in-out infinite'
       }
     }
   },

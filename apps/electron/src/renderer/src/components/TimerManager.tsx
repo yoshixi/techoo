@@ -159,8 +159,8 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
 
   if (timersError) {
     return (
-      <div className={isCompact ? 'text-sm text-destructive' : 'text-red-500 text-sm'}>
-        Failed to load timers
+      <div className={isCompact ? 'text-sm text-destructive' : 'text-destructive text-sm'}>
+        Unable to load timers right now
       </div>
     )
   }
@@ -171,7 +171,7 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
         <div className="flex items-center gap-2 rounded-full bg-muted/40 px-2 py-1 text-xs font-semibold text-foreground">
           <span
             className={`h-2 w-2 rounded-full ${
-              activeTimer ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground/60'
+              activeTimer ? 'bg-timer-active animate-breathe' : 'bg-muted-foreground/60'
             }`}
           ></span>
           <span className="font-mono text-sm">
@@ -203,7 +203,7 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
               disabled={isCompleting}
               className={`rounded-full border p-2 transition-colors ${
                 isCompleted
-                  ? 'border-green-500/40 bg-green-500/10 text-green-700'
+                  ? 'border-green-700/40 bg-green-700/10 text-green-800'
                   : 'border-muted-foreground/30 text-muted-foreground hover:border-foreground/40'
               } disabled:opacity-50`}
               aria-label={isCompleted ? 'Mark incomplete' : 'Mark complete'}
@@ -226,7 +226,7 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
       <div className="flex items-center justify-between rounded-2xl border border-black/5 bg-white/90 p-4">
         <div className="flex items-center gap-3">
           <div
-            className={`w-3 h-3 rounded-full ${activeTimer ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}
+            className={`w-3 h-3 rounded-full ${activeTimer ? 'bg-timer-active animate-breathe' : 'bg-gray-300'}`}
           ></div>
           <span className="font-mono text-xl font-medium text-gray-800">
             {activeTimer ? formatDuration(elapsedTime) : '00:00:00'}
@@ -236,9 +236,9 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
           {activeTimer ? (
             <button
               onClick={handleStopTimer}
-              className="rounded-full bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-500/15"
+              className="rounded-full bg-destructive/10 px-4 py-2 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/15"
             >
-              Stop Timer
+              Pause
             </button>
           ) : (
             <button
@@ -246,7 +246,7 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
               disabled={isCreating}
               className="rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
             >
-              Start Timer
+              Start Focusing
             </button>
           )}
         </div>
@@ -287,7 +287,7 @@ export const TimerManager: React.FC<TimerManagerProps> = ({
                     <button
                       onClick={handleSaveTimer}
                       disabled={isUpdating}
-                      className="p-1 text-green-600 hover:bg-green-100 rounded disabled:opacity-50"
+                      className="p-1 text-green-700 hover:bg-green-200 rounded disabled:opacity-50"
                       aria-label="Save"
                     >
                       <Check className="h-3 w-3" />

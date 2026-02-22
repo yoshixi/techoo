@@ -82,7 +82,7 @@ function AvailableCalendarItem({
       {/* Action button/badge on left side - always visible */}
       <div className="shrink-0 w-16">
         {calendar.isAlreadyAdded ? (
-          <span className="flex items-center gap-1 text-xs text-green-600">
+          <span className="flex items-center gap-1 text-xs text-green-700">
             <CheckCircle className="h-3 w-3" />
             Added
           </span>
@@ -299,7 +299,7 @@ export function SettingsView(): React.JSX.Element {
               </div>
             </div>
             {googleAccounts.length > 0 ? (
-              <span className="flex items-center gap-1.5 text-green-600 text-sm">
+              <span className="flex items-center gap-1.5 text-green-700 text-sm">
                 <CheckCircle className="h-4 w-4" />
                 Connected
               </span>

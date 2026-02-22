@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Circle, Play, Square, Trash2 } from 'lucide-react'
+import { CharacterIllustration } from '../CharacterIllustration'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Badge } from '../ui/badge'
@@ -51,7 +52,7 @@ function RunningTaskCard({
       className="flex items-center gap-3 rounded-lg border bg-card p-3 cursor-pointer hover:bg-muted/50 transition-colors"
       onClick={onSelect}
     >
-      <Circle className="h-2.5 w-2.5 text-red-500 fill-red-500 animate-pulse shrink-0" />
+      <Circle className="h-2.5 w-2.5 text-timer-active fill-timer-active animate-breathe shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium truncate">{task.title}</div>
         {task.tags && task.tags.length > 0 && (
@@ -71,8 +72,8 @@ function RunningTaskCard({
         onClick={(e) => { e.stopPropagation(); onStop() }}
         className="h-7 shrink-0"
       >
-        <Square className="h-3 w-3 mr-1 text-red-500" />
-        Stop
+        <Square className="h-3 w-3 mr-1 text-destructive" />
+        Pause
       </Button>
     </div>
   )
@@ -122,11 +123,11 @@ export function NowTab({
     <div className="space-y-6">
       {/* Quick Capture */}
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Quick Capture</h3>
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Start Something</h3>
         <div className="flex items-center gap-2">
           <Input
             ref={inputRef}
-            placeholder="What are you working on?"
+            placeholder="What would you like to focus on?"
             value={quickTitle}
             onChange={(e) => setQuickTitle(e.target.value)}
             onKeyDown={(e) => {
@@ -159,7 +160,7 @@ export function NowTab({
             className="shrink-0"
           >
             <Play className="h-4 w-4 mr-1" />
-            Start
+            Let's Go
           </Button>
         </div>
       </div>
@@ -167,11 +168,12 @@ export function NowTab({
       {/* Running Tasks */}
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Running Tasks {runningTasks.length > 0 && `(${runningTasks.length})`}
+          Focusing Now {runningTasks.length > 0 && `(${runningTasks.length})`}
         </h3>
         {runningTasks.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            No tasks running. Use Quick Capture above to start one.
+          <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground space-y-3">
+            <CharacterIllustration mood="encouraging" size="md" className="mx-auto" />
+            <p>All clear! Ready when you are.</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -197,8 +199,9 @@ export function NowTab({
           Today's Schedule {todayTasks.length > 0 && `(${todayTasks.length})`}
         </h3>
         {todayTasks.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            No scheduled tasks for today.
+          <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground space-y-3">
+            <CharacterIllustration mood="thinking" size="md" className="mx-auto" />
+            <p>Nothing on the schedule today. Enjoy the calm!</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -212,10 +215,10 @@ export function NowTab({
                   size="icon"
                   variant="ghost"
                   onClick={(e) => { e.stopPropagation(); onStartTimer(task.id) }}
-                  className="h-7 w-7 hover:bg-green-100 shrink-0"
+                  className="h-7 w-7 hover:bg-green-200 shrink-0"
                   title="Start timer"
                 >
-                  <Play className="h-4 w-4 text-green-600" />
+                  <Play className="h-4 w-4 text-green-700" />
                 </Button>
                 <div className="text-xs text-muted-foreground w-28 shrink-0">
                   {formatTimeRangeShort(task.startAt, task.endAt)}
@@ -234,10 +237,10 @@ export function NowTab({
                   size="icon"
                   variant="ghost"
                   onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id) }}
-                  className="h-7 w-7 hover:bg-red-100 shrink-0"
+                  className="h-7 w-7 hover:bg-destructive/10 shrink-0"
                   title="Delete task"
                 >
-                  <Trash2 className="h-4 w-4 text-red-500" />
+                  <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
             ))}

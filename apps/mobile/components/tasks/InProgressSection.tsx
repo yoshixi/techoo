@@ -21,8 +21,8 @@ export function InProgressSection({
   return (
     <View className="mb-4">
       <View className="flex-row items-center gap-2 mb-2">
-        <View className="h-2 w-2 rounded-full bg-green-500" />
-        <Text className="font-semibold text-sm">In Progress</Text>
+        <View className="h-2 w-2 rounded-full bg-green-700" />
+        <Text className="font-semibold text-sm">Focusing Now</Text>
       </View>
       {tasks.map((task) => (
         <TaskListItem

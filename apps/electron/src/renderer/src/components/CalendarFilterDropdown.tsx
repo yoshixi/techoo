@@ -65,7 +65,7 @@ export function CalendarFilterDropdown({
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1 z-50 min-w-48 rounded-md border bg-card p-2 shadow-lg">
+        <div className="absolute right-0 top-full mt-1 z-50 min-w-48 rounded-md border bg-card p-2">
           <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
             Show calendars
           </div>

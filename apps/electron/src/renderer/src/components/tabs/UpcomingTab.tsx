@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { Play, CheckCircle, Maximize2, Trash2 } from 'lucide-react'
+import { CharacterIllustration } from '../CharacterIllustration'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
 import { Switch } from '../ui/switch'
@@ -89,8 +90,9 @@ export function UpcomingTab({
       )}
 
       {!isLoading && groups.length === 0 && (
-        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-          No upcoming tasks found.
+        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground space-y-3">
+          <CharacterIllustration mood="encouraging" size="md" className="mx-auto" />
+          <p>Nothing coming up. Enjoy the calm!</p>
         </div>
       )}
 
@@ -118,30 +120,30 @@ export function UpcomingTab({
                       const timer = activeTimersByTaskId.get(task.id)
                       if (timer) onStopTimer(task.id, timer.id)
                     }}
-                    className="h-7 w-7 hover:bg-red-100 shrink-0"
-                    title="Stop timer"
+                    className="h-7 w-7 hover:bg-destructive/10 shrink-0"
+                    title="Pause timer"
                   >
-                    <span className="h-4 w-4 rounded-sm bg-red-600 animate-pulse block" style={{ width: 12, height: 12 }} />
+                    <span className="h-4 w-4 rounded-sm bg-timer-active animate-breathe block" style={{ width: 12, height: 12 }} />
                   </Button>
                 ) : (
                   <Button
                     size="icon"
                     variant="ghost"
                     onClick={(e) => { e.stopPropagation(); onStartTimer(task.id) }}
-                    className="h-7 w-7 hover:bg-green-100 shrink-0"
+                    className="h-7 w-7 hover:bg-green-200 shrink-0"
                     title="Start timer"
                   >
-                    <Play className="h-4 w-4 text-green-600" />
+                    <Play className="h-4 w-4 text-green-700" />
                   </Button>
                 )}
                 <Button
                   size="icon"
                   variant="ghost"
                   onClick={(e) => { e.stopPropagation(); onToggleCompletion(task) }}
-                  className={`h-7 w-7 shrink-0 ${isCompleted ? 'opacity-50' : 'hover:bg-green-100'}`}
+                  className={`h-7 w-7 shrink-0 ${isCompleted ? 'opacity-50' : 'hover:bg-green-200'}`}
                   title={isCompleted ? 'Mark incomplete' : 'Mark complete'}
                 >
-                  <CheckCircle className={`h-4 w-4 ${isCompleted ? 'text-gray-400' : 'text-green-600'}`} />
+                  <CheckCircle className={`h-4 w-4 ${isCompleted ? 'text-gray-400' : 'text-green-700'}`} />
                 </Button>
                 <div className="text-xs text-muted-foreground w-28 shrink-0">
                   {formatTimeRangeShort(task.startAt, task.endAt)}
@@ -171,10 +173,10 @@ export function UpcomingTab({
                   size="icon"
                   variant="ghost"
                   onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id) }}
-                  className="h-7 w-7 hover:bg-red-100 shrink-0"
+                  className="h-7 w-7 hover:bg-destructive/10 shrink-0"
                   title="Delete task"
                 >
-                  <Trash2 className="h-4 w-4 text-red-500" />
+                  <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
             )

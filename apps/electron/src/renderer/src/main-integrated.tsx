@@ -11,7 +11,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     {USE_API ? (
       <>
-        <div className="fixed top-0 right-0 z-50 bg-green-500 text-white px-3 py-1 text-xs font-mono">
+        <div className="fixed top-0 right-0 z-50 bg-green-700 text-white px-3 py-1 text-xs font-mono">
           API MODE
         </div>
         <ApiApp />

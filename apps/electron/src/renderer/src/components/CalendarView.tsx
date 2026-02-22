@@ -745,11 +745,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   )}
                   {isToday && (
                     <div
-                      className="absolute left-0 right-0 h-px bg-red-500/70"
+                      className="absolute left-0 right-0 h-px bg-primary/70"
                       style={{ top: nowTop }}
                     >
-                      <div className="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-red-500" />
-                      <div className="absolute -left-14 top-1/2 -translate-y-1/2 text-[10px] font-medium text-red-500">
+                      <div className="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-primary" />
+                      <div className="absolute -left-14 top-1/2 -translate-y-1/2 text-[10px] font-medium text-primary">
                         {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
@@ -804,7 +804,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                           'absolute rounded-md bg-primary/15 px-2 py-1 text-left text-xs outline outline-1 outline-primary/30 hover:bg-primary/20',
                           (isDragging || isResizing) && 'opacity-40',
                           isCompleted && 'bg-muted/60 text-slate-500 outline-muted-foreground/30 hover:bg-muted/70',
-                          activeTimer && 'bg-red-500/15 text-red-700 outline-red-500/40 hover:bg-red-500/20'
+                          activeTimer && 'bg-timer-active-bg text-timer-active outline-timer-active/40 hover:bg-timer-active-bg'
                         )}
                         style={{
                           top,
@@ -853,8 +853,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                                 className={cn(
                                   'rounded p-0.5',
                                   activeTimer
-                                    ? 'text-red-600 hover:text-red-700'
-                                    : 'text-green-600 hover:text-green-700'
+                                    ? 'text-destructive hover:text-destructive/80'
+                                    : 'text-green-700 hover:text-green-800'
                                 )}
                                 aria-label={activeTimer ? 'Stop timer' : 'Start timer'}
                               >

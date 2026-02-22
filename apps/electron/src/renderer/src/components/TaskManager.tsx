@@ -250,7 +250,7 @@ export const TaskManager: React.FC = () => {
         {tasks.map((task) => (
           <div
             key={task.id}
-            className={`p-4 border rounded-lg bg-white shadow-sm transition-shadow cursor-pointer hover:shadow-md ${selectedTask?.id === task.id ? 'ring-2 ring-blue-400 border-blue-400' : ''}`}
+            className={`p-4 border rounded-lg bg-white cursor-pointer ${selectedTask?.id === task.id ? 'ring-2 ring-blue-400 border-blue-400' : ''}`}
             onClick={() => setSelectedTask(task)}
           >
             <div>
@@ -265,7 +265,7 @@ export const TaskManager: React.FC = () => {
                     ? `Due ${new Date(task.dueDate).toLocaleDateString()}`
                     : 'No due date'}
                   {task.completedAt && (
-                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+                    <span className="rounded-full bg-green-200 px-2 py-0.5 text-[10px] font-semibold text-green-800">
                       Completed
                     </span>
                   )}
@@ -282,7 +282,7 @@ export const TaskManager: React.FC = () => {
                   <button
                     onClick={() => handleToggleTaskCompletion(task)}
                     disabled={completingTaskId === task.id}
-                    className={`px-3 py-1 text-sm rounded ${task.completedAt ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-green-100 text-green-800 hover:bg-green-200'} disabled:opacity-50`}
+                    className={`px-3 py-1 text-sm rounded ${task.completedAt ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-green-200 text-green-800 hover:bg-green-300'} disabled:opacity-50`}
                   >
                     {completingTaskId === task.id
                       ? 'Updating...'

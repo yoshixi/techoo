@@ -41,7 +41,7 @@ export function TaskBlock({
   const scale = useSharedValue(1);
 
   const bgColor = isActive
-    ? 'bg-green-500'
+    ? 'bg-green-700'
     : isCompleted
       ? 'bg-gray-400'
       : 'bg-primary';
@@ -99,9 +99,9 @@ export function TaskBlock({
       { scale: scale.value },
     ],
     zIndex: isDragging.value ? 100 : 1,
-    shadowOpacity: isDragging.value ? 0.3 : 0,
-    shadowRadius: isDragging.value ? 8 : 0,
-    shadowOffset: { width: 0, height: isDragging.value ? 4 : 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
   }));
 
   return (

@@ -126,7 +126,7 @@ export function TaskListItem({ task, activeTimer, onPress }: TaskListItemProps) 
     return (
       <Pressable
         onPress={handleComplete}
-        className="bg-green-500 justify-center items-center rounded-lg mb-2 px-6"
+        className="bg-green-700 justify-center items-center rounded-lg mb-2 px-6"
       >
         <Animated.View
           style={{ transform: [{ scale }], opacity }}
@@ -160,7 +160,7 @@ export function TaskListItem({ task, activeTimer, onPress }: TaskListItemProps) 
     return (
       <Pressable
         onPress={handleComplete}
-        className="bg-green-500 justify-center items-center rounded-lg mb-2 px-6"
+        className="bg-green-700 justify-center items-center rounded-lg mb-2 px-6"
       >
         <Animated.View
           style={{ transform: [{ scale }], opacity }}
@@ -243,8 +243,8 @@ export function TaskListItem({ task, activeTimer, onPress }: TaskListItemProps) 
           </View>
 
           {isRunning && (
-            <View className="bg-green-100 dark:bg-green-900 px-2 py-1 rounded">
-              <Text className="text-green-700 dark:text-green-300 text-sm font-mono">
+            <View className="bg-green-200 dark:bg-green-900 px-2 py-1 rounded">
+              <Text className="text-green-800 dark:text-green-300 text-sm font-mono">
                 {formattedTime}
               </Text>
             </View>

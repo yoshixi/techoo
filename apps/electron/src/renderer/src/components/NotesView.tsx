@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { Archive, ArrowRightLeft, Trash2 } from 'lucide-react'
+import { CharacterIllustration } from './CharacterIllustration'
 import { Button } from './ui/button'
 import { Switch } from './ui/switch'
 import { Label } from './ui/label'
@@ -51,9 +52,9 @@ function NoteComposer({
       onChange={(e) => setValue(e.target.value)}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      placeholder="Capture an idea..."
+      placeholder="What's on your mind?"
       rows={1}
-      className="w-full resize-none rounded-lg border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="w-full resize-none rounded-lg border bg-white px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     />
   )
 }
@@ -263,8 +264,8 @@ export function NotesView(): React.JSX.Element {
           </div>
         )}
         {!notesLoading && notesError ? (
-          <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
-            Failed to load notes.
+          <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+            We had trouble loading your notes. Please try again.
           </div>
         ) : null}
 
@@ -272,8 +273,9 @@ export function NotesView(): React.JSX.Element {
         {!notesLoading && !notesError && (
           <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
             {notes.length === 0 ? (
-              <div className="text-sm text-muted-foreground text-center py-8">
-                No notes yet. Start typing above to capture an idea.
+              <div className="text-sm text-muted-foreground text-center py-8 space-y-3">
+                <CharacterIllustration mood="thinking" size="md" className="mx-auto" />
+                <p>No notes yet. Start typing above to capture an idea.</p>
               </div>
             ) : (
               notes.map((note) => (
