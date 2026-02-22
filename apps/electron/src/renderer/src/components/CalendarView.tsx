@@ -22,9 +22,8 @@ import type { Task, TaskTimer, CalendarEvent, Calendar } from '../gen/api'
 import {
   MINUTES_PER_DAY,
   DAY_MS,
-  VISIBLE_START_HOUR,
-  VISIBLE_END_HOUR_CALENDAR as VISIBLE_END_HOUR,
   MIN_SLOT_HEIGHT_PX,
+  BASE_SLOT_HEIGHT_PX,
   HOUR_LABEL_VERTICAL_OFFSET,
   MIN_ZOOM,
   MAX_ZOOM,
@@ -151,10 +150,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   // ==========================================================================
   /** Current zoom level (0.5 to 3.0) */
   const [zoomLevel, setZoomLevel] = useState<number>(DEFAULT_ZOOM)
-  /** Base slot height before zoom is applied (calculated from container height) */
-  const [baseSlotHeight, setBaseSlotHeight] = useState<number>(15)
-  /** Actual slot height in pixels (baseSlotHeight * zoomLevel) */
-  const slotHeight = Math.max(MIN_SLOT_HEIGHT_PX, Math.round(baseSlotHeight * zoomLevel))
+  /** Actual slot height in pixels (fixed base * zoomLevel) */
+  const slotHeight = Math.max(MIN_SLOT_HEIGHT_PX, Math.round(BASE_SLOT_HEIGHT_PX * zoomLevel))
 
   /** Slot configuration derived from zoom level (slotMinutes, slotsPerHour, slotCount) */
   const slotConfig = useMemo(() => getSlotConfig(zoomLevel), [zoomLevel])
@@ -488,32 +485,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
     container.scrollTop = targetScrollTop
   }, [viewMode, slotHeight, slotCount, slotMinutes])
-
-  // ==========================================================================
-  // Effect: Calculate Base Slot Height from Container Size
-  // Ensures the visible time window (VISIBLE_START_HOUR to VISIBLE_END_HOUR)
-  // fills the container at 100% zoom. Responds to container resizes.
-  // ==========================================================================
-  React.useEffect(() => {
-    if (!scrollContainerRef.current) return
-    const container = scrollContainerRef.current
-    const defaultConfig = getSlotConfig(DEFAULT_ZOOM)
-    const visibleSlots = (VISIBLE_END_HOUR - VISIBLE_START_HOUR) * defaultConfig.slotsPerHour
-
-    const updateBaseSlotHeight = () => {
-      const nextHeight = Math.max(
-        MIN_SLOT_HEIGHT_PX,
-        Math.floor(container.clientHeight / visibleSlots)
-      )
-      setBaseSlotHeight(nextHeight)
-    }
-
-    updateBaseSlotHeight()
-
-    const observer = new ResizeObserver(updateBaseSlotHeight)
-    observer.observe(container)
-    return () => observer.disconnect()
-  }, [])
 
   // ==========================================================================
   // Effect: Update Current Time Every Minute

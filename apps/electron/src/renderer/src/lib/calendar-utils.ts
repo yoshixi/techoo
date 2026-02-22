@@ -28,6 +28,9 @@ export const VISIBLE_END_HOUR_CALENDAR = 12
 /** Minimum slot height in pixels to ensure readability */
 export const MIN_SLOT_HEIGHT_PX = 4
 
+/** Fixed base slot height in pixels (before zoom is applied) */
+export const BASE_SLOT_HEIGHT_PX = 15
+
 /** Vertical offset to center hour labels with grid lines */
 export const HOUR_LABEL_VERTICAL_OFFSET = 6
 
