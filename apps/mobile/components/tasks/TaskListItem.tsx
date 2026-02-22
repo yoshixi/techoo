@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { View, Pressable, Animated } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import { Check, Circle, Clock } from 'lucide-react-native';
+import { Check, Clock } from 'lucide-react-native';
 import { useSWRConfig } from 'swr';
 import type { Task, TaskTimer } from '@/gen/api/schemas';
 import { putApiTasksId } from '@/gen/api/endpoints/shuchuAPI.gen';
@@ -203,15 +203,6 @@ export function TaskListItem({ task, activeTimer, onPress }: TaskListItemProps) 
           disabled={isHiding}
           className="flex-row items-start gap-3 py-3 px-3 bg-card rounded-lg mb-2 border border-border active:opacity-70"
         >
-          <Pressable onPress={handleComplete} hitSlop={8} className="mt-0.5">
-            {isCompleted ? (
-              <View className="h-5 w-5 rounded-full bg-primary items-center justify-center">
-                <Check size={12} color="white" />
-              </View>
-            ) : (
-              <Circle size={20} className="text-muted-foreground" />
-            )}
-          </Pressable>
           <View className="flex-1">
             <Text
               className={`font-medium ${isCompleted ? 'line-through text-muted-foreground' : ''}`}

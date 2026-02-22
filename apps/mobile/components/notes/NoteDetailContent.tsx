@@ -94,7 +94,7 @@ export function NoteDetailContent({ noteId }: NoteDetailContentProps) {
   return (
     <View className="flex-1">
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
+      <View className="flex-row items-center justify-between px-6 py-4 border-b border-border">
         <Pressable onPress={handleClose} hitSlop={10}>
           <X size={24} className="text-muted-foreground" />
         </Pressable>

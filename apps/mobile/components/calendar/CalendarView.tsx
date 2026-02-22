@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { View, Dimensions } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
@@ -32,6 +32,20 @@ export function CalendarView() {
   const [viewMode, setViewMode] = useState<ViewMode>('day');
   const [showCreateSheet, setShowCreateSheet] = useState(false);
   const [createTimeRange, setCreateTimeRange] = useState<TimeRange | null>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // Scroll to current time on mount
+  useEffect(() => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    // Scroll to 1 hour before current time so it's visible in context
+    const scrollY = Math.max(0, (currentHour - 1) * HOUR_HEIGHT);
+    // Small delay to ensure layout is ready
+    const timer = setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: scrollY, animated: false });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const { data: tasksData, isLoading: tasksLoading } = useGetApiTasks();
   const { data: timersData } = useGetApiTimers();
@@ -183,7 +197,7 @@ export function CalendarView() {
         onToggleViewMode={handleToggleViewMode}
       />
 
-      <ScrollView className="flex-1">
+      <ScrollView ref={scrollViewRef} className="flex-1">
         <View className="flex-row">
           {/* Time labels column */}
           <View className="w-12 pt-2">

@@ -1,7 +1,7 @@
 import { useCallback, useState, useEffect } from 'react';
 import { View, ScrollView, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { X, Trash2, Check, Circle, Calendar } from 'lucide-react-native';
+import { X, Trash2, CheckCircle, Calendar } from 'lucide-react-native';
 import { useSWRConfig } from 'swr';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
@@ -166,7 +166,7 @@ export function TaskDetailContent({ taskId }: TaskDetailContentProps) {
 
   return (
     <View className="flex-1">
-      <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
+      <View className="flex-row items-center justify-between px-6 py-4 border-b border-border">
         <Pressable onPress={handleClose} hitSlop={10}>
           <X size={24} className="text-muted-foreground" />
         </Pressable>
@@ -175,32 +175,29 @@ export function TaskDetailContent({ taskId }: TaskDetailContentProps) {
             <Text className="text-xs text-muted-foreground">Saving...</Text>
           )}
         </View>
-        <Pressable onPress={handleDelete} hitSlop={10}>
-          <Trash2 size={20} className="text-destructive" />
-        </Pressable>
+        <View className="flex-row items-center gap-4">
+          <Pressable onPress={handleToggleComplete} hitSlop={10}>
+            <CheckCircle
+              size={20}
+              className={isCompleted ? 'text-green-700' : 'text-muted-foreground'}
+            />
+          </Pressable>
+          <Pressable onPress={handleDelete} hitSlop={10}>
+            <Trash2 size={20} className="text-destructive" />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
         <View className="p-4">
-          {/* Complete Toggle & Title */}
-          <View className="flex-row items-start gap-3 mb-4">
-            <Pressable onPress={handleToggleComplete} className="mt-1">
-              {isCompleted ? (
-                <View className="h-6 w-6 rounded-full bg-primary items-center justify-center">
-                  <Check size={14} color="white" />
-                </View>
-              ) : (
-                <Circle size={24} className="text-muted-foreground" />
-              )}
-            </Pressable>
-            <View className="flex-1">
-              <Input
-                value={title}
-                onChangeText={setTitle}
-                className="text-lg font-semibold border-0 p-0"
-                placeholder="Task title"
-              />
-            </View>
+          {/* Title */}
+          <View className="mb-4">
+            <Input
+              value={title}
+              onChangeText={setTitle}
+              className="text-lg font-semibold border-0 p-0"
+              placeholder="Task title"
+            />
           </View>
 
           {/* Timer Section */}
