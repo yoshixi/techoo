@@ -1,4 +1,3 @@
-import { google } from 'googleapis'
 import type {
   CalendarProvider,
   ProviderCalendar,
@@ -8,6 +7,10 @@ import type {
   WatchChannelResult,
   WatchChannelInfo
 } from './types'
+
+const GOOGLE_OAUTH_TOKEN_URL = 'https://oauth2.googleapis.com/token'
+const GOOGLE_OAUTH_REVOKE_URL = 'https://oauth2.googleapis.com/revoke'
+const GOOGLE_CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3'
 
 // Google Calendar scopes
 const SCOPES = [
@@ -30,11 +33,21 @@ function getOAuth2Config() {
   return { clientId, clientSecret, redirectUri }
 }
 
-// Create OAuth2 client
-function createOAuth2Client() {
-  const { clientId, clientSecret, redirectUri } = getOAuth2Config()
-  return new google.auth.OAuth2(clientId, clientSecret, redirectUri)
+const buildAuthUrl = (params: Record<string, string>) => {
+  const url = new URL('https://accounts.google.com/o/oauth2/v2/auth')
+  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value))
+  return url.toString()
 }
+
+const authorizedFetch = async (url: string, accessToken: string, init?: RequestInit) =>
+  fetch(url, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      ...(init?.headers || {})
+    }
+  })
 
 // Google Calendar Provider implementation
 export const googleCalendarProvider: CalendarProvider = {
@@ -42,28 +55,57 @@ export const googleCalendarProvider: CalendarProvider = {
 
   // Generate authorization URL for OAuth flow
   getAuthUrl(state?: string): string {
-    const oauth2Client = createOAuth2Client()
+    const { clientId, redirectUri } = getOAuth2Config()
 
-    return oauth2Client.generateAuthUrl({
+    return buildAuthUrl({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
       access_type: 'offline',
-      scope: SCOPES,
-      prompt: 'consent', // Force consent screen to get refresh token
-      state: state
+      scope: SCOPES.join(' '),
+      prompt: 'consent',
+      ...(state ? { state } : {})
     })
   },
 
   // Exchange authorization code for tokens
   async exchangeCodeForTokens(code: string): Promise<ProviderTokens> {
-    const oauth2Client = createOAuth2Client()
-    const { tokens } = await oauth2Client.getToken(code)
+    const { clientId, clientSecret, redirectUri } = getOAuth2Config()
+    const body = new URLSearchParams({
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code'
+    })
+
+    const response = await fetch(GOOGLE_OAUTH_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(
+        `Failed to exchange code for tokens: ${response.status} ${errorText}`.trim()
+      )
+    }
+
+    const tokens = (await response.json()) as {
+      access_token?: string
+      refresh_token?: string
+      expires_in?: number
+    }
 
     if (!tokens.access_token || !tokens.refresh_token) {
       throw new Error('Failed to obtain tokens from Google')
     }
 
-    const expiresAt = tokens.expiry_date
-      ? new Date(tokens.expiry_date)
-      : new Date(Date.now() + 3600 * 1000)
+    const expiresAt =
+      tokens.expires_in !== undefined
+        ? new Date(Date.now() + tokens.expires_in * 1000)
+        : new Date(Date.now() + 3600 * 1000)
 
     return {
       accessToken: tokens.access_token,
@@ -74,18 +116,41 @@ export const googleCalendarProvider: CalendarProvider = {
 
   // Refresh access token using refresh token
   async refreshAccessToken(refreshToken: string): Promise<RefreshedTokens> {
-    const oauth2Client = createOAuth2Client()
-    oauth2Client.setCredentials({ refresh_token: refreshToken })
+    const { clientId, clientSecret } = getOAuth2Config()
+    const body = new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token'
+    })
 
-    const { credentials } = await oauth2Client.refreshAccessToken()
+    const response = await fetch(GOOGLE_OAUTH_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(
+        `Failed to refresh Google access token: ${response.status} ${errorText}`.trim()
+      )
+    }
+
+    const credentials = (await response.json()) as {
+      access_token?: string
+      refresh_token?: string
+      expires_in?: number
+    }
 
     if (!credentials.access_token) {
       throw new Error('Failed to refresh Google access token')
     }
 
-    const expiresAt = credentials.expiry_date
-      ? new Date(credentials.expiry_date)
-      : new Date(Date.now() + 3600 * 1000)
+    const expiresAt =
+      credentials.expires_in !== undefined
+        ? new Date(Date.now() + credentials.expires_in * 1000)
+        : new Date(Date.now() + 3600 * 1000)
 
     return {
       accessToken: credentials.access_token,
@@ -96,31 +161,50 @@ export const googleCalendarProvider: CalendarProvider = {
 
   // Revoke access token
   async revokeToken(accessToken: string): Promise<void> {
-    const oauth2Client = createOAuth2Client()
-    await oauth2Client.revokeToken(accessToken)
+    const response = await fetch(
+      `${GOOGLE_OAUTH_REVOKE_URL}?token=${encodeURIComponent(accessToken)}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Failed to revoke token: ${response.status} ${errorText}`.trim())
+    }
   },
 
   // List user's calendars
   async listCalendars(tokens: ProviderTokens): Promise<ProviderCalendar[]> {
-    const oauth2Client = createOAuth2Client()
-    oauth2Client.setCredentials({
-      access_token: tokens.accessToken,
-      refresh_token: tokens.refreshToken
-    })
-
-    const calendar = google.calendar({ version: 'v3', auth: oauth2Client })
-    const response = await calendar.calendarList.list()
-
-    const calendars: ProviderCalendar[] = (response.data.items || []).map(
-      (item) => ({
-        providerCalendarId: item.id || '',
-        name: item.summary || 'Untitled Calendar',
-        color: item.backgroundColor || undefined,
-        isPrimary: item.primary || false
-      })
+    const response = await fetch(
+      'https://www.googleapis.com/calendar/v3/users/me/calendarList',
+      {
+        headers: {
+          Authorization: `Bearer ${tokens.accessToken}`
+        }
+      }
     )
 
-    return calendars
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(
+        `Failed to list Google calendars: ${response.status} ${errorText}`.trim()
+      )
+    }
+
+    const data = (await response.json()) as {
+      items?: Array<{
+        id?: string | null
+        summary?: string | null
+        backgroundColor?: string | null
+        primary?: boolean | null
+      }>
+    }
+
+    return (data.items || []).map((item) => ({
+      providerCalendarId: item.id || '',
+      name: item.summary || 'Untitled Calendar',
+      color: item.backgroundColor || undefined,
+      isPrimary: item.primary || false
+    }))
   },
 
   // List events from a calendar
@@ -130,34 +214,47 @@ export const googleCalendarProvider: CalendarProvider = {
     startDate: Date,
     endDate: Date
   ): Promise<ProviderEvent[]> {
-    const oauth2Client = createOAuth2Client()
-    oauth2Client.setCredentials({
-      access_token: tokens.accessToken,
-      refresh_token: tokens.refreshToken
-    })
-
-    const calendarApi = google.calendar({ version: 'v3', auth: oauth2Client })
-
     const events: ProviderEvent[] = []
     let pageToken: string | undefined = undefined
     let hasMore = true
 
     while (hasMore) {
-      // Fetch a page of events
-      const fetchPage = async (token: string | undefined) => {
-        return calendarApi.events.list({
-          calendarId,
-          timeMin: startDate.toISOString(),
-          timeMax: endDate.toISOString(),
-          singleEvents: true, // Expand recurring events
-          orderBy: 'startTime',
-          maxResults: 250,
-          pageToken: token
-        })
+      const params = new URLSearchParams({
+        timeMin: startDate.toISOString(),
+        timeMax: endDate.toISOString(),
+        singleEvents: 'true',
+        orderBy: 'startTime',
+        maxResults: '250'
+      })
+      if (pageToken) {
+        params.set('pageToken', pageToken)
       }
-      const response = await fetchPage(pageToken)
 
-      const items = response.data.items || []
+      const response = await authorizedFetch(
+        `${GOOGLE_CALENDAR_API_BASE}/calendars/${encodeURIComponent(calendarId)}/events?${params.toString()}`,
+        tokens.accessToken
+      )
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(
+          `Failed to list Google events: ${response.status} ${errorText}`.trim()
+        )
+      }
+
+      const data = (await response.json()) as {
+        items?: Array<{
+          id?: string | null
+          summary?: string | null
+          description?: string | null
+          start?: { dateTime?: string | null; date?: string | null }
+          end?: { dateTime?: string | null; date?: string | null }
+          location?: string | null
+        }>
+        nextPageToken?: string | null
+      }
+
+      const items = data.items || []
       for (const item of items) {
         if (!item.id) continue
 
@@ -189,7 +286,7 @@ export const googleCalendarProvider: CalendarProvider = {
         })
       }
 
-      pageToken = response.data.nextPageToken || undefined
+      pageToken = data.nextPageToken || undefined
       hasMore = !!pageToken
     }
 
@@ -225,37 +322,46 @@ export const googleCalendarProvider: CalendarProvider = {
     channelId: string,
     token?: string
   ): Promise<WatchChannelResult> {
-    const oauth2Client = createOAuth2Client()
-    oauth2Client.setCredentials({
-      access_token: tokens.accessToken,
-      refresh_token: tokens.refreshToken
-    })
-
-    const calendarApi = google.calendar({ version: 'v3', auth: oauth2Client })
-
     // Set expiration to 7 days from now (maximum allowed by Google)
     const expirationMs = Date.now() + 7 * 24 * 60 * 60 * 1000
 
-    const response = await calendarApi.events.watch({
-      calendarId,
-      requestBody: {
-        id: channelId,
-        type: 'web_hook',
-        address: webhookUrl,
-        token: token,
-        expiration: String(expirationMs)
+    const response = await authorizedFetch(
+      `${GOOGLE_CALENDAR_API_BASE}/calendars/${encodeURIComponent(calendarId)}/events/watch`,
+      tokens.accessToken,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          id: channelId,
+          type: 'web_hook',
+          address: webhookUrl,
+          token: token,
+          expiration: String(expirationMs)
+        })
       }
-    })
+    )
 
-    if (!response.data.resourceId) {
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(
+        `Failed to watch Google calendar: ${response.status} ${errorText}`.trim()
+      )
+    }
+
+    const data = (await response.json()) as {
+      id?: string | null
+      resourceId?: string | null
+      expiration?: string | null
+    }
+
+    if (!data.resourceId) {
       throw new Error('Failed to create watch channel: no resourceId returned')
     }
 
     return {
-      channelId: response.data.id || channelId,
-      resourceId: response.data.resourceId,
-      expiresAt: response.data.expiration
-        ? new Date(Number(response.data.expiration))
+      channelId: data.id || channelId,
+      resourceId: data.resourceId,
+      expiresAt: data.expiration
+        ? new Date(Number(data.expiration))
         : new Date(expirationMs)
     }
   },
@@ -265,20 +371,24 @@ export const googleCalendarProvider: CalendarProvider = {
     tokens: ProviderTokens,
     channel: WatchChannelInfo
   ): Promise<void> {
-    const oauth2Client = createOAuth2Client()
-    oauth2Client.setCredentials({
-      access_token: tokens.accessToken,
-      refresh_token: tokens.refreshToken
-    })
-
-    const calendarApi = google.calendar({ version: 'v3', auth: oauth2Client })
-
-    await calendarApi.channels.stop({
-      requestBody: {
-        id: channel.channelId,
-        resourceId: channel.resourceId
+    const response = await authorizedFetch(
+      `${GOOGLE_CALENDAR_API_BASE}/channels/stop`,
+      tokens.accessToken,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          id: channel.channelId,
+          resourceId: channel.resourceId
+        })
       }
-    })
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(
+        `Failed to stop watch channel: ${response.status} ${errorText}`.trim()
+      )
+    }
   }
 }
 

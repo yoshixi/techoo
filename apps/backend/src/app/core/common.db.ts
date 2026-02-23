@@ -55,7 +55,8 @@ export function getDb(): DB {
     throw new Error('Turso credentials are required in this runtime. Set TURSO_CONNECTION_URL and TURSO_AUTH_TOKEN.')
   }
 
-  const url = env.SQLITE_URL || getLocalDbUrl()
+  const sqliteUrl = (env as Record<string, string | undefined>).SQLITE_URL
+  const url = sqliteUrl || getLocalDbUrl()
   dbInstance = getDbFromSqlite(url)
   return dbInstance as unknown as DB
 }

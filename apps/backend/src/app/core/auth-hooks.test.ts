@@ -7,11 +7,12 @@ import { eq } from 'drizzle-orm'
 
 describe('Auth database hooks', () => {
   beforeAll(() => {
-    process.env.BETTER_AUTH_SECRET = 'test-better-auth-secret-at-least-32-chars-long'
-    process.env.BETTER_AUTH_URL = 'http://localhost:8787'
-    process.env.GOOGLE_CLIENT_ID = 'test-google-client-id'
-    process.env.GOOGLE_CLIENT_SECRET = 'test-google-client-secret'
-    process.env.GOOGLE_REDIRECT_URI = 'http://localhost:8787/api/auth/callback/google'
+    const env = process.env as Record<string, string>
+    env.BETTER_AUTH_SECRET = 'test-better-auth-secret-at-least-32-chars-long'
+    env.BETTER_AUTH_URL = 'http://localhost:8787'
+    env.GOOGLE_CLIENT_ID = 'test-google-client-id'
+    env.GOOGLE_CLIENT_SECRET = 'test-google-client-secret'
+    env.GOOGLE_REDIRECT_URI = 'http://localhost:8787/api/auth/callback/google'
   })
 
   let testContext: SqliteLibsqlTestContext
