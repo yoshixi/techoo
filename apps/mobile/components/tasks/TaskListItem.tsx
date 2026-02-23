@@ -1,12 +1,13 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { View, Pressable, Animated } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import { Check, Clock, Play } from 'lucide-react-native';
+import { Check, Clock, Play, Square } from 'lucide-react-native';
 import { useSWRConfig } from 'swr';
 import type { Task, TaskTimer } from '@/gen/api/schemas';
 import {
   putApiTasksId,
   postApiTimers,
+  putApiTimersId,
   getGetApiTasksTaskIdTimersKey,
   getGetApiTimersKey,
 } from '@/gen/api/endpoints/comoriAPI.gen';
@@ -112,20 +113,21 @@ export function TaskListItem({ task, activeTimer, onPress }: TaskListItemProps) 
     }
   }, [isCompleted, task.id, mutate, fadeAnim, heightAnim, removeTaskFromCache]);
 
-  const handleStartTimer = useCallback(async () => {
+  const handleToggleTimer = useCallback(async () => {
     swipeableRef.current?.close();
 
-    // Skip if a timer is already running
-    if (activeTimer && !activeTimer.endTime) return;
-
     try {
-      await postApiTimers({ taskId: task.id, startTime: new Date().toISOString() });
+      if (isRunning && activeTimer) {
+        await putApiTimersId(activeTimer.id, { endTime: new Date().toISOString() });
+      } else {
+        await postApiTimers({ taskId: task.id, startTime: new Date().toISOString() });
+      }
       await mutate(getGetApiTasksTaskIdTimersKey(task.id));
       await mutate(getGetApiTimersKey());
     } catch (error) {
       // Silently fail — user can retry
     }
-  }, [activeTimer, task.id, mutate]);
+  }, [isRunning, activeTimer, task.id, mutate]);
 
   const renderRightActions = (
     progress: Animated.AnimatedInterpolation<number>,
@@ -145,16 +147,20 @@ export function TaskListItem({ task, activeTimer, onPress }: TaskListItemProps) 
 
     return (
       <Pressable
-        onPress={handleStartTimer}
-        className="bg-primary justify-center items-center rounded-lg mb-2 px-6"
+        onPress={handleToggleTimer}
+        className={`${isRunning ? 'bg-destructive' : 'bg-primary'} justify-center items-center rounded-lg mb-2 px-6`}
       >
         <Animated.View
           style={{ transform: [{ scale }], opacity }}
           className="items-center"
         >
-          <Play size={24} color="white" fill="white" />
+          {isRunning ? (
+            <Square size={24} color="white" fill="white" />
+          ) : (
+            <Play size={24} color="white" fill="white" />
+          )}
           <Text className="text-white text-xs mt-1 font-medium">
-            {isRunning ? 'Running' : 'Start'}
+            {isRunning ? 'Stop' : 'Start'}
           </Text>
         </Animated.View>
       </Pressable>
@@ -214,7 +220,7 @@ export function TaskListItem({ task, activeTimer, onPress }: TaskListItemProps) 
           if (direction === 'left') {
             handleComplete();
           } else {
-            handleStartTimer();
+            handleToggleTimer();
           }
         }}
         overshootRight={false}
