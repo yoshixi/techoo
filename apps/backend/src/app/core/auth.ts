@@ -10,6 +10,7 @@ import {
   accountsTable,
   verificationsTable,
 } from "../db/schema/schema";
+import { env } from "cloudflare:workers";
 
 const updateGoogleAccountProfile = async (account: {
   id?: number | string
@@ -56,7 +57,7 @@ const updateGoogleAccountProfile = async (account: {
 
 export const createAuth = () =>
   betterAuth({
-    secret: process.env.BETTER_AUTH_SECRET!,
+    secret: env.BETTER_AUTH_SECRET,
     baseURL: process.env.BETTER_AUTH_URL || "http://localhost:8787",
     database: drizzleAdapter(getDb(), {
       provider: "sqlite",

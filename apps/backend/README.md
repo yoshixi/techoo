@@ -5,6 +5,28 @@ pnpm dev
 
 Configure the D1 binding in `wrangler.jsonc` before running `pnpm dev` (Wrangler emulator).
 
+## Deploy (Cloudflare Workers)
+
+From the repo root:
+
+```txt
+pnpm --filter @apps/backend run deploy
+```
+
+Set required secrets (Cloudflare):
+
+```txt
+cd apps/backend
+pnpm exec wrangler secret put TURSO_CONNECTION_URL --config wrangler.jsonc
+pnpm exec wrangler secret put TURSO_AUTH_TOKEN --config wrangler.jsonc
+pnpm exec wrangler secret put BETTER_AUTH_SECRET --config wrangler.jsonc
+pnpm exec wrangler secret put GOOGLE_CLIENT_ID --config wrangler.jsonc
+pnpm exec wrangler secret put GOOGLE_CLIENT_SECRET --config wrangler.jsonc
+
+```
+
+For custom domains, configure `routes` and `zone_name` in `wrangler.jsonc`.
+
 ## Schema & Migrations
 
 Generate a new migration from the backend schema:

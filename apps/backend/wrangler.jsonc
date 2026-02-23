@@ -1,7 +1,56 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "backend",
-  "compatibility_date": "2025-08-03",
-  "compatibility_flags": ["nodejs_compat"],
-  "main": "./src/index.tsx"
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"compatibility_date": "2025-08-03",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"name": "comori-backend",
+	"main": "./src/index.tsx",
+	"vars": {
+		"NODE_ENV": "production",
+		"TURSO_AUTH_TOKEN": "",
+		"TURSO_CONNECTION_URL": "",
+		"NODE_ENV": "production",
+		"BETTER_AUTH_URL": "https://api.comori.app",
+		"BETTER_AUTH_SECRET": "your-random-secret-at-least-32-chars",
+    "GOOGLE_CLIENT_ID": "",
+		"GOOGLE_CLIENT_SECRET": "",
+		"GOOGLE_REDIRECT_URI": "https://api.comori.app/api/auth/callback/google"
+	},
+	"env": {
+		"prod": {
+			"name": "prod-comori-backend",
+			"vars": {
+				"NODE_ENV": "production",
+				"BETTER_AUTH_URL": "https://api.comori.app",
+				"GOOGLE_REDIRECT_URI": "https://api.comori.app/api/auth/callback/google"
+			},
+			"placement": {
+				"mode": "targeted",
+        "region": "aws:us-east-1",
+			},
+			"routes": [
+				{
+					"pattern": "api.comori.app",
+					"custom_domain": true,
+					"zone_name": "comori.app",
+				}
+			]
+		}
+	},
+	"observability": {
+		"enabled": false,
+		"head_sampling_rate": 1,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"persist": true,
+			"invocation_logs": true
+		},
+		"traces": {
+			"enabled": true,
+			"persist": true,
+			"head_sampling_rate": 1
+		}
+	}
 }

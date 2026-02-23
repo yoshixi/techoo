@@ -11,7 +11,8 @@ const DRIZZLE_CONFIG = {
 
 let dbInstance: ReturnType<typeof drizzleLibsql> | null = null
 
-const getEnv = () => (typeof process === 'undefined' ? {} : process.env)
+const getEnv = (): NodeJS.ProcessEnv =>
+  (typeof process === 'undefined' ? ({} as NodeJS.ProcessEnv) : process.env)
 const isNodeRuntime = () => typeof process !== 'undefined' && !!process.versions?.node
 
 const getLocalDbUrl = () => {

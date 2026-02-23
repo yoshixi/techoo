@@ -6,9 +6,14 @@
     "build": "vite build",
     "preview": "$npm_execpath run build && vite preview",
     "deploy": "$npm_execpath run build && wrangler deploy",
+    "deploy:prod": "CLOUDFLARE_ENV=prod $npm_execpath run build && CLOUDFLARE_ENV=prod wrangler deploy --env prod",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "drizzle:generate": "drizzle-kit generate --config ./drizzle.config.ts",
+    "drizzle:generate:prod": "DOTENV_CONFIG_PATH=.env.prod drizzle-kit generate --config ./drizzle.config.ts",
+    "drizzle:migrate": "drizzle-kit migrate --config ./drizzle.config.ts",
+    "drizzle:migrate:prod": "DOTENV_CONFIG_PATH=.env.prod drizzle-kit migrate --config ./drizzle.config.ts",
     "drizzle:push": "drizzle-kit push --config ./drizzle.config.ts",
+    "drizzle:push:prod": "DOTENV_CONFIG_PATH=.env.prod drizzle-kit push --config ./drizzle.config.ts",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -30,7 +35,6 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.2.3",
-    "@cloudflare/workers-types": "^4.20250214.0",
     "@types/node": "^22.15.3",
     "drizzle-kit": "^0.31.7",
     "miniflare": "4.20260212.0",
