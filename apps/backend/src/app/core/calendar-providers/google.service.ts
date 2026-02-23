@@ -39,6 +39,8 @@ const buildAuthUrl = (params: Record<string, string>) => {
   return url.toString()
 }
 
+// Use direct REST calls because googleapis depends on Node http, which is not
+// fully supported in the Cloudflare Workers runtime.
 const authorizedFetch = async (url: string, accessToken: string, init?: RequestInit) =>
   fetch(url, {
     ...init,
