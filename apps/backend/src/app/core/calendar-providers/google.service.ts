@@ -39,8 +39,8 @@ const buildAuthUrl = (params: Record<string, string>) => {
   return url.toString()
 }
 
-// Use direct REST calls because googleapis depends on Node http, which is not
-// fully supported in the Cloudflare Workers runtime.
+// Direct REST calls instead of the googleapis SDK, which depends on Node http
+// and cannot run in the Cloudflare Workers runtime.
 const authorizedFetch = async (url: string, accessToken: string, init?: RequestInit) =>
   fetch(url, {
     ...init,
@@ -176,13 +176,9 @@ export const googleCalendarProvider: CalendarProvider = {
 
   // List user's calendars
   async listCalendars(tokens: ProviderTokens): Promise<ProviderCalendar[]> {
-    const response = await fetch(
-      'https://www.googleapis.com/calendar/v3/users/me/calendarList',
-      {
-        headers: {
-          Authorization: `Bearer ${tokens.accessToken}`
-        }
-      }
+    const response = await authorizedFetch(
+      `${GOOGLE_CALENDAR_API_BASE}/users/me/calendarList`,
+      tokens.accessToken
     )
 
     if (!response.ok) {
@@ -295,13 +291,11 @@ export const googleCalendarProvider: CalendarProvider = {
     return events
   },
 
-  // This is not part of the CalendarProvider interface but is used elsewhere.
   async getUserInfo(tokens: ProviderTokens): Promise<{ email?: string; name?: string; picture?: string }> {
-    const response = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
-      headers: {
-        Authorization: `Bearer ${tokens.accessToken}`
-      }
-    })
+    const response = await authorizedFetch(
+      'https://openidconnect.googleapis.com/v1/userinfo',
+      tokens.accessToken
+    )
 
     if (!response.ok) {
       throw new Error(`Failed to fetch Google user info: ${response.status}`)
