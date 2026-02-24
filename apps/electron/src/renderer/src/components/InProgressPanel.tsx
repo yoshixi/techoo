@@ -136,7 +136,7 @@ function TaskCard({ task, timer, onStopTimer, onOpenDetail, isCollapsed }: TaskC
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="What would you like to focus on?"
+          placeholder="What is your update?"
           rows={2}
           className="text-xs resize-none"
         />

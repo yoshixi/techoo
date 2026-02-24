@@ -53,6 +53,8 @@ interface UseCalendarSettingsReturn {
   isExplicitlyDisconnected: boolean
   /** Whether data is loading */
   isLoading: boolean
+  /** Error message when available calendars fetch fails */
+  availableCalendarsError: string | null
   /** Linked Google accounts */
   googleAccounts: OAuthAccount[]
   /** Selected account status */
@@ -126,13 +128,31 @@ export function useCalendarSettings(
   }, [googleAccounts.length, providerAccountId, isExplicitlyDisconnected])
 
   // Get available calendars from Google
-  const { data: availableData, isLoading: isAvailableLoading } =
+  const {
+    data: availableData,
+    isLoading: isAvailableLoading,
+    error: availableError
+  } =
     useGetApiCalendarsAvailable(
       { accountId: providerAccountId || '' },
       {
         swr: { enabled: Boolean(providerAccountId && isGoogleConnected) }
       }
     )
+  const availableCalendarsError = useMemo(() => {
+    if (!availableError) return null
+    if (typeof availableError === 'string') return availableError
+    if (availableError instanceof Error) return availableError.message
+    if (
+      typeof availableError === 'object' &&
+      availableError &&
+      'error' in availableError &&
+      typeof (availableError as { error?: unknown }).error === 'string'
+    ) {
+      return (availableError as { error: string }).error
+    }
+    return 'Failed to load available calendars.'
+  }, [availableError])
 
   // Get synced calendars from our DB
   const { data: syncedData, isLoading: isSyncedLoading } = useGetApiCalendars({
@@ -212,6 +232,7 @@ export function useCalendarSettings(
     isExplicitlyDisconnected,
     isLoading:
       isAccountsLoading || isStatusLoading || isAvailableLoading || isSyncedLoading,
+    availableCalendarsError,
     googleAccounts,
     selectedAccountStatus: statusData ?? null,
     availableCalendars: availableData?.calendars ?? [],

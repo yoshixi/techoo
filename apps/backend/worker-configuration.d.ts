@@ -7,19 +7,18 @@ declare namespace Cloudflare {
 	}
 	interface ProdEnv {
 		NODE_ENV: "production";
-		BETTER_AUTH_URL: string;
-		GOOGLE_REDIRECT_URI: string;
+		BETTER_AUTH_URL: "https://api.comori.app";
+		GOOGLE_REDIRECT_URI: "https://api.comori.app/api/auth/callback/google";
 	}
 	interface Env {
 		NODE_ENV: "production";
-		BETTER_AUTH_URL: string;
-		GOOGLE_REDIRECT_URI: string;
-		TURSO_AUTH_TOKEN?: string;
-		TURSO_CONNECTION_URL?: string;
-		SQLITE_URL?: string;
+		BETTER_AUTH_URL: "https://api.comori.app";
+		GOOGLE_REDIRECT_URI: "https://api.comori.app/api/auth/callback/google";
+		TURSO_AUTH_TOKEN?: "";
+		TURSO_CONNECTION_URL?: "";
 		BETTER_AUTH_SECRET?: "your-random-secret-at-least-32-chars";
-		GOOGLE_CLIENT_ID?: string;
-		GOOGLE_CLIENT_SECRET?: string;
+		GOOGLE_CLIENT_ID?: "";
+		GOOGLE_CLIENT_SECRET?: "";
 	}
 }
 interface CloudflareBindings extends Cloudflare.Env {}
@@ -27,7 +26,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "NODE_ENV" | "BETTER_AUTH_URL" | "GOOGLE_REDIRECT_URI" | "TURSO_AUTH_TOKEN" | "TURSO_CONNECTION_URL" | "SQLITE_URL" | "BETTER_AUTH_SECRET" | "GOOGLE_CLIENT_ID" | "GOOGLE_CLIENT_SECRET">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "NODE_ENV" | "BETTER_AUTH_URL" | "GOOGLE_REDIRECT_URI" | "TURSO_AUTH_TOKEN" | "TURSO_CONNECTION_URL" | "BETTER_AUTH_SECRET" | "GOOGLE_CLIENT_ID" | "GOOGLE_CLIENT_SECRET">> {}
 }
 
 // Begin runtime types
