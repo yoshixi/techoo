@@ -218,9 +218,9 @@ export function TaskListItem({ task, activeTimer, onPress }: TaskListItemProps) 
         renderLeftActions={renderLeftActions}
         onSwipeableOpen={(direction) => {
           if (direction === 'left') {
-            handleComplete();
-          } else {
             handleToggleTimer();
+          } else {
+            handleComplete();
           }
         }}
         overshootRight={false}

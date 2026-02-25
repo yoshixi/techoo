@@ -10,7 +10,8 @@ import {
   accountsTable,
   verificationsTable,
 } from "../db/schema/schema";
-import { env } from "cloudflare:workers";
+const getEnv = (): Record<string, string | undefined> =>
+  (typeof process === "undefined" ? {} : (process.env as Record<string, string | undefined>));
 
 const updateGoogleAccountProfile = async (account: {
   id?: number | string
@@ -56,11 +57,12 @@ const updateGoogleAccountProfile = async (account: {
 };
 
 export const createAuth = () => {
-  const secret = env.BETTER_AUTH_SECRET ?? process.env.BETTER_AUTH_SECRET ?? ""
-  const googleClientId = process.env.GOOGLE_CLIENT_ID ?? ""
-  const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET ?? ""
-  const googleRedirectUri = process.env.GOOGLE_REDIRECT_URI ?? ""
-  const betterAuthUrl = process.env.BETTER_AUTH_URL ?? ""
+  const env = getEnv()
+  const secret = env.BETTER_AUTH_SECRET ?? ""
+  const googleClientId = env.GOOGLE_CLIENT_ID ?? ""
+  const googleClientSecret = env.GOOGLE_CLIENT_SECRET ?? ""
+  const googleRedirectUri = env.GOOGLE_REDIRECT_URI ?? ""
+  const betterAuthUrl = env.BETTER_AUTH_URL ?? ""
   if (!secret) {
     console.error("BETTER_AUTH_SECRET is missing or empty")
   } else {
@@ -88,7 +90,7 @@ export const createAuth = () => {
   }
   return betterAuth({
     secret,
-    baseURL: process.env.BETTER_AUTH_URL || "http://localhost:8787",
+    baseURL: env.BETTER_AUTH_URL || "http://localhost:8787",
     database: drizzleAdapter(getDb(), {
       provider: "sqlite",
       usePlural: true,

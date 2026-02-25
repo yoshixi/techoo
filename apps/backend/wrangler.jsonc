@@ -8,8 +8,8 @@
 	"main": "./src/index.tsx",
 	"vars": {
 		"NODE_ENV": "production",
-		"BETTER_AUTH_URL": "http://localost:8787",
-		"GOOGLE_REDIRECT_URI": "http://localost:8787/api/auth/callback/google",
+		"BETTER_AUTH_URL": "http://localhost:8787",
+		"GOOGLE_REDIRECT_URI": "http://localhost:8787/api/auth/callback/google",
 
     // values stored as the secrets
 		"TURSO_AUTH_TOKEN": "",

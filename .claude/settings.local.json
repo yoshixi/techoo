@@ -53,7 +53,8 @@
       "Bash(git branch:*)",
       "WebFetch(domain:community.cloudflare.com)",
       "WebFetch(domain:developers.cloudflare.com)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(head:*)"
     ]
   }
 }

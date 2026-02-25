@@ -128,7 +128,7 @@ Refer to the root [DEV_ENVIROMENT.md](../../../DEV_ENVIROMENT.md) for detailed i
 | `pnpm run orval:generate` | Generates the SWR hooks + schema types. |
 | `pnpm run api:generate` | Runs both commands sequentially. |
 | `pnpm run orval:watch` | Watches the OpenAPI file and regenerates on change. |
-| `pnpm run dev:api` | Copies `.env.api` to `.env` (sets `VITE_API_URL` + `VITE_USE_API=true`) and launches `electron-vite dev`. |
+| `pnpm run dev:api` | Copies `.env_api_example` to `.env` (sets `VITE_API_URL` + `VITE_USE_API=true`) and launches `electron-vite dev`. |
 | `pnpm run dev` | Launches the renderer without modifying `.env` (offline mode by default). |
 
 ## Working With The Hooks
@@ -168,7 +168,7 @@ export function TaskManager(): JSX.Element {
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | `Cannot find module '../gen/api'` | Client not generated after a clean checkout | Run `pnpm run api:generate`. |
-| API requests point to `http://localhost:5173` | Missing `.env` / wrong `VITE_API_URL` | Copy `.env.example` or adjust `.env`. |
+| API requests point to `http://localhost:5173` | Missing `.env` / wrong `VITE_API_URL` | Copy `.env_example` or adjust `.env`. |
 | Requests fail with `fetch failed` | Backend not running or wrong port | Start `apps/backend` (`pnpm --filter @apps/backend dev`). |
 | Mutator file missing during generation | File deleted while `clean` is enabled | Restore `src/renderer/src/lib/api/mutator.ts` before running Orval. |
 

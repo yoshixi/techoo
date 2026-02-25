@@ -21,7 +21,7 @@ createRoot(document.getElementById('root')!).render(
 ```
 
 - `pnpm run dev` – runs the offline UI (`VITE_USE_API` defaults to `false`).
-- `pnpm run dev:api` / `pnpm run start:api` – copies `.env.api` to `.env` and boots the renderer with API mode enabled.
+- `pnpm run dev:api` / `pnpm run start:api` – copies `.env_api_example` to `.env` and boots the renderer with API mode enabled.
 
 ## Setup Checklist
 
@@ -33,7 +33,7 @@ createRoot(document.getElementById('root')!).render(
    pnpm install
    ```
 2. **Run the Hono backend** (from `apps/backend`) so `http://localhost:8787/api` is reachable.
-3. **Create a `.env` file** or copy `.env.example` and set:
+3. **Create a `.env` file** or copy `.env_example` and set:
    ```env
    VITE_API_URL=http://localhost:8787/api
    VITE_USE_API=true
@@ -155,6 +155,6 @@ async function handleCreateTask(form: CreateTaskRequest) {
 - **API requests fail immediately** – confirm the backend is running, `VITE_API_URL` points to the correct host, and you launched the renderer with `VITE_USE_API=true`.
 - **Type errors after backend changes** – rerun `pnpm run api:generate` so the generated hooks match the latest schema.
 - **Missing mutator errors while generating** – ensure `src/renderer/src/lib/api/mutator.ts` exists before running Orval (the config references it).
-- **Stale `.env` values** – `dev:api` copies `.env.api` into `.env` every time; delete `.env` or update it manually if you need a different target server.
+- **Stale `.env` values** – `dev:api` copies `.env_api_example` into `.env` every time; delete `.env` or update it manually if you need a different target server.
 
 With this setup the Electron renderer stays fully type-safe, relies on the native `fetch` API for HTTP calls, and can pivot between offline and API-backed modes without touching the code.***
