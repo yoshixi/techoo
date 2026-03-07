@@ -10,10 +10,10 @@
       "DOM",
       "DOM.Iterable"
     ],
-    "types": ["vite/client", "node", "@cloudflare/workers-types"],
+    "types": ["vite/client", "node"],
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx"
   },
-  "include": ["src", "test"],
+  "include": ["src", "test", "worker-configuration.d.ts"],
   "exclude": ["vite.config.ts", "dist", "node_modules"]
 }

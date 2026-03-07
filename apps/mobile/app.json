@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "comori",
+    "slug": "comori",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -17,7 +17,11 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "app.comori",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "edgeToEdgeEnabled": true,
@@ -36,6 +40,14 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "apiUrl": "https://api.comori.app",
+      "router": {},
+      "eas": {
+        "projectId": "a9c0540c-4cff-462e-b45c-410265bbe5ba"
+      }
+    },
+    "owner": "yoshixi"
   }
 }

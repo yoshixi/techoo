@@ -10,6 +10,8 @@ import {
   accountsTable,
   verificationsTable,
 } from "../db/schema/schema";
+const getEnv = (): Record<string, string | undefined> =>
+  (typeof process === "undefined" ? {} : (process.env as Record<string, string | undefined>));
 
 const updateGoogleAccountProfile = async (account: {
   id?: number | string
@@ -54,10 +56,41 @@ const updateGoogleAccountProfile = async (account: {
   }
 };
 
-export const createAuth = () =>
-  betterAuth({
-    secret: process.env.BETTER_AUTH_SECRET!,
-    baseURL: process.env.BETTER_AUTH_URL || "http://localhost:8787",
+export const createAuth = () => {
+  const env = getEnv()
+  const secret = env.BETTER_AUTH_SECRET ?? ""
+  const googleClientId = env.GOOGLE_CLIENT_ID ?? ""
+  const googleClientSecret = env.GOOGLE_CLIENT_SECRET ?? ""
+  const googleRedirectUri = env.GOOGLE_REDIRECT_URI ?? ""
+  const betterAuthUrl = env.BETTER_AUTH_URL ?? ""
+  if (!secret) {
+    console.error("BETTER_AUTH_SECRET is missing or empty")
+  } else {
+    console.log(`BETTER_AUTH_SECRET length ${secret.length}`)
+  }
+  if (!betterAuthUrl) {
+    console.error("BETTER_AUTH_URL is missing or empty")
+  } else {
+    console.log(`BETTER_AUTH_URL length ${betterAuthUrl.length}`)
+  }
+  if (!googleClientId) {
+    console.error("GOOGLE_CLIENT_ID is missing or empty")
+  } else {
+    console.log(`GOOGLE_CLIENT_ID length ${googleClientId.length}`)
+  }
+  if (!googleClientSecret) {
+    console.error("GOOGLE_CLIENT_SECRET is missing or empty")
+  } else {
+    console.log(`GOOGLE_CLIENT_SECRET length ${googleClientSecret.length}`)
+  }
+  if (!googleRedirectUri) {
+    console.error("GOOGLE_REDIRECT_URI is missing or empty")
+  } else {
+    console.log(`GOOGLE_REDIRECT_URI length ${googleRedirectUri.length}`)
+  }
+  return betterAuth({
+    secret,
+    baseURL: env.BETTER_AUTH_URL || "http://localhost:8787",
     database: drizzleAdapter(getDb(), {
       provider: "sqlite",
       usePlural: true,
@@ -161,3 +194,4 @@ export const createAuth = () =>
       database: { generateId: false },
     },
   });
+};

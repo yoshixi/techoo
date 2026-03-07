@@ -36,8 +36,8 @@ I have successfully configured your project to use **local SQLite for developmen
 
 ### 📁 **New Files Created**
 
-- `.env.local.example` - Development environment template
-- `.env.production.example` - Production environment template
+- `.env_local_example` - Development environment template
+- `.env_production_example` - Production environment template
 
 ### 🚀 **How to Use**
 

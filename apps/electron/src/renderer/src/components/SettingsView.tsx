@@ -185,6 +185,7 @@ export function SettingsView(): React.JSX.Element {
   const {
     isExplicitlyDisconnected,
     isLoading,
+    availableCalendarsError,
     googleAccounts,
     selectedAccountStatus,
     availableCalendars,
@@ -346,6 +347,10 @@ export function SettingsView(): React.JSX.Element {
             {!isSelectedAccountConnected ? (
               <p className="text-sm text-muted-foreground py-2">
                 Selected account needs reconnect before listing calendars.
+              </p>
+            ) : availableCalendarsError ? (
+              <p className="text-sm text-destructive py-2">
+                Failed to load available calendars: {availableCalendarsError}
               </p>
             ) : isLoading ? (
               <p className="text-sm text-muted-foreground py-2">Loading calendars...</p>

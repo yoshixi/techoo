@@ -50,7 +50,11 @@
       "Bash(xcode-select:*)",
       "Bash(pnpm:*)",
       "Bash(git cherry-pick:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "WebFetch(domain:community.cloudflare.com)",
+      "WebFetch(domain:developers.cloudflare.com)",
+      "Bash(git:*)",
+      "Bash(head:*)"
     ]
   }
 }

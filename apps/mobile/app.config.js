@@ -26,10 +26,18 @@ const localEnv = loadEnvLocal();
 module.exports = ({ config }) => {
   return {
     ...config,
+    android: {
+      ...config.android,
+      package: 'app.comori',
+    },
+    ios: {
+      ...config.ios,
+      bundleIdentifier: 'app.comori',
+    },
     extra: {
       ...config.extra,
       // API URL from environment variable, defaults to localhost
-      apiUrl: localEnv.API_URL || process.env.API_URL || 'http://localhost:8787',
+      apiUrl: localEnv.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8787',
     },
   };
 };

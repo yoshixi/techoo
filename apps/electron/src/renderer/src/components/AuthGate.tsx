@@ -1,6 +1,7 @@
 import React from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { AuthScreen } from './AuthScreen'
+import { CharacterIllustration } from './CharacterIllustration'
 import App from '../App'
 
 export function AuthGate(): React.JSX.Element {
@@ -8,17 +9,9 @@ export function AuthGate(): React.JSX.Element {
 
   if (isLoading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-          fontSize: '1rem',
-          color: '#666'
-        }}
-      >
-        Loading...
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background">
+        <CharacterIllustration mood="thinking" size="lg" />
+        <p className="text-sm text-muted-foreground">One moment...</p>
       </div>
     )
   }

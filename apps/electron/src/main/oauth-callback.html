@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comori</title>
+  <style>
+    @font-face {
+      font-family: 'SystemFont';
+      src: local('-apple-system'), local('BlinkMacSystemFont'), local('Segoe UI'), local('Roboto'), local('Helvetica Neue'), local('sans-serif');
+    }
+
+    * { box-sizing: border-box; margin: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #F4F2EE;
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      color: #1C1C1C;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .card {
+      background: #FAFAF8;
+      border: 1px solid #E0DDD7;
+      border-radius: 1.5rem;
+      padding: 3rem 2.5rem;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .emoji {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      font-size: 0.875rem;
+      color: #8E8A84;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="emoji" id="emoji"></div>
+    <h1 id="title"></h1>
+    <p id="message"></p>
+  </div>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const ok = params.get('ok') === '1';
+    const action = params.get('action') || 'signin';
+
+    const content = {
+      signin: {
+        success: { emoji: '\uD83C\uDF1F', title: "You're all set!", message: 'You can close this window and return to the app.' },
+        failure: { emoji: '\uD83D\uDE15', title: 'Something went wrong', message: 'Please close this window and try again.' }
+      },
+      link: {
+        success: { emoji: '\uD83D\uDD17', title: 'Account linked!', message: 'You can close this window and return to the app.' },
+        failure: { emoji: '\uD83D\uDE15', title: 'Linking failed', message: 'Please close this window and try again.' }
+      }
+    };
+
+    const c = (content[action] || content.signin)[ok ? 'success' : 'failure'];
+    document.getElementById('emoji').textContent = c.emoji;
+    document.getElementById('title').textContent = c.title;
+    document.getElementById('message').textContent = c.message;
+    document.title = c.title + ' - Comori';
+  </script>
+</body>
+</html>

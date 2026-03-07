@@ -4,6 +4,7 @@ import { existsSync } from 'fs'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/logo@2x.png?asset'
+import oauthCallbackHtml from './oauth-callback.html?raw'
 import { TrayManager } from './tray'
 import { NotificationScheduler, type NotificationPermissionStatus } from './notificationScheduler'
 
@@ -104,9 +105,10 @@ function startOAuthCallbackServer(): Promise<OAuthCallbackServer> {
 
       res.writeHead(200, { 'Content-Type': 'text/html' })
       res.end(
-        sessionToken
-          ? '<html><body style="font-family:system-ui;text-align:center;padding:3rem"><h1>Signed in successfully</h1><p>You can close this window and return to the app.</p></body></html>'
-          : '<html><body style="font-family:system-ui;text-align:center;padding:3rem"><h1>Authentication failed</h1><p>Please close this window and try again.</p></body></html>'
+        oauthCallbackHtml.replace(
+          'window.location.search',
+          JSON.stringify(`?ok=${sessionToken ? '1' : '0'}&action=signin`)
+        )
       )
 
       clearTimeout(timeout)
@@ -157,9 +159,10 @@ function startOAuthLinkCallbackServer(): Promise<OAuthLinkCallbackServer> {
 
       res.writeHead(200, { 'Content-Type': 'text/html' })
       res.end(
-        linked
-          ? '<html><body style="font-family:system-ui;text-align:center;padding:3rem"><h1>Account linked</h1><p>You can close this window and return to the app.</p></body></html>'
-          : '<html><body style="font-family:system-ui;text-align:center;padding:3rem"><h1>Link failed</h1><p>Please close this window and try again.</p></body></html>'
+        oauthCallbackHtml.replace(
+          'window.location.search',
+          JSON.stringify(`?ok=${linked ? '1' : '0'}&action=link`)
+        )
       )
 
       clearTimeout(timeout)

@@ -14,7 +14,12 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "check-types": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "build": "eas build -p all",
+    "build:android": "eas build -p android",
+    "build:ios": "eas build -p ios",
+    "build:dev": "eas build -p all --profile development",
+    "build:preview": "eas build -p all --profile preview"
   },
   "dependencies": {
     "@gorhom/bottom-sheet": "^5.2.8",
@@ -56,6 +61,7 @@
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^30.0.0",
     "@types/react": "19.1.17",
+    "eas-cli": "^18.0.3",
     "jest-expo": "^54.0.16",
     "orval": "^7.17.0",
     "prettier": "^3.6.2",

@@ -46,11 +46,12 @@ describe('Auth & Token Endpoints', () => {
   let request: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
   beforeAll(async () => {
-    process.env.BETTER_AUTH_SECRET = 'test-better-auth-secret-at-least-32-characters-long';
-    process.env.BETTER_AUTH_URL = 'http://localhost';
-    process.env.GOOGLE_CLIENT_ID = 'test-google-client-id';
-    process.env.GOOGLE_CLIENT_SECRET = 'test-google-client-secret';
-    process.env.TRUSTED_ORIGINS = 'http://localhost';
+    const env = process.env as Record<string, string>;
+    env.BETTER_AUTH_SECRET = 'test-better-auth-secret-at-least-32-characters-long';
+    env.BETTER_AUTH_URL = 'http://localhost';
+    env.GOOGLE_CLIENT_ID = 'test-google-client-id';
+    env.GOOGLE_CLIENT_SECRET = 'test-google-client-secret';
+    env.TRUSTED_ORIGINS = 'http://localhost';
 
     testContext = await createSqliteLibsqlTestContext();
 
