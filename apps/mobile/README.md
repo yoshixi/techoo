@@ -71,3 +71,12 @@ The easiest way to deploy your app is with [Expo Application Services (EAS)](htt
 ---
 
 If you enjoy using React Native Reusables, please consider giving it a ⭐ on [GitHub](https://github.com/founded-labs/react-native-reusables). Your support means a lot!
+
+## Set up for prod
+
+```
+  pnpm exec eas secret:create --name EXPO_PUBLIC_API_BASE_URL --value https://api.comori.app
+```
+
+
+
