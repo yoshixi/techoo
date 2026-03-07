@@ -64,6 +64,20 @@ jobs:
           APPLE_API_ISSUER: ${{ secrets.APPLE_ISSUER_ID }}
           MAIN_VITE_API_BASE_URL: ${{ vars.MAIN_VITE_API_BASE_URL }}
           VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          ELECTRON_BUILDER_DEBUG: true
+          DEBUG: electron-builder*,app-builder*
+
+      - name: Notarization history (macOS, on failure)
+        if: failure() && matrix.os == 'macos-latest'
+        run: |
+          xcrun notarytool history \
+            --key "$APPLE_API_KEY" \
+            --key-id "$APPLE_API_KEY_ID" \
+            --issuer "$APPLE_API_ISSUER"
+        env:
+          APPLE_API_KEY: ${{ env.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_CONNECT_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_ISSUER_ID }}
 
       - name: Upload artifacts to GitHub Release
         uses: softprops/action-gh-release@v2
