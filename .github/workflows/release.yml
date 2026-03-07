@@ -55,8 +55,9 @@ jobs:
           echo "APPLE_API_KEY=$WORKSPACE_DIR/AuthKey.p8" >> "$GITHUB_ENV"
 
       - name: Build Electron app
+        shell: bash
         run: |
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             pnpm --filter electron run build:${{ matrix.platform }}
           else
             pnpm --filter electron run build:${{ matrix.platform }} -- --config.mac.notarize=false
