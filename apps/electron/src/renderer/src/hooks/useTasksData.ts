@@ -582,16 +582,28 @@ export function useTasksData(options: TasksDataOptions): UseTasksDataReturn {
     const isInActiveList = activeTasks.some(t => t.id === task.id)
     const mutateTargetList = isInActiveList ? mutateActiveTasks : mutateInactiveTasks
 
-    const optimisticUpdate = (currentData: typeof activeTasksResponse) => {
-      if (!currentData) return currentData
-      return {
-        ...currentData,
-        tasks: currentData.tasks.filter((t) => t.id !== task.id)
-      }
-    }
-
-    mutateTargetList(optimisticUpdate, { revalidate: false })
-    mutateReviewTasks(optimisticUpdate, { revalidate: false })
+    mutateTargetList(
+      (currentData) => {
+        if (!currentData) return currentData
+        return {
+          ...currentData,
+          tasks: currentData.tasks.filter((t) => t.id !== task.id)
+        }
+      },
+      { revalidate: false }
+    )
+    mutateReviewTasks(
+      (currentData) => {
+        if (!currentData) return currentData
+        return {
+          ...currentData,
+          tasks: currentData.tasks.map((t) =>
+            t.id === task.id ? { ...t, completedAt: newCompletedAt } : t
+          )
+        }
+      },
+      { revalidate: false }
+    )
 
     putApiTasksId(task.id, { completedAt: newCompletedAt })
       .then(() => mutateBothTaskLists())
