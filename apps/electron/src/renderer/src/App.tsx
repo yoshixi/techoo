@@ -343,16 +343,24 @@ function App(): React.JSX.Element {
   }, [tasksData])
 
   const handleCarryoverMoveAllToToday = useCallback(() => {
-    const today = new Date()
-    today.setHours(9, 0, 0, 0)
+    let cursor = new Date()
+    cursor.setHours(9, 0, 0, 0)
     for (const task of tasksData.carryoverTasks) {
-      const newStartAt = today.toISOString()
+      const newStartAt = cursor.toISOString()
       let newEndAt: string | null = null
+      const DEFAULT_DURATION_MS = 30 * 60 * 1000
       if (task.startAt && task.endAt) {
         const durationMs = new Date(task.endAt).getTime() - new Date(task.startAt).getTime()
         if (durationMs > 0) {
-          newEndAt = new Date(today.getTime() + durationMs).toISOString()
+          newEndAt = new Date(cursor.getTime() + durationMs).toISOString()
+          cursor = new Date(cursor.getTime() + durationMs)
+        } else {
+          newEndAt = new Date(cursor.getTime() + DEFAULT_DURATION_MS).toISOString()
+          cursor = new Date(cursor.getTime() + DEFAULT_DURATION_MS)
         }
+      } else {
+        newEndAt = new Date(cursor.getTime() + DEFAULT_DURATION_MS).toISOString()
+        cursor = new Date(cursor.getTime() + DEFAULT_DURATION_MS)
       }
       tasksData.handleUpdateTaskSchedule(task.id, newStartAt, newEndAt)
     }
@@ -430,10 +438,14 @@ function App(): React.JSX.Element {
   }, [tasksData, timerFillTask, timerFillMode, timerFillActiveTimer])
 
   const handleTimerFillSkip = useCallback((task: Task) => {
+    // Stop active timer if this was an overlong-timer case
+    if (timerFillMode === 'overlong-timer' && timerFillActiveTimer) {
+      tasksData.handleStopTimer(task.id, timerFillActiveTimer.id)
+    }
     tasksData.handleToggleTaskCompletion(task)
     setTimerFillTask(null)
     setTimerFillActiveTimer(null)
-  }, [tasksData])
+  }, [tasksData, timerFillMode, timerFillActiveTimer])
 
   const handleCalendarEventConvert = useCallback((event: CalendarEvent) => {
     postApiTasks({ title: event.title, startAt: event.startAt, endAt: event.endAt })

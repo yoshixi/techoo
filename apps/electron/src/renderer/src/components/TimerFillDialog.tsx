@@ -25,7 +25,7 @@ function formatDuration(ms: number): string {
   return `${m}m`
 }
 
-export function TimerFillDialog({ task, mode, activeTimer, onConfirm, onSkip, onCancel }: TimerFillDialogProps): React.JSX.Element {
+export function TimerFillDialog({ task, mode, activeTimer, onConfirm, onSkip, onCancel }: TimerFillDialogProps): React.JSX.Element | null {
   const defaults = useMemo(() => {
     if (!task) return { start: '', end: '' }
 
@@ -61,7 +61,7 @@ export function TimerFillDialog({ task, mode, activeTimer, onConfirm, onSkip, on
     }
   }, [mode, activeTimer, task])
 
-  if (!task) return <Dialog open={false}><DialogContent><DialogHeader><DialogTitle /></DialogHeader></DialogContent></Dialog>
+  if (!task) return null
 
   const handleConfirm = (): void => {
     const start = new Date(startTime).toISOString()
