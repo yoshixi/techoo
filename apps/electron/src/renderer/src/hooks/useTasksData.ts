@@ -21,6 +21,9 @@ interface TasksDataOptions {
   showUnscheduled: boolean
   filterTagIds: number[]
   sortBy: 'createdAt' | 'startAt'
+  // UpcomingTab filter state (lifted from tab)
+  upcomingShowCompleted: boolean
+  upcomingShowUnscheduled: boolean
 }
 
 export interface UseTasksDataReturn {
@@ -30,6 +33,13 @@ export interface UseTasksDataReturn {
   displayTasks: Task[]
   allTasks: Task[]
   sidebarActiveTasks: Task[]
+
+  // Now tab data
+  nowTodayTasks: Task[]
+
+  // Upcoming tab data
+  upcomingTasks: Task[]
+  upcomingTasksLoading: boolean
 
   // Review tab data (unfiltered)
   reviewTasks: Task[]
@@ -82,7 +92,7 @@ export interface UseTasksDataReturn {
 }
 
 export function useTasksData(options: TasksDataOptions): UseTasksDataReturn {
-  const { currentView, showCompleted, showTodayOnly, showUnscheduled, filterTagIds, sortBy } = options
+  const { currentView, showCompleted, showTodayOnly, showUnscheduled, filterTagIds, sortBy, upcomingShowCompleted, upcomingShowUnscheduled } = options
 
   const [currentTime, setCurrentTime] = useState(Date.now())
   const [expandedTaskIds, setExpandedTaskIds] = useState<Set<number>>(new Set())
@@ -204,7 +214,42 @@ export function useTasksData(options: TasksDataOptions): UseTasksDataReturn {
   const tasksLoading = activeTasksLoading || inactiveTasksLoading
   const tasksError = activeTasksError || inactiveTasksError
 
-  // Review tab: fetch tasks from the last 14 days (including completed) for review charts
+  // --- Now tab: today's scheduled tasks (no active timer, not completed) ---
+  const nowTodayTaskQuery = useMemo(() => ({
+    hasActiveTimer: 'false' as const,
+    scheduled: 'true' as const,
+    startAtFrom: todayRange.startAt,
+    startAtTo: todayRange.endAt,
+    sortBy: 'startAt' as const,
+    order: 'asc' as const,
+    completed: 'false' as const,
+    tags: filterTagIds.length ? filterTagIds : undefined
+  }), [todayRange, filterTagIds])
+
+  const {
+    data: nowTodayTasksResponse,
+    mutate: mutateNowTodayTasks
+  } = useGetApiTasks(nowTodayTaskQuery)
+  const nowTodayTasks = nowTodayTasksResponse?.tasks ?? []
+
+  // --- Upcoming tab: tasks with user-controlled filters ---
+  const upcomingTaskQuery = useMemo(() => ({
+    scheduled: upcomingShowUnscheduled ? undefined : ('true' as const),
+    completed: upcomingShowCompleted ? undefined : ('false' as const),
+    sortBy: 'startAt' as const,
+    order: 'asc' as const,
+    nullsLast: upcomingShowUnscheduled ? ('true' as const) : undefined,
+    tags: filterTagIds.length ? filterTagIds : undefined
+  }), [upcomingShowCompleted, upcomingShowUnscheduled, filterTagIds])
+
+  const {
+    data: upcomingTasksResponse,
+    isLoading: upcomingTasksLoading,
+    mutate: mutateUpcomingTasks
+  } = useGetApiTasks(upcomingTaskQuery)
+  const upcomingTasks = upcomingTasksResponse?.tasks ?? []
+
+  // --- Review tab: tasks from the last 14 days (including completed) ---
   const reviewDateRange = useMemo(() => {
     const now = new Date()
     const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 13)
@@ -224,17 +269,27 @@ export function useTasksData(options: TasksDataOptions): UseTasksDataReturn {
   } = useGetApiTasks(reviewTaskQuery)
   const reviewTasks = reviewTasksResponse?.tasks ?? []
 
+  // Revalidate all task caches from server
   const mutateBothTaskLists = useCallback(() => {
-    return Promise.all([mutateActiveTasks(), mutateInactiveTasks(), mutateSidebarActiveTasks(), mutateReviewTasks()])
-  }, [mutateActiveTasks, mutateInactiveTasks, mutateSidebarActiveTasks, mutateReviewTasks])
+    return Promise.all([
+      mutateActiveTasks(),
+      mutateInactiveTasks(),
+      mutateSidebarActiveTasks(),
+      mutateReviewTasks(),
+      mutateNowTodayTasks(),
+      mutateUpcomingTasks()
+    ])
+  }, [mutateActiveTasks, mutateInactiveTasks, mutateSidebarActiveTasks, mutateReviewTasks, mutateNowTodayTasks, mutateUpcomingTasks])
 
   // Timers — include review task IDs so we get timer data for the Review tab
   const taskIds = useMemo(() => {
     const idSet = new Set<number>()
     for (const task of allTasks) idSet.add(task.id)
     for (const task of reviewTasks) idSet.add(task.id)
+    for (const task of nowTodayTasks) idSet.add(task.id)
+    for (const task of upcomingTasks) idSet.add(task.id)
     return Array.from(idSet)
-  }, [allTasks, reviewTasks])
+  }, [allTasks, reviewTasks, nowTodayTasks, upcomingTasks])
   const shouldFetchTimer = useMemo(() => taskIds.length > 0, [taskIds])
 
   const {
@@ -344,26 +399,37 @@ export function useTasksData(options: TasksDataOptions): UseTasksDataReturn {
     })
   }, [])
 
+  // --- Helper: optimistically remove a task from a cache ---
+  const optimisticRemove = useCallback(
+    (mutate: ReturnType<typeof useGetApiTasks>['mutate'], taskId: number) => {
+      mutate(
+        (currentData) => {
+          if (!currentData) return currentData
+          return {
+            ...currentData,
+            tasks: currentData.tasks.filter((t) => t.id !== taskId),
+            total: currentData.total - 1
+          }
+        },
+        { revalidate: false }
+      )
+    },
+    []
+  )
+
   // --- Mutation operations ---
 
   const handleStartTimer = useCallback((taskId: number) => {
-    const task = allTasks.find(t => t.id === taskId)
+    const task = allTasks.find(t => t.id === taskId) ?? nowTodayTasks.find(t => t.id === taskId) ?? upcomingTasks.find(t => t.id === taskId)
     if (!task) return
 
     setCurrentTime(Date.now())
     setExpandedTaskIds((prev) => new Set(prev).add(taskId))
 
-    mutateInactiveTasks(
-      (currentData) => {
-        if (!currentData) return currentData
-        return {
-          ...currentData,
-          tasks: currentData.tasks.filter((t) => t.id !== taskId),
-          total: currentData.total - 1
-        }
-      },
-      { revalidate: false }
-    )
+    // Remove from inactive lists, add to active
+    optimisticRemove(mutateInactiveTasks, taskId)
+    optimisticRemove(mutateNowTodayTasks, taskId)
+    optimisticRemove(mutateUpcomingTasks, taskId)
     mutateActiveTasks(
       (currentData) => {
         if (!currentData) return currentData
@@ -379,7 +445,7 @@ export function useTasksData(options: TasksDataOptions): UseTasksDataReturn {
     postApiTimers({ taskId, startTime: new Date().toISOString() })
       .then(() => { mutateTimers(); mutateBothTaskLists() })
       .catch((error) => { console.error('Failed to start timer:', error); mutateBothTaskLists() })
-  }, [allTasks, mutateTimers, mutateActiveTasks, mutateInactiveTasks, mutateBothTaskLists])
+  }, [allTasks, nowTodayTasks, upcomingTasks, mutateTimers, mutateActiveTasks, mutateInactiveTasks, mutateNowTodayTasks, mutateUpcomingTasks, mutateBothTaskLists, optimisticRemove])
 
   const handleStopTimer = useCallback((taskId: number, timerId: number) => {
     const task = allTasks.find(t => t.id === taskId)
@@ -478,6 +544,7 @@ export function useTasksData(options: TasksDataOptions): UseTasksDataReturn {
           },
           { revalidate: false }
         )
+        mutateBothTaskLists()
       })
       .catch((error) => {
         console.error('Failed to create task:', error)
@@ -493,7 +560,7 @@ export function useTasksData(options: TasksDataOptions): UseTasksDataReturn {
           { revalidate: false }
         )
       })
-  }, [mutateInactiveTasks])
+  }, [mutateInactiveTasks, mutateBothTaskLists])
 
   const handleCreateTaskAndStartTimer = useCallback((title: string, tagIds?: number[]) => {
     if (!title.trim()) return
@@ -569,46 +636,48 @@ export function useTasksData(options: TasksDataOptions): UseTasksDataReturn {
 
   const handleDeleteTask = useCallback(async (taskId: number): Promise<void> => {
     if (!confirm('Are you sure you want to delete this task?')) return
+
+    // Optimistically remove from all caches
+    optimisticRemove(mutateActiveTasks, taskId)
+    optimisticRemove(mutateInactiveTasks, taskId)
+    optimisticRemove(mutateNowTodayTasks, taskId)
+    optimisticRemove(mutateUpcomingTasks, taskId)
+    optimisticRemove(mutateReviewTasks, taskId)
+
     try {
       await deleteApiTasksId(taskId)
       await mutateBothTaskLists()
     } catch (error) {
       console.error('Failed to delete task:', error)
+      mutateBothTaskLists()
     }
-  }, [mutateBothTaskLists])
+  }, [mutateActiveTasks, mutateInactiveTasks, mutateNowTodayTasks, mutateUpcomingTasks, mutateReviewTasks, mutateBothTaskLists, optimisticRemove])
 
   const handleToggleTaskCompletion = useCallback((task: Task) => {
     const newCompletedAt = task.completedAt ? null : new Date().toISOString()
-    const isInActiveList = activeTasks.some(t => t.id === task.id)
-    const mutateTargetList = isInActiveList ? mutateActiveTasks : mutateInactiveTasks
 
-    mutateTargetList(
-      (currentData) => {
-        if (!currentData) return currentData
-        return {
-          ...currentData,
-          tasks: currentData.tasks.filter((t) => t.id !== task.id)
-        }
-      },
-      { revalidate: false }
-    )
-    mutateReviewTasks(
-      (currentData) => {
-        if (!currentData) return currentData
-        return {
-          ...currentData,
-          tasks: currentData.tasks.map((t) =>
-            t.id === task.id ? { ...t, completedAt: newCompletedAt } : t
-          )
-        }
-      },
-      { revalidate: false }
-    )
+    // Optimistically update completedAt in all caches (shows strikethrough animation)
+    // Server revalidation via mutateBothTaskLists will remove from filtered queries
+    const optimisticCompletionUpdate = (currentData: typeof activeTasksResponse) => {
+      if (!currentData) return currentData
+      return {
+        ...currentData,
+        tasks: currentData.tasks.map((t) =>
+          t.id === task.id ? { ...t, completedAt: newCompletedAt } : t
+        )
+      }
+    }
+
+    mutateActiveTasks(optimisticCompletionUpdate, { revalidate: false })
+    mutateInactiveTasks(optimisticCompletionUpdate, { revalidate: false })
+    mutateNowTodayTasks(optimisticCompletionUpdate, { revalidate: false })
+    mutateUpcomingTasks(optimisticCompletionUpdate, { revalidate: false })
+    mutateReviewTasks(optimisticCompletionUpdate, { revalidate: false })
 
     putApiTasksId(task.id, { completedAt: newCompletedAt })
       .then(() => mutateBothTaskLists())
       .catch((error) => { console.error('Failed to update task completion:', error); mutateBothTaskLists() })
-  }, [activeTasks, mutateActiveTasks, mutateInactiveTasks, mutateReviewTasks, mutateBothTaskLists])
+  }, [activeTasks, mutateActiveTasks, mutateInactiveTasks, mutateNowTodayTasks, mutateUpcomingTasks, mutateReviewTasks, mutateBothTaskLists])
 
   const handleUpdateTaskTags = useCallback((taskId: number, tagIds: number[]) => {
     putApiTasksId(taskId, { tagIds })
@@ -644,6 +713,9 @@ export function useTasksData(options: TasksDataOptions): UseTasksDataReturn {
     displayTasks,
     allTasks,
     sidebarActiveTasks,
+    nowTodayTasks,
+    upcomingTasks,
+    upcomingTasksLoading: upcomingTasksLoading,
     reviewTasks,
     reviewTimers: timers,
     reviewTimersByTaskId,

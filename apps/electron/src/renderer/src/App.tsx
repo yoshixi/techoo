@@ -122,6 +122,8 @@ function App(): React.JSX.Element {
   const [showUnscheduled] = useState(true)
   const [filterTagIds, setFilterTagIds] = useState<number[]>([])
   const [sortBy] = useState<'createdAt' | 'startAt'>('startAt')
+  const [upcomingShowCompleted, setUpcomingShowCompleted] = useState(false)
+  const [upcomingShowUnscheduled, setUpcomingShowUnscheduled] = useState(true)
   const [calendarViewMode, setCalendarViewMode] = useState<ViewMode>('day')
   const [calendarDraft, setCalendarDraft] = useState<{
     title: string
@@ -149,7 +151,9 @@ function App(): React.JSX.Element {
     showTodayOnly,
     showUnscheduled,
     filterTagIds,
-    sortBy
+    sortBy,
+    upcomingShowCompleted,
+    upcomingShowUnscheduled
   })
 
   const {
@@ -385,6 +389,10 @@ function App(): React.JSX.Element {
             filterTagIds={filterTagIds}
             onFilterTagIdsChange={setFilterTagIds}
             onTaskSelect={handleTaskSelect}
+            upcomingShowCompleted={upcomingShowCompleted}
+            upcomingShowUnscheduled={upcomingShowUnscheduled}
+            onUpcomingShowCompletedChange={setUpcomingShowCompleted}
+            onUpcomingShowUnscheduledChange={setUpcomingShowUnscheduled}
           />
         )}
       </SidebarInset>

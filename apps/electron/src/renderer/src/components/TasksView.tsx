@@ -14,13 +14,21 @@ interface TasksViewProps {
   onFilterTagIdsChange: (ids: number[]) => void
   onTaskSelect: (task: Task) => void
   quickCaptureInputRef?: React.RefObject<HTMLInputElement | null>
+  upcomingShowCompleted: boolean
+  upcomingShowUnscheduled: boolean
+  onUpcomingShowCompletedChange: (value: boolean) => void
+  onUpcomingShowUnscheduledChange: (value: boolean) => void
 }
 
 export function TasksView({
   data,
   filterTagIds,
   onFilterTagIdsChange,
-  onTaskSelect
+  onTaskSelect,
+  upcomingShowCompleted,
+  upcomingShowUnscheduled,
+  onUpcomingShowCompletedChange,
+  onUpcomingShowUnscheduledChange
 }: TasksViewProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TasksTab>('now')
 
@@ -38,19 +46,25 @@ export function TasksView({
             <NowTab
               activeTasks={data.activeTasks}
               activeTimersByTaskId={data.activeTimersByTaskId}
+              todayTasks={data.nowTodayTasks}
               onStartTimer={data.handleStartTimer}
               onStopTimer={data.handleStopTimer}
               onCreateTaskAndStartTimer={data.handleCreateTaskAndStartTimer}
               onToggleCompletion={data.handleToggleTaskCompletion}
               onDeleteTask={data.handleDeleteTask}
               onTaskSelect={onTaskSelect}
-              filterTagIds={filterTagIds}
             />
           </TabsContent>
 
           <TabsContent value="upcoming" className="flex-1 min-h-0 overflow-auto">
             <UpcomingTab
+              tasks={data.upcomingTasks}
+              isLoading={data.upcomingTasksLoading}
               activeTimersByTaskId={data.activeTimersByTaskId}
+              showCompleted={upcomingShowCompleted}
+              showUnscheduled={upcomingShowUnscheduled}
+              onShowCompletedChange={onUpcomingShowCompletedChange}
+              onShowUnscheduledChange={onUpcomingShowUnscheduledChange}
               onStartTimer={data.handleStartTimer}
               onStopTimer={data.handleStopTimer}
               onToggleCompletion={data.handleToggleTaskCompletion}

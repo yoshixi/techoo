@@ -5,19 +5,19 @@ import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Badge } from '../ui/badge'
 import { TagCombobox } from '../TagCombobox'
-import { useGetApiTasks, type Task, type TaskTimer } from '../../gen/api'
-import { formatTimeRangeShort, getTodayRange } from '../../lib/time'
+import type { Task, TaskTimer } from '../../gen/api'
+import { formatTimeRangeShort } from '../../lib/time'
 
 interface NowTabProps {
   activeTasks: Task[]
   activeTimersByTaskId: Map<number, TaskTimer>
+  todayTasks: Task[]
   onStartTimer: (taskId: number) => void
   onStopTimer: (taskId: number, timerId: number) => void
   onCreateTaskAndStartTimer: (title: string, tagIds?: number[]) => void
   onToggleCompletion: (task: Task) => void
   onDeleteTask: (taskId: number) => void
   onTaskSelect: (task: Task) => void
-  filterTagIds: number[]
 }
 
 function formatElapsed(startTime: string): string {
@@ -83,13 +83,13 @@ function RunningTaskCard({
 export function NowTab({
   activeTasks,
   activeTimersByTaskId,
+  todayTasks,
   onStartTimer,
   onStopTimer,
   onCreateTaskAndStartTimer,
   onToggleCompletion,
   onDeleteTask,
-  onTaskSelect,
-  filterTagIds
+  onTaskSelect
 }: NowTabProps): React.JSX.Element {
   const [quickTitle, setQuickTitle] = useState('')
   const [quickTagIds, setQuickTagIds] = useState<number[]>([])
@@ -103,34 +103,6 @@ export function NowTab({
     setQuickTagIds([])
     setShowTagPicker(false)
   }, [quickTitle, quickTagIds, onCreateTaskAndStartTimer])
-
-  // Today's schedule: inactive, scheduled tasks for today
-  const todayRange = getTodayRange()
-  const { data: todayTasksResponse, mutate: mutateTodayTasks } = useGetApiTasks({
-    hasActiveTimer: 'false' as const,
-    scheduled: 'true' as const,
-    startAtFrom: todayRange.startAt,
-    startAtTo: todayRange.endAt,
-    sortBy: 'startAt' as const,
-    order: 'asc' as const,
-    completed: 'false' as const,
-    tags: filterTagIds.length ? filterTagIds : undefined
-  })
-  const todayTasks = todayTasksResponse?.tasks ?? []
-
-  const handleToggleCompletion = useCallback((task: Task) => {
-    mutateTodayTasks(
-      (currentData) => {
-        if (!currentData) return currentData
-        return {
-          ...currentData,
-          tasks: currentData.tasks.filter((t) => t.id !== task.id)
-        }
-      },
-      { revalidate: false }
-    )
-    onToggleCompletion(task)
-  }, [mutateTodayTasks, onToggleCompletion])
 
   // Running tasks with timers
   const runningTasks = activeTasks.filter((t) => activeTimersByTaskId.has(t.id))
@@ -221,10 +193,12 @@ export function NowTab({
           </div>
         ) : (
           <div className="space-y-1">
-            {todayTasks.map((task) => (
+            {todayTasks.map((task) => {
+              const isCompleted = !!task.completedAt
+              return (
               <div
                 key={task.id}
-                className="flex items-center gap-3 rounded-lg border p-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                className={`flex items-center gap-3 rounded-lg border p-2 cursor-pointer hover:bg-muted/50 transition-colors ${isCompleted ? 'opacity-50' : ''}`}
                 onClick={() => onTaskSelect(task)}
               >
                 <Button
@@ -239,16 +213,16 @@ export function NowTab({
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={(e) => { e.stopPropagation(); handleToggleCompletion(task) }}
-                  className="h-7 w-7 hover:bg-green-200 shrink-0"
-                  title="Mark complete"
+                  onClick={(e) => { e.stopPropagation(); onToggleCompletion(task) }}
+                  className={`h-7 w-7 shrink-0 ${isCompleted ? 'opacity-50' : 'hover:bg-green-200'}`}
+                  title={isCompleted ? 'Mark incomplete' : 'Mark complete'}
                 >
-                  <CheckCircle className="h-4 w-4 text-green-700" />
+                  <CheckCircle className={`h-4 w-4 ${isCompleted ? 'text-gray-400' : 'text-green-700'}`} />
                 </Button>
                 <div className="text-xs text-muted-foreground w-28 shrink-0">
                   {formatTimeRangeShort(task.startAt, task.endAt)}
                 </div>
-                <div className="flex-1 text-sm font-medium truncate">{task.title}</div>
+                <div className={`flex-1 text-sm font-medium truncate ${isCompleted ? 'line-through' : ''}`}>{task.title}</div>
                 {task.tags && task.tags.length > 0 && (
                   <div className="flex gap-1 shrink-0">
                     {task.tags.map((tag) => (
@@ -268,7 +242,8 @@ export function NowTab({
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
