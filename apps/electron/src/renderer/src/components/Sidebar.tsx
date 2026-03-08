@@ -1,5 +1,5 @@
-import React from 'react'
-import { CalendarDays, ListTodo, StickyNote, CircleUser, Settings } from 'lucide-react'
+import React, { useMemo } from 'react'
+import { CalendarDays, ListTodo, StickyNote, CircleUser, Settings, ClipboardList } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -24,15 +24,22 @@ interface AppSidebarProps {
   activeTimersByTaskId: Map<number, TaskTimer>
   onStopTimer: (taskId: number, timerId: number) => void
   onOpenTaskDetail: (task: Task) => void
+  onPlanToday?: () => void
+  carryoverCount?: number
 }
 
 const menuItems = [
-  { id: 'calendar' as const, label: 'Calendar', icon: CalendarDays },
   { id: 'tasks' as const, label: 'Tasks', icon: ListTodo },
+  { id: 'calendar' as const, label: 'Calendar', icon: CalendarDays },
   { id: 'notes' as const, label: 'Notes', icon: StickyNote },
   { id: 'settings' as const, label: 'Settings', icon: Settings },
   { id: 'account' as const, label: 'Account', icon: CircleUser }
 ]
+
+function isPlanningTime(): boolean {
+  const hour = new Date().getHours()
+  return hour >= 4 && hour < 12
+}
 
 export function AppSidebar({
   currentView,
@@ -40,8 +47,11 @@ export function AppSidebar({
   activeTasks,
   activeTimersByTaskId,
   onStopTimer,
-  onOpenTaskDetail
+  onOpenTaskDetail,
+  onPlanToday,
+  carryoverCount = 0
 }: AppSidebarProps): React.JSX.Element {
+  const showPlanToday = useMemo(() => isPlanningTime(), [])
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="flex flex-row items-center justify-between p-4">
@@ -64,6 +74,22 @@ export function AppSidebar({
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {showPlanToday && onPlanToday && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={onPlanToday}
+                    tooltip="Plan Today"
+                  >
+                    <ClipboardList className="h-4 w-4" />
+                    <span>Plan Today</span>
+                    {carryoverCount > 0 && (
+                      <span className="ml-auto inline-flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-medium h-4 min-w-4 px-1">
+                        {carryoverCount}
+                      </span>
+                    )}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

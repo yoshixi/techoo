@@ -7,7 +7,11 @@ import { Label } from './components/ui/label'
 import { TagCombobox } from './components/TagCombobox'
 import {
   postApiTasks,
-  type Task
+  postApiTimers,
+  putApiTimersId,
+  type Task,
+  type TaskTimer,
+  type CalendarEvent
 } from './gen/api'
 import { TaskSideMenu } from './components/TaskSideMenu'
 import { AppSidebar, type View } from './components/Sidebar'
@@ -22,6 +26,8 @@ import { useIsNarrow } from './hooks/use-mobile'
 import { useTasksData } from './hooks/useTasksData'
 import { useCalendarEvents } from './hooks/useCalendarEvents'
 import { TasksView } from './components/TasksView'
+import { PlanningPanel } from './components/planning/PlanningPanel'
+import { TimerFillDialog, type TimerFillMode } from './components/TimerFillDialog'
 import { NotesView } from './components/NotesView'
 import { startOfDay, addDays } from './lib/calendar-utils'
 
@@ -122,6 +128,8 @@ function App(): React.JSX.Element {
   const [showUnscheduled] = useState(true)
   const [filterTagIds, setFilterTagIds] = useState<number[]>([])
   const [sortBy] = useState<'createdAt' | 'startAt'>('startAt')
+  const [upcomingShowCompleted, setUpcomingShowCompleted] = useState(false)
+  const [upcomingShowUnscheduled, setUpcomingShowUnscheduled] = useState(true)
   const [calendarViewMode, setCalendarViewMode] = useState<ViewMode>('day')
   const [calendarDraft, setCalendarDraft] = useState<{
     title: string
@@ -132,6 +140,14 @@ function App(): React.JSX.Element {
   } | null>(null)
   const [isCreatingCalendarTask, setIsCreatingCalendarTask] = useState(false)
   const [calendarCreateError, setCalendarCreateError] = useState<string | null>(null)
+  const [timerFillTask, setTimerFillTask] = useState<Task | null>(null)
+  const [timerFillMode, setTimerFillMode] = useState<TimerFillMode>('no-timer')
+  const [timerFillActiveTimer, setTimerFillActiveTimer] = useState<TaskTimer | null>(null)
+  const [isPlanningOpen, setIsPlanningOpen] = useState(() => {
+    const lastPlanDate = localStorage.getItem('comori:lastPlanDate')
+    const today = new Date().toISOString().split('T')[0]
+    return lastPlanDate !== today
+  })
 
   // Sidebar state controlled by window width
   const isNarrow = useIsNarrow()
@@ -149,7 +165,10 @@ function App(): React.JSX.Element {
     showTodayOnly,
     showUnscheduled,
     filterTagIds,
-    sortBy
+    sortBy,
+    upcomingShowCompleted,
+    upcomingShowUnscheduled,
+    isPlanningOpen
   })
 
   const {
@@ -175,7 +194,7 @@ function App(): React.JSX.Element {
     return { startDate, endDate }
   }, [])
 
-  // Calendar events data layer
+  // Calendar events data layer — also fetch when planning is open
   const {
     events: calendarEvents,
     calendars,
@@ -184,8 +203,19 @@ function App(): React.JSX.Element {
   } = useCalendarEvents({
     startDate: calendarDateRange.startDate,
     endDate: calendarDateRange.endDate,
-    enabled: currentView === 'calendar'
+    enabled: currentView === 'calendar' || isPlanningOpen
   })
+
+  // Filter calendar events to today only (for planning panel)
+  const todayCalendarEvents = useMemo(() => {
+    const now = new Date()
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+    const todayEnd = todayStart + 24 * 60 * 60 * 1000
+    return calendarEvents.filter((event) => {
+      const eventStart = new Date(event.startAt).getTime()
+      return eventStart >= todayStart && eventStart < todayEnd
+    })
+  }, [calendarEvents])
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [focusedTaskIndex, setFocusedTaskIndex] = useState<number>(-1)
@@ -291,6 +321,138 @@ function App(): React.JSX.Element {
     }
   }
 
+  // Planning panel handlers
+  const handleCarryoverMoveToToday = useCallback((taskId: number) => {
+    const task = tasksData.carryoverTasks.find(t => t.id === taskId)
+    const today = new Date()
+    today.setHours(9, 0, 0, 0)
+    const newStartAt = today.toISOString()
+    // Shift endAt by same duration, or clear if no valid range
+    let newEndAt: string | null = null
+    if (task?.startAt && task?.endAt) {
+      const durationMs = new Date(task.endAt).getTime() - new Date(task.startAt).getTime()
+      if (durationMs > 0) {
+        newEndAt = new Date(today.getTime() + durationMs).toISOString()
+      }
+    }
+    tasksData.handleUpdateTaskSchedule(taskId, newStartAt, newEndAt)
+  }, [tasksData])
+
+  const handleCarryoverSkip = useCallback((taskId: number) => {
+    tasksData.handleUpdateTaskSchedule(taskId, null, null)
+  }, [tasksData])
+
+  const handleCarryoverMoveAllToToday = useCallback(() => {
+    let cursor = new Date()
+    cursor.setHours(9, 0, 0, 0)
+    for (const task of tasksData.carryoverTasks) {
+      const newStartAt = cursor.toISOString()
+      let newEndAt: string | null = null
+      const DEFAULT_DURATION_MS = 30 * 60 * 1000
+      if (task.startAt && task.endAt) {
+        const durationMs = new Date(task.endAt).getTime() - new Date(task.startAt).getTime()
+        if (durationMs > 0) {
+          newEndAt = new Date(cursor.getTime() + durationMs).toISOString()
+          cursor = new Date(cursor.getTime() + durationMs)
+        } else {
+          newEndAt = new Date(cursor.getTime() + DEFAULT_DURATION_MS).toISOString()
+          cursor = new Date(cursor.getTime() + DEFAULT_DURATION_MS)
+        }
+      } else {
+        newEndAt = new Date(cursor.getTime() + DEFAULT_DURATION_MS).toISOString()
+        cursor = new Date(cursor.getTime() + DEFAULT_DURATION_MS)
+      }
+      tasksData.handleUpdateTaskSchedule(task.id, newStartAt, newEndAt)
+    }
+  }, [tasksData])
+
+  const handleCreateTodayTask = useCallback((title: string, durationMinutes: number, startAt: string) => {
+    const startMs = new Date(startAt).getTime()
+    const endAt = new Date(startMs + durationMinutes * 60 * 1000).toISOString()
+    postApiTasks({ title, startAt, endAt })
+      .then(() => tasksData.mutateBothTaskLists())
+      .catch((error) => console.error('Failed to create today task:', error))
+  }, [tasksData])
+
+  const handlePlanningTaskMove = useCallback(async (task: Task, range: { startAt: string; endAt: string }) => {
+    await tasksData.handleSaveSchedule(task.id, range.startAt, range.endAt)
+  }, [tasksData])
+
+  // Wrap completion to check for timer records or overlong timers
+  const handleCompleteWithTimerCheck = useCallback((task: Task) => {
+    // If task is being un-completed, just toggle
+    if (task.completedAt) {
+      tasksData.handleToggleTaskCompletion(task)
+      return
+    }
+
+    const taskTimers = tasksData.timersByTaskId.get(task.id)
+
+    // Check for overlong active timer: if planned duration exists and active timer is 2x+ longer
+    const activeTimer = tasksData.activeTimersByTaskId.get(task.id)
+    if (taskTimers && taskTimers.length > 0) {
+      if (activeTimer && task.startAt && task.endAt) {
+        const plannedMs = new Date(task.endAt).getTime() - new Date(task.startAt).getTime()
+        const recordedMs = Date.now() - new Date(activeTimer.startTime).getTime()
+        if (plannedMs > 0 && recordedMs >= plannedMs * 2) {
+          setTimerFillTask(task)
+          setTimerFillMode('overlong-timer')
+          setTimerFillActiveTimer(activeTimer)
+          return
+        }
+      }
+      // Stop active timer if running, then complete
+      if (activeTimer) {
+        tasksData.handleStopTimer(task.id, activeTimer.id)
+      }
+      tasksData.handleToggleTaskCompletion(task)
+      return
+    }
+
+    // No timers — show fill dialog
+    setTimerFillTask(task)
+    setTimerFillMode('no-timer')
+    setTimerFillActiveTimer(null)
+  }, [tasksData])
+
+  const handleTimerFillConfirm = useCallback(async (taskId: number, startTime: string, endTime: string) => {
+    try {
+      if (timerFillMode === 'overlong-timer' && timerFillActiveTimer) {
+        // Update the existing timer's start and end time
+        await putApiTimersId(timerFillActiveTimer.id, { startTime, endTime })
+      } else {
+        // Create a new completed timer
+        const response = await postApiTimers({ taskId, startTime })
+        await putApiTimersId(response.timer.id, { endTime })
+      }
+      await tasksData.mutateTimers()
+    } catch (error) {
+      console.error('Failed to update timer:', error)
+    }
+    // Complete the task
+    if (timerFillTask) {
+      tasksData.handleToggleTaskCompletion(timerFillTask)
+    }
+    setTimerFillTask(null)
+    setTimerFillActiveTimer(null)
+  }, [tasksData, timerFillTask, timerFillMode, timerFillActiveTimer])
+
+  const handleTimerFillSkip = useCallback((task: Task) => {
+    // Stop active timer if this was an overlong-timer case
+    if (timerFillMode === 'overlong-timer' && timerFillActiveTimer) {
+      tasksData.handleStopTimer(task.id, timerFillActiveTimer.id)
+    }
+    tasksData.handleToggleTaskCompletion(task)
+    setTimerFillTask(null)
+    setTimerFillActiveTimer(null)
+  }, [tasksData, timerFillMode, timerFillActiveTimer])
+
+  const handleCalendarEventConvert = useCallback((event: CalendarEvent) => {
+    postApiTasks({ title: event.title, startAt: event.startAt, endAt: event.endAt })
+      .then(() => tasksData.mutateBothTaskLists())
+      .catch((error) => console.error('Failed to convert calendar event to task:', error))
+  }, [tasksData])
+
   const handleTaskSelect = useCallback((task: Task) => {
     setSelectedTask(task)
     const index = allTasksForNavigation.findIndex((t) => t.id === task.id)
@@ -313,6 +475,8 @@ function App(): React.JSX.Element {
         activeTimersByTaskId={activeTimersByTaskId}
         onStopTimer={handleStopTimer}
         onOpenTaskDetail={setSelectedTask}
+        onPlanToday={() => setIsPlanningOpen(true)}
+        carryoverCount={tasksData.carryoverTasks.length}
       />
       <SidebarInset>
         {currentView === 'account' ? (
@@ -385,9 +549,39 @@ function App(): React.JSX.Element {
             filterTagIds={filterTagIds}
             onFilterTagIdsChange={setFilterTagIds}
             onTaskSelect={handleTaskSelect}
+            onToggleCompletion={handleCompleteWithTimerCheck}
+            upcomingShowCompleted={upcomingShowCompleted}
+            upcomingShowUnscheduled={upcomingShowUnscheduled}
+            onUpcomingShowCompletedChange={setUpcomingShowCompleted}
+            onUpcomingShowUnscheduledChange={setUpcomingShowUnscheduled}
+            carryoverCount={tasksData.carryoverTasks.length}
+            onPlanToday={() => setIsPlanningOpen(true)}
           />
         )}
       </SidebarInset>
+
+      {/* Planning panel */}
+      {isPlanningOpen && (
+        <PlanningPanel
+          carryoverTasks={tasksData.carryoverTasks}
+          todayTasks={tasksData.nowTodayTasks}
+          calendarEvents={todayCalendarEvents}
+          activeTimersByTaskId={activeTimersByTaskId}
+          onMoveToToday={handleCarryoverMoveToToday}
+          onSkip={handleCarryoverSkip}
+          onComplete={handleCompleteWithTimerCheck}
+          onMoveAllToToday={handleCarryoverMoveAllToToday}
+          onCreateTodayTask={handleCreateTodayTask}
+          onTaskMove={handlePlanningTaskMove}
+          onTaskSelect={handleTaskSelect}
+          onTaskDelete={handleDeleteTask}
+          onCalendarEventConvert={handleCalendarEventConvert}
+          onClose={() => {
+            setIsPlanningOpen(false)
+            localStorage.setItem('comori:lastPlanDate', new Date().toISOString().split('T')[0])
+          }}
+        />
+      )}
 
       {/* Calendar create task dialog */}
       <Dialog
@@ -519,6 +713,7 @@ function App(): React.JSX.Element {
                 setSelectedTask(updated)
                 await mutateBothTaskLists()
               }}
+              onToggleCompletion={handleCompleteWithTimerCheck}
               tasks={allTasks}
             />
           ) : null}
@@ -558,6 +753,16 @@ function App(): React.JSX.Element {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Timer fill dialog - shown when completing task without timer records */}
+      <TimerFillDialog
+        task={timerFillTask}
+        mode={timerFillMode}
+        activeTimer={timerFillActiveTimer}
+        onConfirm={handleTimerFillConfirm}
+        onSkip={handleTimerFillSkip}
+        onCancel={() => { setTimerFillTask(null); setTimerFillActiveTimer(null) }}
+      />
     </SidebarProvider>
   )
 }

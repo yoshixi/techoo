@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import { Play, CheckCircle, Maximize2, Trash2 } from 'lucide-react'
 import { CharacterIllustration } from '../CharacterIllustration'
 import { Button } from '../ui/button'
@@ -6,12 +6,18 @@ import { Badge } from '../ui/badge'
 import { Switch } from '../ui/switch'
 import { Label } from '../ui/label'
 import { TagCombobox } from '../TagCombobox'
-import { useGetApiTasks, type Task, type TaskTimer } from '../../gen/api'
+import type { Task, TaskTimer } from '../../gen/api'
 import { formatTimeRangeShort } from '../../lib/time'
 import { groupTasksByDate, type GroupedTasks } from '../../lib/date-groups'
 
 interface UpcomingTabProps {
+  tasks: Task[]
+  isLoading: boolean
   activeTimersByTaskId: Map<number, TaskTimer>
+  showCompleted: boolean
+  showUnscheduled: boolean
+  onShowCompletedChange: (value: boolean) => void
+  onShowUnscheduledChange: (value: boolean) => void
   onStartTimer: (taskId: number) => void
   onStopTimer: (taskId: number, timerId: number) => void
   onToggleCompletion: (task: Task) => void
@@ -22,7 +28,13 @@ interface UpcomingTabProps {
 }
 
 export function UpcomingTab({
+  tasks,
+  isLoading,
   activeTimersByTaskId,
+  showCompleted,
+  showUnscheduled,
+  onShowCompletedChange,
+  onShowUnscheduledChange,
   onStartTimer,
   onStopTimer,
   onToggleCompletion,
@@ -31,19 +43,6 @@ export function UpcomingTab({
   filterTagIds,
   onFilterTagIdsChange
 }: UpcomingTabProps): React.JSX.Element {
-  const [showCompleted, setShowCompleted] = useState(false)
-  const [showUnscheduled, setShowUnscheduled] = useState(true)
-
-  const { data: tasksResponse, isLoading } = useGetApiTasks({
-    scheduled: showUnscheduled ? undefined : ('true' as const),
-    completed: showCompleted ? undefined : ('false' as const),
-    sortBy: 'startAt' as const,
-    order: 'asc' as const,
-    nullsLast: showUnscheduled ? ('true' as const) : undefined,
-    tags: filterTagIds.length ? filterTagIds : undefined
-  })
-  const tasks = tasksResponse?.tasks ?? []
-
   const groups: GroupedTasks[] = useMemo(() => groupTasksByDate(tasks), [tasks])
 
   return (
@@ -63,7 +62,7 @@ export function UpcomingTab({
           <Switch
             id="upcoming-show-unscheduled"
             checked={showUnscheduled}
-            onCheckedChange={setShowUnscheduled}
+            onCheckedChange={onShowUnscheduledChange}
             className="scale-75"
           />
         </div>
@@ -74,7 +73,7 @@ export function UpcomingTab({
           <Switch
             id="upcoming-show-completed"
             checked={showCompleted}
-            onCheckedChange={setShowCompleted}
+            onCheckedChange={onShowCompletedChange}
             className="scale-75"
           />
         </div>

@@ -19,6 +19,7 @@ interface TaskSideMenuProps {
   task: Task | null
   onClose: () => void
   onTaskUpdated?: (task: Task) => void
+  onToggleCompletion?: (task: Task) => void
   /** All tasks to display in the schedule picker */
   tasks?: Task[]
 }
@@ -38,6 +39,7 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
   task,
   onClose,
   onTaskUpdated,
+  onToggleCompletion,
   tasks
 }) => {
   const titleInputRef = useRef<HTMLInputElement | null>(null)
@@ -175,6 +177,11 @@ export const TaskSideMenu: React.FC<TaskSideMenuProps> = ({
 
   const handleToggleCompletion = async (): Promise<void> => {
     if (!currentTask) return
+    // Use external handler if provided (supports timer fill-out dialog)
+    if (onToggleCompletion) {
+      onToggleCompletion(currentTask)
+      return
+    }
     setIsCompleting(true)
     try {
       const isCompletingTask = !currentTask.completedAt

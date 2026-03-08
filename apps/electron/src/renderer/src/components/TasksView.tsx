@@ -13,14 +13,28 @@ interface TasksViewProps {
   filterTagIds: number[]
   onFilterTagIdsChange: (ids: number[]) => void
   onTaskSelect: (task: Task) => void
+  onToggleCompletion: (task: Task) => void
   quickCaptureInputRef?: React.RefObject<HTMLInputElement | null>
+  upcomingShowCompleted: boolean
+  upcomingShowUnscheduled: boolean
+  onUpcomingShowCompletedChange: (value: boolean) => void
+  onUpcomingShowUnscheduledChange: (value: boolean) => void
+  carryoverCount: number
+  onPlanToday: () => void
 }
 
 export function TasksView({
   data,
   filterTagIds,
   onFilterTagIdsChange,
-  onTaskSelect
+  onTaskSelect,
+  onToggleCompletion,
+  upcomingShowCompleted,
+  upcomingShowUnscheduled,
+  onUpcomingShowCompletedChange,
+  onUpcomingShowUnscheduledChange,
+  carryoverCount,
+  onPlanToday
 }: TasksViewProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TasksTab>('now')
 
@@ -38,21 +52,30 @@ export function TasksView({
             <NowTab
               activeTasks={data.activeTasks}
               activeTimersByTaskId={data.activeTimersByTaskId}
+              todayTasks={data.nowTodayTasks}
               onStartTimer={data.handleStartTimer}
               onStopTimer={data.handleStopTimer}
               onCreateTaskAndStartTimer={data.handleCreateTaskAndStartTimer}
+              onToggleCompletion={onToggleCompletion}
               onDeleteTask={data.handleDeleteTask}
               onTaskSelect={onTaskSelect}
-              filterTagIds={filterTagIds}
+              carryoverCount={carryoverCount}
+              onPlanToday={onPlanToday}
             />
           </TabsContent>
 
           <TabsContent value="upcoming" className="flex-1 min-h-0 overflow-auto">
             <UpcomingTab
+              tasks={data.upcomingTasks}
+              isLoading={data.upcomingTasksLoading}
               activeTimersByTaskId={data.activeTimersByTaskId}
+              showCompleted={upcomingShowCompleted}
+              showUnscheduled={upcomingShowUnscheduled}
+              onShowCompletedChange={onUpcomingShowCompletedChange}
+              onShowUnscheduledChange={onUpcomingShowUnscheduledChange}
               onStartTimer={data.handleStartTimer}
               onStopTimer={data.handleStopTimer}
-              onToggleCompletion={data.handleToggleTaskCompletion}
+              onToggleCompletion={onToggleCompletion}
               onDeleteTask={data.handleDeleteTask}
               onTaskSelect={onTaskSelect}
               filterTagIds={filterTagIds}
@@ -65,6 +88,7 @@ export function TasksView({
               allTasks={data.reviewTasks}
               timers={data.reviewTimers}
               timersByTaskId={data.reviewTimersByTaskId}
+              onToggleCompletion={onToggleCompletion}
               onTaskSelect={onTaskSelect}
             />
           </TabsContent>
