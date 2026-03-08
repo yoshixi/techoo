@@ -506,7 +506,7 @@ export function useTasksData(options: TasksDataOptions): UseTasksDataReturn {
       title: title.trim(),
       description: '',
       dueDate: null,
-      startAt: null,
+      startAt: now,
       completedAt: null,
       tags: [],
       createdAt: now,
@@ -528,6 +528,7 @@ export function useTasksData(options: TasksDataOptions): UseTasksDataReturn {
 
     postApiTasks({
       title: title.trim(),
+      startAt: now,
       tagIds: tagIds && tagIds.length > 0 ? tagIds : undefined
     })
       .then((response) => {

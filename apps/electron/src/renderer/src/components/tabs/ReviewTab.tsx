@@ -7,9 +7,10 @@ import {
   Tooltip as RechartsTooltip,
   ResponsiveContainer
 } from 'recharts'
-import { Info } from 'lucide-react'
+import { CheckCircle, Info } from 'lucide-react'
 import { Badge } from '../ui/badge'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
+import { Button } from '../ui/button'
 import {
   Table,
   TableBody,
@@ -30,6 +31,7 @@ interface ReviewTabProps {
   allTasks: Task[]
   timers: TaskTimer[]
   timersByTaskId: Map<number, TaskTimer[]>
+  onToggleCompletion: (task: Task) => void
   onTaskSelect: (task: Task) => void
 }
 
@@ -37,6 +39,7 @@ export function ReviewTab({
   allTasks,
   timers,
   timersByTaskId,
+  onToggleCompletion,
   onTaskSelect
 }: ReviewTabProps): React.JSX.Element {
   const dailyData = useMemo(() => aggregateDailyTimers(timers, 14), [timers])
@@ -156,6 +159,7 @@ export function ReviewTab({
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10"></TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Tags</TableHead>
                   <TableHead className="text-right">Total Time</TableHead>
@@ -163,13 +167,26 @@ export function ReviewTab({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {taskSummaries.map(({ task, totalMs, sessionCount }) => (
+                {taskSummaries.map(({ task, totalMs, sessionCount }) => {
+                  const isCompleted = !!task.completedAt
+                  return (
                   <TableRow
                     key={task.id}
-                    className="cursor-pointer hover:bg-muted/50"
+                    className={`cursor-pointer hover:bg-muted/50 ${isCompleted ? 'opacity-50' : ''}`}
                     onClick={() => onTaskSelect(task)}
                   >
-                    <TableCell className="font-medium">{task.title}</TableCell>
+                    <TableCell>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={(e) => { e.stopPropagation(); onToggleCompletion(task) }}
+                        className={`h-7 w-7 shrink-0 ${isCompleted ? 'opacity-50' : 'hover:bg-green-200'}`}
+                        title={isCompleted ? 'Mark incomplete' : 'Mark complete'}
+                      >
+                        <CheckCircle className={`h-4 w-4 ${isCompleted ? 'text-gray-400' : 'text-green-700'}`} />
+                      </Button>
+                    </TableCell>
+                    <TableCell className={`font-medium ${isCompleted ? 'line-through' : ''}`}>{task.title}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {task.tags && task.tags.length > 0 ? (
@@ -190,7 +207,8 @@ export function ReviewTab({
                       {sessionCount}
                     </TableCell>
                   </TableRow>
-                ))}
+                  )
+                })}
               </TableBody>
             </Table>
           </div>

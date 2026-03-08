@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { Circle, Play, Square, Trash2 } from 'lucide-react'
+import { CheckCircle, Circle, Play, Square, Trash2 } from 'lucide-react'
 import { CharacterIllustration } from '../CharacterIllustration'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -14,6 +14,7 @@ interface NowTabProps {
   onStartTimer: (taskId: number) => void
   onStopTimer: (taskId: number, timerId: number) => void
   onCreateTaskAndStartTimer: (title: string, tagIds?: number[]) => void
+  onToggleCompletion: (task: Task) => void
   onDeleteTask: (taskId: number) => void
   onTaskSelect: (task: Task) => void
   filterTagIds: number[]
@@ -85,6 +86,7 @@ export function NowTab({
   onStartTimer,
   onStopTimer,
   onCreateTaskAndStartTimer,
+  onToggleCompletion,
   onDeleteTask,
   onTaskSelect,
   filterTagIds
@@ -219,6 +221,15 @@ export function NowTab({
                   title="Start timer"
                 >
                   <Play className="h-4 w-4 text-green-700" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={(e) => { e.stopPropagation(); onToggleCompletion(task) }}
+                  className="h-7 w-7 hover:bg-green-200 shrink-0"
+                  title="Mark complete"
+                >
+                  <CheckCircle className="h-4 w-4 text-green-700" />
                 </Button>
                 <div className="text-xs text-muted-foreground w-28 shrink-0">
                   {formatTimeRangeShort(task.startAt, task.endAt)}
