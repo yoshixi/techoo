@@ -465,6 +465,7 @@ function App(): React.JSX.Element {
           onCreateTodayTask={handleCreateTodayTask}
           onTaskMove={handlePlanningTaskMove}
           onTaskSelect={handleTaskSelect}
+          onTaskDelete={handleDeleteTask}
           onClose={() => {
             setIsPlanningOpen(false)
             localStorage.setItem('comori:lastPlanDate', new Date().toISOString().split('T')[0])

@@ -19,6 +19,7 @@ interface PlanningPanelProps {
   onCreateTodayTask: (title: string, durationMinutes: number, startAt: string) => void
   onTaskMove?: (task: Task, range: { startAt: string; endAt: string }) => void
   onTaskSelect?: (task: Task) => void
+  onTaskDelete?: (taskId: number) => void
   onClose: () => void
 }
 
@@ -74,6 +75,7 @@ export function PlanningPanel({
   onCreateTodayTask,
   onTaskMove,
   onTaskSelect,
+  onTaskDelete,
   onClose
 }: PlanningPanelProps): React.JSX.Element {
   const [newTaskTitle, setNewTaskTitle] = useState('')
@@ -223,6 +225,7 @@ export function PlanningPanel({
               activeTimersByTaskId={activeTimersByTaskId}
               onTaskSelect={onTaskSelect}
               onTaskMove={onTaskMove}
+              onTaskDelete={onTaskDelete ? (task) => onTaskDelete(task.id) : undefined}
             />
 
             {/* Summary */}
