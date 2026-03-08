@@ -72,19 +72,14 @@ export function DayTimeline({
 }: DayTimelineProps): React.JSX.Element {
   const layouts = useMemo(() => calculateSessionLayouts(sessions), [sessions])
 
-  // Compute visible hour range: earliest session to latest (or now), with 1h padding
+  // Visible hour range: default 7:00–24:00, but pull start earlier if any session begins before 7am
   const { startHour, endHour } = useMemo(() => {
-    if (layouts.length === 0) return { startHour: 8, endHour: 18 }
-    const minSlot = Math.min(...layouts.map((l) => l.startSlot))
-    const maxSlot = Math.max(...layouts.map((l) => l.endSlot))
-    // For the upper bound, cap at current hour + 1 if showing live (today view)
-    const now = new Date()
-    const nowHour = now.getHours() + 1
-    const s = Math.max(0, Math.floor((minSlot * SLOT_MINUTES) / 60) - 1)
-    const rawEnd = Math.ceil((maxSlot * SLOT_MINUTES) / 60) + 1
-    const e = Math.min(24, showLiveIndicator ? Math.min(rawEnd, nowHour + 1) : rawEnd)
-    return { startHour: s, endHour: Math.max(e, s + 2) }
-  }, [layouts, showLiveIndicator])
+    const defaultStart = 7
+    if (layouts.length === 0) return { startHour: defaultStart, endHour: 24 }
+    const earliestHour = Math.floor((Math.min(...layouts.map((l) => l.startSlot)) * SLOT_MINUTES) / 60)
+    const s = earliestHour < defaultStart ? Math.max(0, earliestHour) : defaultStart
+    return { startHour: s, endHour: 24 }
+  }, [layouts])
 
   const startSlotOffset = startHour * SLOTS_PER_HOUR
   const visibleSlots = (endHour - startHour) * SLOTS_PER_HOUR
