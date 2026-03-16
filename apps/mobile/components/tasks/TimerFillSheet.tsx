@@ -6,6 +6,7 @@ import { useSWRConfig } from 'swr';
 import type { Task } from '@/gen/api/schemas';
 import {
   postApiTimers,
+  putApiTimersId,
   putApiTasksId,
 } from '@/gen/api/endpoints/comoriAPI.gen';
 import { Text } from '@/components/ui/text';
@@ -57,14 +58,15 @@ export function TimerFillSheet({ visible, task, onClose }: TimerFillSheetProps) 
 
     setIsSubmitting(true);
     try {
-      // Create a timer record with the user-specified start time. Note: the API
-      // only accepts startTime on creation — the timer is created as "running".
-      // We then immediately complete the task. The running timer will be visible
-      // in timer history. A future improvement could stop the timer with endTime
-      // by fetching the created timer ID and calling putApiTimersId.
-      await postApiTimers({
+      // The API only accepts startTime on creation, so we create the timer
+      // first, then immediately stop it with the user-selected endTime.
+      const timerResponse = await postApiTimers({
         taskId: task.id,
         startTime: startTime.toISOString(),
+      });
+
+      await putApiTimersId(timerResponse.timer.id, {
+        endTime: endTime.toISOString(),
       });
 
       await putApiTasksId(task.id, {
