@@ -10,7 +10,7 @@ import {
   putApiTimersId,
   getGetApiTasksTaskIdTimersKey,
   getGetApiTimersKey,
-} from '@/gen/api/endpoints/techooAPI.gen';
+} from '@/gen/api/endpoints/techoAPI.gen';
 import { Text } from '@/components/ui/text';
 import { Badge } from '@/components/ui/badge';
 import { useTimer } from '@/hooks/useTimer';

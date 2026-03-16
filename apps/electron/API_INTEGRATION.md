@@ -54,7 +54,7 @@ The API client lives under `src/renderer/src/gen/api`:
 ```
 src/renderer/src/gen/api/
 ├── endpoints/
-│   └── techooAPI.gen.ts      # SWR hooks + fetchers (auto-generated)
+│   └── techoAPI.gen.ts      # SWR hooks + fetchers (auto-generated)
 └── schemas/
     ├── *.ts                  # Strongly typed schema slices (auto-generated)
     └── index.ts

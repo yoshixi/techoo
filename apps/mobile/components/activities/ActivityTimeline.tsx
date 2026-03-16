@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 import { Clock, MessageSquare } from 'lucide-react-native';
-import { useGetApiTasksIdActivities } from '@/gen/api/endpoints/techooAPI.gen';
+import { useGetApiTasksIdActivities } from '@/gen/api/endpoints/techoAPI.gen';
 import { Text } from '@/components/ui/text';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDateTime, formatElapsedTime, calculateDurationSeconds } from '@/lib/time';

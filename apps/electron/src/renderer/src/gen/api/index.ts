@@ -1,2 +1,2 @@
-export * from './endpoints/techooAPI.gen'
+export * from './endpoints/techoAPI.gen'
 export * from './schemas'

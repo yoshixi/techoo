@@ -7,7 +7,7 @@ import {
   postApiTasks,
   postApiTimers,
   putApiTimersId,
-} from '@/gen/api/endpoints/techooAPI.gen';
+} from '@/gen/api/endpoints/techoAPI.gen';
 import { Text } from '@/components/ui/text';
 import { THEME } from '@/lib/theme';
 

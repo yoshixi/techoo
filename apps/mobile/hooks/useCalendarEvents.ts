@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
   useGetApiEvents,
   useGetApiCalendars,
-} from '@/gen/api/endpoints/techooAPI.gen'
+} from '@/gen/api/endpoints/techoAPI.gen'
 import type { CalendarEvent, Calendar } from '@/gen/api/schemas'
 
 const STORAGE_KEY = 'techoo:visible-calendar-ids'

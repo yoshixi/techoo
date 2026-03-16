@@ -8,7 +8,7 @@ import {
   postApiTimers,
   putApiTimersId,
   putApiTasksId,
-} from '@/gen/api/endpoints/comoriAPI.gen';
+} from '@/gen/api/endpoints/techoAPI.gen';
 import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { formatTime } from '@/lib/time';

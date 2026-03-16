@@ -8,7 +8,7 @@ import {
   deleteApiTasksTaskIdCommentsCommentId,
   getGetApiTasksTaskIdCommentsKey,
   getGetApiTasksIdActivitiesKey,
-} from '@/gen/api/endpoints/techooAPI.gen';
+} from '@/gen/api/endpoints/techoAPI.gen';
 import type { TaskComment } from '@/gen/api/schemas';
 import { Text } from '@/components/ui/text';
 import { Input } from '@/components/ui/input';

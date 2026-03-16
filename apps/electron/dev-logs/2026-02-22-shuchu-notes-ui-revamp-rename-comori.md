@@ -75,7 +75,7 @@
    pnpm --filter electron run api:generate
    pnpm --filter mobile run api:generate
    ```
-   This will rename `shuchuAPI.gen.ts` to `techooAPI.gen.ts` and update all imports.
+   This will rename `shuchuAPI.gen.ts` to `techoAPI.gen.ts` and update all imports.
 
 2. **Install Nunito font for mobile** (Expo):
    ```sh

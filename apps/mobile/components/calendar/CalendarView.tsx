@@ -8,7 +8,7 @@ import {
   useGetApiTimers,
   putApiTasksId,
   getGetApiTasksKey,
-} from '@/gen/api/endpoints/techooAPI.gen';
+} from '@/gen/api/endpoints/techoAPI.gen';
 import type { Task, CalendarEvent, Calendar } from '@/gen/api/schemas';
 import { Text } from '@/components/ui/text';
 import { Skeleton } from '@/components/ui/skeleton';

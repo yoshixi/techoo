@@ -14,7 +14,7 @@ import {
   postApiCalendarsIdSync,
   getGetApiCalendarsKey,
   getGetApiEventsKey,
-} from '@/gen/api/endpoints/techooAPI.gen'
+} from '@/gen/api/endpoints/techoAPI.gen'
 import type {
   Calendar,
   AvailableCalendar,

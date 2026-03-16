@@ -9,7 +9,7 @@ import {
 } from 'lucide-react-native';
 import { useSWRConfig } from 'swr';
 import type { Task } from '@/gen/api/schemas';
-import { putApiTasksId } from '@/gen/api/endpoints/comoriAPI.gen';
+import { putApiTasksId } from '@/gen/api/endpoints/techoAPI.gen';
 import { Text } from '@/components/ui/text';
 
 export interface CarryoverSectionProps {
