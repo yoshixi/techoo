@@ -3,7 +3,7 @@ import { View, FlatList, RefreshControl, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { useSWRConfig } from 'swr';
-import { useGetApiTasks, useGetApiTimers } from '@/gen/api/endpoints/comoriAPI.gen';
+import { useGetApiTasks, useGetApiTimers, getApiTasksTaskIdTimers, putApiTasksId } from '@/gen/api/endpoints/comoriAPI.gen';
 import type { Task, TaskTimer } from '@/gen/api/schemas';
 import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,8 @@ import { InProgressSection } from './InProgressSection';
 import { CreateTaskSheet } from './CreateTaskSheet';
 import { QuickStartTask } from './QuickStartTask';
 import { TodayTasks } from './TodayTasks';
+import { CarryoverSection } from './CarryoverSection';
+import { TimerFillSheet } from './TimerFillSheet';
 import { startOfDay, addDays } from '@/lib/time';
 
 export function TaskList() {
@@ -22,6 +24,7 @@ export function TaskList() {
   const { mutate } = useSWRConfig();
   const [showCreateSheet, setShowCreateSheet] = useState(false);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
+  const [timerFillTask, setTimerFillTask] = useState<Task | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     showCompleted: false,
     selectedTagIds: [],
@@ -75,18 +78,68 @@ export function TaskList() {
     });
   }, [tasks, activeTimerByTaskId]);
 
-  // Other tasks (not in-progress, not today)
+  // Carryover tasks (incomplete, scheduled before today)
+  const carryoverTasks = useMemo(() => {
+    const todayStart = startOfDay(new Date());
+
+    return tasks.filter((task) => {
+      if (activeTimerByTaskId[task.id]) return false;
+      if (task.completedAt) return false;
+      if (!task.startAt) return false;
+      const taskStart = new Date(task.startAt);
+      return taskStart < todayStart;
+    });
+  }, [tasks, activeTimerByTaskId]);
+
+  // Remainder bucket: tasks that don't fit in any of the above sections.
+  // Includes unscheduled tasks and future-scheduled tasks. We exclude carryover
+  // by ID set rather than re-checking dates to stay consistent with the
+  // carryoverTasks filter above (avoids edge cases at day boundaries).
   const otherTasks = useMemo(() => {
     const todayStart = startOfDay(new Date());
     const todayEnd = addDays(todayStart, 1);
+    const carryoverIds = new Set(carryoverTasks.map((t) => t.id));
 
     return tasks.filter((task) => {
       if (activeTimerByTaskId[task.id]) return false; // Exclude in-progress
+      if (carryoverIds.has(task.id)) return false; // Exclude carryover
       if (!task.startAt) return true; // Include unscheduled
       const taskStart = new Date(task.startAt);
       return taskStart < todayStart || taskStart >= todayEnd; // Exclude today
     });
-  }, [tasks, activeTimerByTaskId]);
+  }, [tasks, activeTimerByTaskId, carryoverTasks]);
+
+  // Gatekeeper for task completion: fetches the task's timer history from the
+  // server (not from the SWR cache, which only has active timers) to decide
+  // whether to show the TimerFillSheet. This makes an extra API call on each
+  // completion, but avoids the complexity of caching per-task timer lists for
+  // every task in the list.
+  const handleCompleteWithTimerCheck = useCallback(
+    async (task: Task) => {
+      try {
+        const timersResponse = await getApiTasksTaskIdTimers(task.id);
+        const taskTimers = timersResponse?.timers ?? [];
+
+        if (taskTimers.length === 0) {
+          // No timer records — show the fill-out sheet
+          setTimerFillTask(task);
+        } else {
+          // Has timer records — complete directly
+          await putApiTasksId(task.id, {
+            completedAt: new Date().toISOString(),
+          });
+          await mutate(
+            (key) => Array.isArray(key) && key[0] === '/api/tasks',
+            undefined,
+            { revalidate: true }
+          );
+        }
+      } catch (error) {
+        console.error('Failed to check timers:', error);
+      }
+    },
+    [mutate]
+  );
 
   const handleRefresh = useCallback(async () => {
     // Mutate all task queries by using a filter function
@@ -118,9 +171,10 @@ export function TaskList() {
         task={item}
         activeTimer={activeTimerByTaskId[item.id]}
         onPress={() => handleTaskPress(item)}
+        onComplete={handleCompleteWithTimerCheck}
       />
     ),
-    [activeTimerByTaskId, handleTaskPress]
+    [activeTimerByTaskId, handleTaskPress, handleCompleteWithTimerCheck]
   );
 
   if (error) {
@@ -161,7 +215,7 @@ export function TaskList() {
                   onPress={() => setShowFilterSheet(true)}
                 />
               </View>
-              <QuickStartTask />
+              <QuickStartTask activeTimers={activeTimers} />
               {inProgressTasks.length > 0 && (
                 <InProgressSection
                   tasks={inProgressTasks}
@@ -169,6 +223,10 @@ export function TaskList() {
                   onTaskPress={handleTaskPress}
                 />
               )}
+              <CarryoverSection
+                tasks={carryoverTasks}
+                onComplete={handleCompleteWithTimerCheck}
+              />
               <TodayTasks
                 tasks={todayTasks}
                 activeTimerByTaskId={activeTimerByTaskId}
@@ -207,6 +265,11 @@ export function TaskList() {
         sort={sort}
         onFiltersChange={setFilters}
         onSortChange={setSort}
+      />
+      <TimerFillSheet
+        visible={!!timerFillTask}
+        task={timerFillTask}
+        onClose={() => setTimerFillTask(null)}
       />
     </View>
   );

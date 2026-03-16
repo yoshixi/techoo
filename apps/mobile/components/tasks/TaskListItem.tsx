@@ -1,7 +1,7 @@
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useRef, useState, useMemo } from 'react';
 import { View, Pressable, Animated } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import { Check, Clock, Play, Square } from 'lucide-react-native';
+import { AlertTriangle, Check, Clock, Play, Square } from 'lucide-react-native';
 import { useSWRConfig } from 'swr';
 import type { Task, TaskTimer } from '@/gen/api/schemas';
 import {
@@ -23,21 +23,46 @@ export interface TaskListItemProps {
   task: Task;
   activeTimer?: TaskTimer;
   onPress: () => void;
+  onComplete?: (task: Task) => void;
 }
 
-export function TaskListItem({ task, activeTimer, onPress }: TaskListItemProps) {
+export function TaskListItem({ task, activeTimer, onPress, onComplete }: TaskListItemProps) {
   const { mutate } = useSWRConfig();
   const swipeableRef = useRef<Swipeable>(null);
   const [isHiding, setIsHiding] = useState(false);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const heightAnim = useRef(new Animated.Value(1)).current;
 
-  const { formattedTime, isRunning } = useTimer({
+  const { formattedTime, isRunning, elapsedSeconds } = useTimer({
     startTime: activeTimer?.startTime,
     isActive: !!activeTimer && !activeTimer.endTime,
   });
 
   const isCompleted = !!task.completedAt;
+
+  // Derive countdown from the task's planned window (startAt→endAt) vs actual elapsed time.
+  // Uses task.startAt as the reference point for planned duration; falls back to the timer's
+  // startTime if the task has no startAt (e.g., created without scheduling).
+  // Returns null when there's no endAt — the task has no planned duration to count against.
+  const countdownInfo = useMemo(() => {
+    if (!isRunning || !task.endAt || !activeTimer?.startTime) return null;
+
+    const endAt = new Date(task.endAt).getTime();
+    const startAt = task.startAt ? new Date(task.startAt).getTime() : new Date(activeTimer.startTime).getTime();
+    const plannedDurationSecs = Math.floor((endAt - startAt) / 1000);
+
+    if (plannedDurationSecs <= 0) return null;
+
+    const remainingSecs = plannedDurationSecs - elapsedSeconds;
+    const isOverdue = remainingSecs < 0;
+    const absSecs = Math.abs(remainingSecs);
+    const mins = Math.floor(absSecs / 60);
+
+    if (isOverdue) {
+      return { label: `over by ${mins}m`, isOverdue: true };
+    }
+    return { label: `~${mins}m left`, isOverdue: false };
+  }, [isRunning, task.endAt, task.startAt, activeTimer?.startTime, elapsedSeconds]);
 
   // Remove task from local cache without server revalidation
   const removeTaskFromCache = useCallback(() => {
@@ -56,6 +81,15 @@ export function TaskListItem({ task, activeTimer, onPress }: TaskListItemProps) 
 
   const handleComplete = useCallback(async () => {
     swipeableRef.current?.close();
+
+    // When onComplete is provided, delegate completion to the parent (TaskList) which
+    // checks for timer records first and may show TimerFillSheet instead of completing
+    // immediately. We only delegate on "complete" (not "undo"), so uncompleting always
+    // works inline without the timer check.
+    if (onComplete && !isCompleted) {
+      onComplete(task);
+      return;
+    }
 
     const newCompletedAt = isCompleted ? null : new Date().toISOString();
     const wasCompleted = isCompleted;
@@ -111,7 +145,7 @@ export function TaskListItem({ task, activeTimer, onPress }: TaskListItemProps) 
         { revalidate: true }
       );
     }
-  }, [isCompleted, task.id, mutate, fadeAnim, heightAnim, removeTaskFromCache]);
+  }, [isCompleted, task, onComplete, mutate, fadeAnim, heightAnim, removeTaskFromCache]);
 
   const handleToggleTimer = useCallback(async () => {
     swipeableRef.current?.close();
@@ -264,10 +298,34 @@ export function TaskListItem({ task, activeTimer, onPress }: TaskListItemProps) 
           </View>
 
           {isRunning && (
-            <View className="bg-green-200 dark:bg-green-900 px-2 py-1 rounded">
-              <Text className="text-green-800 dark:text-green-300 text-sm font-mono">
-                {formattedTime}
-              </Text>
+            <View className="items-end gap-1">
+              <View className="bg-green-200 dark:bg-green-900 px-2 py-1 rounded">
+                <Text className="text-green-800 dark:text-green-300 text-sm font-mono">
+                  {formattedTime}
+                </Text>
+              </View>
+              {countdownInfo && (
+                <View
+                  className={`flex-row items-center gap-1 px-1.5 py-0.5 rounded ${
+                    countdownInfo.isOverdue
+                      ? 'bg-amber-100 dark:bg-amber-900'
+                      : 'bg-green-100 dark:bg-green-900/50'
+                  }`}
+                >
+                  {countdownInfo.isOverdue && (
+                    <AlertTriangle size={10} color="#b45309" />
+                  )}
+                  <Text
+                    className={`text-xs ${
+                      countdownInfo.isOverdue
+                        ? 'text-amber-700 dark:text-amber-300'
+                        : 'text-green-700 dark:text-green-400'
+                    }`}
+                  >
+                    {countdownInfo.label}
+                  </Text>
+                </View>
+              )}
             </View>
           )}
         </Pressable>
