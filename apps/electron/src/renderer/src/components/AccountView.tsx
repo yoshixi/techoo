@@ -4,6 +4,7 @@ import { Button } from './ui/button'
 import { Keyboard, Bell, CheckCircle, XCircle, AlertCircle, LogOut, User, ChevronDown, ChevronRight, Link } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { customInstance } from '../lib/api/mutator'
+import { getSessionToken } from '../lib/auth'
 
 type NotificationPermissionStatus = 'granted' | 'denied' | 'not-determined'
 
@@ -131,7 +132,7 @@ export function AccountView(): React.JSX.Element {
 
   const handleLinkGoogleAccount = async (): Promise<void> => {
     setLinkStatus(null)
-    const sessionToken = localStorage.getItem('session_token')
+    const sessionToken = await getSessionToken()
     if (!sessionToken) {
       setLinkStatus('error')
       return
@@ -272,7 +273,7 @@ export function AccountView(): React.JSX.Element {
 
         {/* About — minimal footer */}
         <div className="pt-2 text-center text-sm text-muted-foreground">
-          Comori — Your cozy focus companion
+          Techoo — Your cozy focus companion
         </div>
       </div>
     </div>

@@ -54,7 +54,8 @@
       "WebFetch(domain:community.cloudflare.com)",
       "WebFetch(domain:developers.cloudflare.com)",
       "Bash(git:*)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Bash(find:*)"
     ]
   }
 }

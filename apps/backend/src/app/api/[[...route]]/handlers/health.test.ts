@@ -59,7 +59,7 @@ describe('Health Handler', () => {
       const data = await res.json();
       
       expect(data).toHaveProperty('status', 'ok');
-      expect(data).toHaveProperty('message', 'Comori API is running');
+      expect(data).toHaveProperty('message', 'Techoo API is running');
       expect(data).toHaveProperty('timestamp');
       
       // Validate timestamp format (ISO 8601)
@@ -111,7 +111,7 @@ describe('Health Handler', () => {
         expect(res.status).toBe(200);
         const data = await res.json();
         expect(data).toHaveProperty('status', 'ok');
-        expect(data).toHaveProperty('message', 'Comori API is running');
+        expect(data).toHaveProperty('message', 'Techoo API is running');
         expect(data).toHaveProperty('timestamp');
       }
     });

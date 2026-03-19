@@ -6,7 +6,7 @@ import {
   type Calendar
 } from '../gen/api'
 
-const STORAGE_KEY = 'comori:visible-calendar-ids'
+const STORAGE_KEY = 'techoo:visible-calendar-ids'
 
 interface UseCalendarEventsOptions {
   /** Start date for event range */

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { authClient, getJwt } from '../lib/auth'
+import { authClient, getJwt, setSessionToken } from '../lib/auth'
 import { CharacterIllustration } from './CharacterIllustration'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -76,7 +76,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps): React.JSX.Elem
       }
 
       // Store the session token (same as email/password flow)
-      localStorage.setItem('session_token', sessionToken)
+      await setSessionToken(sessionToken)
 
       // Exchange session token for JWT
       const jwt = await getJwt()
@@ -98,7 +98,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps): React.JSX.Elem
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center">
           <CharacterIllustration mood="idle" size="lg" className="mx-auto" />
-          <h1 className="text-xl font-semibold tracking-tight">Welcome to Comori</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Welcome to Techoo</h1>
         </CardHeader>
 
         <CardContent>

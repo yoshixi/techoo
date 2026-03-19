@@ -56,6 +56,17 @@ export const verificationsTable = sqliteTable('verifications', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 });
 
+// OAuth exchange codes (short-lived, single-use)
+export const oauthExchangeCodesTable = sqliteTable('oauth_exchange_codes', {
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  codeHash: text('code_hash').notNull().unique(),
+  sessionToken: text('session_token').notNull(),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+}, (table) => ({
+  expiresAtIndex: index('oauth_exchange_codes_expires_at_idx').on(table.expiresAt),
+}));
+
 // Tasks table
 export const tasksTable = sqliteTable('tasks', {
   id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
@@ -225,6 +236,8 @@ export type InsertAccount = typeof accountsTable.$inferInsert;
 export type SelectAccount = typeof accountsTable.$inferSelect;
 export type InsertVerification = typeof verificationsTable.$inferInsert;
 export type SelectVerification = typeof verificationsTable.$inferSelect;
+export type InsertOauthExchangeCode = typeof oauthExchangeCodesTable.$inferInsert;
+export type SelectOauthExchangeCode = typeof oauthExchangeCodesTable.$inferSelect;
 export type InsertCalendar = typeof calendarsTable.$inferInsert;
 export type SelectCalendar = typeof calendarsTable.$inferSelect;
 export type InsertCalendarEvent = typeof calendarEventsTable.$inferInsert;

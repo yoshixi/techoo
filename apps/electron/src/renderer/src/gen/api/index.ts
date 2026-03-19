@@ -1,2 +1,2 @@
-export * from './endpoints/comoriAPI.gen'
+export * from './endpoints/techooAPI.gen'
 export * from './schemas'

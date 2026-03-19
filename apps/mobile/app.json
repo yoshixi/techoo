@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "comori",
-    "slug": "comori",
+    "name": "techoo",
+    "slug": "techoo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "comori",
+    "scheme": "techoo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -18,7 +18,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.comori",
+      "bundleIdentifier": "app.techoo",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -42,7 +42,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiUrl": "https://api.comori.app",
+      "apiUrl": "https://api.techoo.app",
       "router": {},
       "eas": {
         "projectId": "a9c0540c-4cff-462e-b45c-410265bbe5ba"

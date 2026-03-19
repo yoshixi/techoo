@@ -14,6 +14,9 @@ declare global {
     electron: ElectronAPI
     api: {
       updateAuthToken: (token: string | null) => void
+      getSessionToken: () => Promise<string | null>
+      setSessionToken: (token: string) => Promise<void>
+      clearSessionToken: () => Promise<void>
       updateTimerStates: (timers: TimerState[]) => void
       onShowTaskDetail: (callback: (taskId: number) => void) => () => void
       onNotificationTimerStarted: (callback: (taskId: number) => void) => () => void

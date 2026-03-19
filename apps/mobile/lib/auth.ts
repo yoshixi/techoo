@@ -46,6 +46,37 @@ export async function getJwt(): Promise<string | null> {
   }
 }
 
+export async function exchangeSessionCode(code: string): Promise<string> {
+  const res = await fetch(`${API_BASE_URL}/api/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  })
+  if (!res.ok) {
+    throw new Error('Session code exchange failed')
+  }
+  const data = (await res.json()) as { session_token?: string }
+  if (!data.session_token) {
+    throw new Error('No session token returned from exchange')
+  }
+  return data.session_token
+}
+
+export async function createSessionCode(sessionToken: string): Promise<string> {
+  const res = await fetch(`${API_BASE_URL}/api/session-code`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${sessionToken}` },
+  })
+  if (!res.ok) {
+    throw new Error('Failed to create session code')
+  }
+  const data = (await res.json()) as { code?: string }
+  if (!data.code) {
+    throw new Error('No session code returned')
+  }
+  return data.code
+}
+
 /** Store session token in SecureStore after sign-in */
 export async function setSessionToken(token: string): Promise<void> {
   await SecureStore.setItemAsync(SESSION_TOKEN_KEY, token)

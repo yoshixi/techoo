@@ -1,5 +1,5 @@
 {
-  "name": "comori",
+  "name": "techoo",
   "private": true,
   "scripts": {
     "build": "turbo run build",

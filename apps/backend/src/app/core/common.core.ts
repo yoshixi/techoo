@@ -54,7 +54,7 @@ export const HealthResponseModel = z.object({
   }),
   message: z.string().openapi({
     description: 'Health status message',
-    example: 'Comori API is running'
+    example: 'Techoo API is running'
   }),
   timestamp: z.iso.datetime().openapi({
     description: 'Current timestamp',

@@ -4,7 +4,7 @@ import { TaskListItem } from '../../components/tasks/TaskListItem';
 import type { Task } from '../../gen/api/schemas';
 
 // Mock the API hooks
-jest.mock('../../gen/api/endpoints/comoriAPI.gen', () => ({
+jest.mock('../../gen/api/endpoints/techooAPI.gen', () => ({
   usePutApiTasksId: jest.fn(() => ({ trigger: jest.fn() })),
   getGetApiTasksKey: jest.fn(() => ['tasks']),
 }));

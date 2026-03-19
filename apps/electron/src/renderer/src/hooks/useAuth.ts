@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { authClient, clearAuthState, getJwt } from '../lib/auth'
+import { authClient, clearAuthState, getJwt, getSessionToken } from '../lib/auth'
 
 interface AuthUser {
   id: string
@@ -28,7 +28,7 @@ export function useAuth(): UseAuthReturn {
         return
       }
 
-      const sessionToken = localStorage.getItem('session_token')
+      const sessionToken = await getSessionToken()
       if (!sessionToken) {
         setUser(null)
         clearAuthState()

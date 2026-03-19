@@ -8,7 +8,7 @@ import {
   putApiTimersId,
   getGetApiTasksTaskIdTimersKey,
   getGetApiTimersKey,
-} from '@/gen/api/endpoints/comoriAPI.gen';
+} from '@/gen/api/endpoints/techooAPI.gen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 

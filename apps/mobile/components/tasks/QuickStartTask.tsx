@@ -7,7 +7,7 @@ import {
   postApiTasks,
   postApiTimers,
   putApiTimersId,
-} from '@/gen/api/endpoints/comoriAPI.gen';
+} from '@/gen/api/endpoints/techooAPI.gen';
 import { Text } from '@/components/ui/text';
 import { THEME } from '@/lib/theme';
 

@@ -501,7 +501,7 @@ export function SettingsContent() {
       {/* About — minimal footer */}
       <View className="pt-2 items-center">
         <Text className="text-sm text-muted-foreground">
-          Comori v{appVersion} — Your cozy focus companion
+          Techoo v{appVersion} — Your cozy focus companion
         </Text>
       </View>
     </View>

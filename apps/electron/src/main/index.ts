@@ -7,6 +7,7 @@ import icon from '../../resources/logo@2x.png?asset'
 import oauthCallbackHtml from './oauth-callback.html?raw'
 import { TrayManager } from './tray'
 import { NotificationScheduler, type NotificationPermissionStatus } from './notificationScheduler'
+import { readSessionToken, writeSessionToken, clearSessionToken } from './sessionTokenStore'
 
 function setupContentSecurityPolicy(): void {
   const apiUrl = import.meta.env.MAIN_VITE_API_BASE_URL || 'http://localhost:8787'
@@ -67,7 +68,7 @@ function resolvePreloadPath(): string {
 
 interface OAuthCallbackServer {
   port: number
-  waitForToken: () => Promise<string | null>
+  waitForCode: () => Promise<string | null>
   close: () => void
 }
 
@@ -79,16 +80,16 @@ interface OAuthLinkCallbackServer {
 
 function startOAuthCallbackServer(): Promise<OAuthCallbackServer> {
   return new Promise((resolveSetup) => {
-    let resolveToken: ((token: string | null) => void) | null = null
-    const tokenPromise = new Promise<string | null>((resolve) => {
-      resolveToken = resolve
+    let resolveCode: ((code: string | null) => void) | null = null
+    const codePromise = new Promise<string | null>((resolve) => {
+      resolveCode = resolve
     })
 
     // Timeout: resolve with null after 5 minutes
     const timeout = setTimeout(() => {
-      if (resolveToken) {
-        resolveToken(null)
-        resolveToken = null
+      if (resolveCode) {
+        resolveCode(null)
+        resolveCode = null
       }
     }, 5 * 60 * 1000)
 
@@ -99,22 +100,22 @@ function startOAuthCallbackServer(): Promise<OAuthCallbackServer> {
         return
       }
 
-      // Extract session token from query parameter (set by desktop-auth-callback endpoint)
+      // Extract short-lived code from query parameter (set by desktop OAuth callback endpoint)
       const url = new URL(req.url, `http://localhost`)
-      const sessionToken = url.searchParams.get('session_token')
+      const code = url.searchParams.get('code')
 
       res.writeHead(200, { 'Content-Type': 'text/html' })
       res.end(
         oauthCallbackHtml.replace(
           'window.location.search',
-          JSON.stringify(`?ok=${sessionToken ? '1' : '0'}&action=signin`)
+          JSON.stringify(`?ok=${code ? '1' : '0'}&action=signin`)
         )
       )
 
       clearTimeout(timeout)
-      if (resolveToken) {
-        resolveToken(sessionToken)
-        resolveToken = null
+      if (resolveCode) {
+        resolveCode(code)
+        resolveCode = null
       }
     })
 
@@ -123,7 +124,7 @@ function startOAuthCallbackServer(): Promise<OAuthCallbackServer> {
       const port = typeof addr === 'object' && addr ? addr.port : 0
       resolveSetup({
         port,
-        waitForToken: () => tokenPromise,
+        waitForCode: () => codePromise,
         close: () => {
           clearTimeout(timeout)
           server.close()
@@ -131,6 +132,30 @@ function startOAuthCallbackServer(): Promise<OAuthCallbackServer> {
       })
     })
   })
+}
+
+async function exchangeSessionCode(apiUrl: string, code: string): Promise<string | null> {
+  const res = await fetch(`${apiUrl}/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code })
+  })
+  if (!res.ok) return null
+  const data = (await res.json()) as { session_token?: string }
+  return data.session_token ?? null
+}
+
+async function requestSessionCode(
+  apiUrl: string,
+  sessionToken: string
+): Promise<string | null> {
+  const res = await fetch(`${apiUrl}/session-code`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${sessionToken}` }
+  })
+  if (!res.ok) return null
+  const data = (await res.json()) as { code?: string }
+  return data.code ?? null
 }
 
 function startOAuthLinkCallbackServer(): Promise<OAuthLinkCallbackServer> {
@@ -191,6 +216,7 @@ let mainWindow: BrowserWindow | null = null
 let trayManager: TrayManager | null = null
 let notificationScheduler: NotificationScheduler | null = null
 let authToken: string | null = null
+let sessionTokenCache: string | null = null
 
 export function getAuthToken(): string | null {
   return authToken
@@ -340,7 +366,7 @@ function createWindow(): void {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.comori.app')
+  electronApp.setAppUserModelId('com.techoo.app')
 
   // Setup CSP based on environment configuration
   setupContentSecurityPolicy()
@@ -365,6 +391,23 @@ app.whenReady().then(() => {
     notificationScheduler?.setAuthToken(token)
   })
 
+  ipcMain.handle('auth:get-session-token', () => {
+    if (sessionTokenCache === null) {
+      sessionTokenCache = readSessionToken()
+    }
+    return sessionTokenCache
+  })
+
+  ipcMain.handle('auth:set-session-token', (_event, token: string) => {
+    sessionTokenCache = token
+    writeSessionToken(token)
+  })
+
+  ipcMain.handle('auth:clear-session-token', () => {
+    sessionTokenCache = null
+    clearSessionToken()
+  })
+
   // Notification permission handlers
   ipcMain.handle('notification:get-permission', (): NotificationPermissionStatus => {
     return NotificationScheduler.getPermissionStatus()
@@ -387,10 +430,10 @@ app.whenReady().then(() => {
     const callbackServer = await startOAuthCallbackServer()
     console.log(`opening URL ${apiUrl}`)
 
-    // Open system browser to the server's desktop-oauth endpoint.
+    // Open system browser to the server's desktop OAuth endpoint.
     // The server initiates the OAuth flow so the browser has the state cookie.
     const oauthInitUrl =
-      `${apiUrl}/desktop-oauth?provider=${encodeURIComponent(provider)}&port=${callbackServer.port}`
+      `${apiUrl}/oauth/desktop?provider=${encodeURIComponent(provider)}&port=${callbackServer.port}`
     shell.openExternal(oauthInitUrl)
 
     // Bring Electron back to front so user sees loading state
@@ -402,7 +445,9 @@ app.whenReady().then(() => {
     }, 1000)
 
     try {
-      return await callbackServer.waitForToken()
+      const code = await callbackServer.waitForCode()
+      if (!code) return null
+      return await exchangeSessionCode(apiUrl, code)
     } finally {
       callbackServer.close()
     }
@@ -415,9 +460,13 @@ app.whenReady().then(() => {
 
       try {
         const apiUrl = `${import.meta.env.MAIN_VITE_API_BASE_URL || 'http://localhost:8787'}/api`
+        const sessionCode = await requestSessionCode(apiUrl, sessionToken)
+        if (!sessionCode) {
+          return false
+        }
         const linkUrl =
-          `${apiUrl}/desktop-link?provider=${encodeURIComponent(provider)}` +
-          `&port=${callbackServer.port}&session_token=${encodeURIComponent(sessionToken)}`
+          `${apiUrl}/oauth/desktop-link?provider=${encodeURIComponent(provider)}` +
+          `&port=${callbackServer.port}&session_code=${encodeURIComponent(sessionCode)}`
         shell.openExternal(linkUrl)
 
         setTimeout(() => {

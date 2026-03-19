@@ -9,7 +9,7 @@ jest.mock('swr', () => ({
   useSWRConfig: () => ({ mutate: mockMutate })
 }))
 
-jest.mock('../../gen/api/endpoints/comoriAPI.gen', () => ({
+jest.mock('../../gen/api/endpoints/techooAPI.gen', () => ({
   usePostApiTasks: () => ({
     trigger: mockCreateTask,
     isMutating: false

@@ -2,6 +2,18 @@ import { createAuthClient } from 'better-auth/client'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'
 const API_BASE_URL = `${BASE_URL}/api`
+let sessionTokenCache: string | null = null
+
+export async function getSessionToken(): Promise<string | null> {
+  if (sessionTokenCache !== null) return sessionTokenCache
+  sessionTokenCache = await window.api.getSessionToken()
+  return sessionTokenCache
+}
+
+export async function setSessionToken(token: string): Promise<void> {
+  sessionTokenCache = token
+  await window.api.setSessionToken(token)
+}
 
 export const authClient = createAuthClient({
   baseURL: BASE_URL,
@@ -10,12 +22,12 @@ export const authClient = createAuthClient({
     onSuccess: (ctx) => {
       const sessionToken = ctx.response.headers.get('set-auth-token')
       if (sessionToken) {
-        localStorage.setItem('session_token', sessionToken)
+        void setSessionToken(sessionToken)
       }
     },
     auth: {
       type: 'Bearer',
-      token: () => localStorage.getItem('session_token') || ''
+      token: () => sessionTokenCache || ''
     }
   }
 })
@@ -31,7 +43,7 @@ export async function getJwt(): Promise<string | null> {
   }
 
   // Exchange session token for a new JWT
-  const sessionToken = localStorage.getItem('session_token')
+  const sessionToken = await getSessionToken()
   if (!sessionToken) return null
 
   try {
@@ -55,7 +67,8 @@ export async function getJwt(): Promise<string | null> {
 }
 
 export function clearAuthState(): void {
-  localStorage.removeItem('session_token')
+  sessionTokenCache = null
+  void window.api.clearSessionToken()
   jwtToken = null
   jwtExpiresAt = 0
   window.api.updateAuthToken(null)

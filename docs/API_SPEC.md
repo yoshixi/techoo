@@ -1,14 +1,14 @@
 ---
-title: "Comori API Specification"
-brief_description: "Comori API Specification"
+title: "Techoo API Specification"
+brief_description: "Techoo API Specification"
 created_at: "2025-12-28"
 update_at: "2026-02-08"
 ---
 
-# Comori API Specification
+# Techoo API Specification
 
 ## Overview
-This document describes the REST API for the Comori task management application. The API provides endpoints for tasks, timers, comments, tags, calendar sync, and activity feeds. The API is built with Hono + OpenAPI integration and uses Zod schemas for validation.
+This document describes the REST API for the Techoo task management application. The API provides endpoints for tasks, timers, comments, tags, calendar sync, and activity feeds. The API is built with Hono + OpenAPI integration and uses Zod schemas for validation.
 
 ## Base URL
 ```

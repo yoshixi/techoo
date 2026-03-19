@@ -202,7 +202,7 @@ components/
 
 - Button in NowTab: "Plan Today" with carryover count badge
 - Badge only shows when there are carryover tasks
-- Could also auto-show on first app open of the day (stored in localStorage: `comori:lastPlanDate`)
+- Could also auto-show on first app open of the day (stored in localStorage: `techoo:lastPlanDate`)
 
 ## Props Flow
 
@@ -243,7 +243,7 @@ PlanningPanel (rendered in App.tsx when isPlanningOpen)
 ### Phase 3: Calendar Context + Auto-Show ✅
 - Show Google Calendar events in Today's Plan as read-only context blocks (dashed border, muted style)
 - Tasks and events merged into a single timeline sorted by start time
-- Auto-show planning modal on first app open of the day (localStorage `comori:lastPlanDate`)
+- Auto-show planning modal on first app open of the day (localStorage `techoo:lastPlanDate`)
 - Calendar events fetched when planning panel is open (reuses existing `useCalendarEvents` hook)
 
 ### Phase 4: Calendar Event Conversion + Timer Fill-out ✅

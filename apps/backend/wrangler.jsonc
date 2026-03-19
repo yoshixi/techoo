@@ -4,7 +4,7 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
-	"name": "comori-backend",
+	"name": "techoo-backend",
 	"main": "./src/index.tsx",
 	"vars": {
 		"NODE_ENV": "production",
@@ -21,11 +21,11 @@
 	},
 	"env": {
 		"prod": {
-			"name": "prod-comori-backend",
+			"name": "prod-techoo-backend",
 			"vars": {
 				"NODE_ENV": "production",
-				"BETTER_AUTH_URL": "https://api.comori.app",
-				"GOOGLE_REDIRECT_URI": "https://api.comori.app/api/auth/callback/google",
+				"BETTER_AUTH_URL": "https://api.techoo.app",
+				"GOOGLE_REDIRECT_URI": "https://api.techoo.app/api/auth/callback/google",
 			},
 			"placement": {
 				"mode": "targeted",
@@ -33,9 +33,9 @@
 			},
 			"routes": [
 				{
-					"pattern": "api.comori.app",
+					"pattern": "api.techoo.app",
 					"custom_domain": true,
-					"zone_name": "comori.app",
+					"zone_name": "techoo.app",
 				}
 			]
 		}

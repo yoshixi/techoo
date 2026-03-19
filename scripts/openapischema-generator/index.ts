@@ -33,8 +33,8 @@ const openApiDoc = (honoApp as OpenAPIHono).getOpenAPIDocument({
   openapi: '3.0.0',
   info: {
     version: '1.0.0',
-    title: 'Comori API',
-    description: 'API for the Comori task management application with OpenAPI documentation'
+    title: 'Techoo API',
+    description: 'API for the Techoo task management application with OpenAPI documentation'
   }
 });
 

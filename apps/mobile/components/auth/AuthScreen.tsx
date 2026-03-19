@@ -88,7 +88,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
       >
         <View className="px-6 py-12">
           <View className="items-center mb-8">
-            <Text variant="h2">Comori</Text>
+            <Text variant="h2">Techoo</Text>
             <Text className="text-muted-foreground mt-1">
               {mode === 'signin' ? 'Sign in to your account' : 'Create a new account'}
             </Text>

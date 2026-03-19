@@ -7,13 +7,13 @@ declare namespace Cloudflare {
 	}
 	interface ProdEnv {
 		NODE_ENV: "production";
-		BETTER_AUTH_URL: "https://api.comori.app";
-		GOOGLE_REDIRECT_URI: "https://api.comori.app/api/auth/callback/google";
+		BETTER_AUTH_URL: "https://api.techoo.app";
+		GOOGLE_REDIRECT_URI: "https://api.techoo.app/api/auth/callback/google";
 	}
 	interface Env {
 		NODE_ENV: "production";
-		BETTER_AUTH_URL: "https://api.comori.app";
-		GOOGLE_REDIRECT_URI: "https://api.comori.app/api/auth/callback/google";
+		BETTER_AUTH_URL: "https://api.techoo.app";
+		GOOGLE_REDIRECT_URI: "https://api.techoo.app/api/auth/callback/google";
 		TURSO_AUTH_TOKEN?: "";
 		TURSO_CONNECTION_URL?: "";
 		BETTER_AUTH_SECRET?: "your-random-secret-at-least-32-chars";

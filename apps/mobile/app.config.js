@@ -28,11 +28,11 @@ module.exports = ({ config }) => {
     ...config,
     android: {
       ...config.android,
-      package: 'app.comori',
+      package: 'app.techoo',
     },
     ios: {
       ...config.ios,
-      bundleIdentifier: 'app.comori',
+      bundleIdentifier: 'app.techoo',
     },
     extra: {
       ...config.extra,

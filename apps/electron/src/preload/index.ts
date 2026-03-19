@@ -18,6 +18,12 @@ const api = {
   updateAuthToken: (token: string | null): void => {
     ipcRenderer.send('auth:token-update', token)
   },
+  getSessionToken: (): Promise<string | null> =>
+    ipcRenderer.invoke('auth:get-session-token'),
+  setSessionToken: (token: string): Promise<void> =>
+    ipcRenderer.invoke('auth:set-session-token', token),
+  clearSessionToken: (): Promise<void> =>
+    ipcRenderer.invoke('auth:clear-session-token'),
   // Update all active timer states for tray display
   updateTimerStates: (timers: TimerState[]): void => {
     ipcRenderer.send('timer:states-change', timers)

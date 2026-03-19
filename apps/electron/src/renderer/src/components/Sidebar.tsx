@@ -55,7 +55,7 @@ export function AppSidebar({
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="flex flex-row items-center justify-between p-4">
-        <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">Comori</span>
+        <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">Techoo</span>
         <SidebarTrigger />
       </SidebarHeader>
       <SidebarContent>

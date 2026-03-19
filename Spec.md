@@ -1,11 +1,11 @@
 
-The Comori is an application for managing focused work sessions. It should provide the task management and time tracking features to help users stay focused on their work.
+The Techoo is an application for managing focused work sessions. It should provide the task management and time tracking features to help users stay focused on their work.
 
 ## UIs
 
 ### List of Tasks
 
-The main UI of Comori is the list of tasks. Users can add, edit, and delete tasks from this list. Each task has a title, description, and a status (e.g., "To Do", "In Progress", "Done").
+The main UI of Techoo is the list of tasks. Users can add, edit, and delete tasks from this list. Each task has a title, description, and a status (e.g., "To Do", "In Progress", "Done").
 
 #### Focus timer
 
@@ -16,7 +16,7 @@ The user can push the start button placed next to each task to start the focus t
 
 # Data Structure
 
-Mermaid diagram of the data structure used in Comori:
+Mermaid diagram of the data structure used in Techoo:
 
 ```mermaid
 erDiagram

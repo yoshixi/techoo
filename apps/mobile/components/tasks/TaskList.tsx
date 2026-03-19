@@ -3,7 +3,7 @@ import { View, FlatList, RefreshControl, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { useSWRConfig } from 'swr';
-import { useGetApiTasks, useGetApiTimers, getApiTasksTaskIdTimers, putApiTasksId } from '@/gen/api/endpoints/comoriAPI.gen';
+import { useGetApiTasks, useGetApiTimers, getApiTasksTaskIdTimers, putApiTasksId } from '@/gen/api/endpoints/techooAPI.gen';
 import type { Task, TaskTimer } from '@/gen/api/schemas';
 import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';

@@ -4,6 +4,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { bearer } from "better-auth/plugins";
 import { getDb } from "./common.db";
 import { googleCalendarProvider } from "./calendar-providers/google.service";
+import { requireEnv } from "../lib/utils";
 import {
   usersTable,
   sessionsTable,
@@ -58,39 +59,32 @@ const updateGoogleAccountProfile = async (account: {
 
 export const createAuth = () => {
   const env = getEnv()
-  const secret = env.BETTER_AUTH_SECRET ?? ""
-  const googleClientId = env.GOOGLE_CLIENT_ID ?? ""
-  const googleClientSecret = env.GOOGLE_CLIENT_SECRET ?? ""
+  const isProduction = env.NODE_ENV === "production"
+
+  const secret = requireEnv(env.BETTER_AUTH_SECRET, "BETTER_AUTH_SECRET", isProduction)
+  const betterAuthUrl = requireEnv(env.BETTER_AUTH_URL, "BETTER_AUTH_URL", isProduction)
+  const googleClientId = requireEnv(env.GOOGLE_CLIENT_ID, "GOOGLE_CLIENT_ID", isProduction)
+  const googleClientSecret = requireEnv(env.GOOGLE_CLIENT_SECRET, "GOOGLE_CLIENT_SECRET", isProduction)
   const googleRedirectUri = env.GOOGLE_REDIRECT_URI ?? ""
-  const betterAuthUrl = env.BETTER_AUTH_URL ?? ""
-  if (!secret) {
-    console.error("BETTER_AUTH_SECRET is missing or empty")
-  } else {
-    console.log(`BETTER_AUTH_SECRET length ${secret.length}`)
-  }
-  if (!betterAuthUrl) {
-    console.error("BETTER_AUTH_URL is missing or empty")
-  } else {
-    console.log(`BETTER_AUTH_URL length ${betterAuthUrl.length}`)
-  }
-  if (!googleClientId) {
-    console.error("GOOGLE_CLIENT_ID is missing or empty")
-  } else {
-    console.log(`GOOGLE_CLIENT_ID length ${googleClientId.length}`)
-  }
-  if (!googleClientSecret) {
-    console.error("GOOGLE_CLIENT_SECRET is missing or empty")
-  } else {
-    console.log(`GOOGLE_CLIENT_SECRET length ${googleClientSecret.length}`)
-  }
+
   if (!googleRedirectUri) {
-    console.error("GOOGLE_REDIRECT_URI is missing or empty")
-  } else {
-    console.log(`GOOGLE_REDIRECT_URI length ${googleRedirectUri.length}`)
+    const message = "GOOGLE_REDIRECT_URI is missing or empty"
+    if (isProduction) {
+      throw new Error(message)
+    }
+    console.error(message)
+  }
+
+  if (!isProduction) {
+    if (secret) console.log(`BETTER_AUTH_SECRET length ${secret.length}`)
+    if (betterAuthUrl) console.log(`BETTER_AUTH_URL length ${betterAuthUrl.length}`)
+    if (googleClientId) console.log(`GOOGLE_CLIENT_ID length ${googleClientId.length}`)
+    if (googleClientSecret) console.log(`GOOGLE_CLIENT_SECRET length ${googleClientSecret.length}`)
+    if (googleRedirectUri) console.log(`GOOGLE_REDIRECT_URI length ${googleRedirectUri.length}`)
   }
   return betterAuth({
     secret,
-    baseURL: env.BETTER_AUTH_URL || "http://localhost:8787",
+    baseURL: betterAuthUrl || "http://localhost:8787",
     database: drizzleAdapter(getDb(), {
       provider: "sqlite",
       usePlural: true,
@@ -121,18 +115,22 @@ export const createAuth = () => {
       },
     },
     socialProviders: {
-      google: {
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-        scope: [
-          'openid',
-          'email',
-          'profile',
-          'https://www.googleapis.com/auth/calendar.readonly',
-          'https://www.googleapis.com/auth/calendar.events.readonly'
-        ],
-        accessType: 'offline', // Request refresh token
-      },
+      ...(googleClientId && googleClientSecret
+        ? {
+            google: {
+              clientId: googleClientId,
+              clientSecret: googleClientSecret,
+              scope: [
+                'openid',
+                'email',
+                'profile',
+                'https://www.googleapis.com/auth/calendar.readonly',
+                'https://www.googleapis.com/auth/calendar.events.readonly'
+              ],
+              accessType: 'offline', // Request refresh token
+            },
+          }
+        : {}),
       // TODO: GitHub and Apple OAuth are not supported yet
       // github: {
       //   clientId: process.env.GITHUB_CLIENT_ID!,

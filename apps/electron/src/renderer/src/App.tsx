@@ -132,13 +132,13 @@ function App(): React.JSX.Element {
   const [upcomingShowCompleted, setUpcomingShowCompleted] = useState(false)
   const [upcomingShowUnscheduled, setUpcomingShowUnscheduled] = useState(true)
   const [reviewPeriod, setReviewPeriod] = useState<ReviewPeriod>(() => {
-    const saved = localStorage.getItem('comori-review-period')
+    const saved = localStorage.getItem('techoo-review-period')
     if (saved === 'today' || saved === 'yesterday' || saved === 'week' || saved === '14days') return saved
     return 'today'
   })
   const handleReviewPeriodChange = useCallback((p: ReviewPeriod) => {
     setReviewPeriod(p)
-    localStorage.setItem('comori-review-period', p)
+    localStorage.setItem('techoo-review-period', p)
   }, [])
   const [calendarViewMode, setCalendarViewMode] = useState<ViewMode>('day')
   const [calendarDraft, setCalendarDraft] = useState<{
@@ -154,7 +154,7 @@ function App(): React.JSX.Element {
   const [timerFillMode, setTimerFillMode] = useState<TimerFillMode>('no-timer')
   const [timerFillActiveTimer, setTimerFillActiveTimer] = useState<TaskTimer | null>(null)
   const [isPlanningOpen, setIsPlanningOpen] = useState(() => {
-    const lastPlanDate = localStorage.getItem('comori:lastPlanDate')
+    const lastPlanDate = localStorage.getItem('techoo:lastPlanDate')
     const today = new Date().toISOString().split('T')[0]
     return lastPlanDate !== today
   })
@@ -591,7 +591,7 @@ function App(): React.JSX.Element {
           onCalendarEventConvert={handleCalendarEventConvert}
           onClose={() => {
             setIsPlanningOpen(false)
-            localStorage.setItem('comori:lastPlanDate', new Date().toISOString().split('T')[0])
+            localStorage.setItem('techoo:lastPlanDate', new Date().toISOString().split('T')[0])
           }}
         />
       )}

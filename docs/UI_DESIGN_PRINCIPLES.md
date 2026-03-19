@@ -1,13 +1,13 @@
 ---
 title: "UI Design Principles"
-brief_description: "Charming, character-driven design guidelines for Comori."
+brief_description: "Charming, character-driven design guidelines for Techoo."
 created_at: "2026-01-17"
 update_at: "2026-02-22"
 ---
 
 # UI Design Principles
 
-Comori's visual identity is warm, emotionally supportive, and charming. The app should feel like a cozy companion helping users focus, not a cold productivity tool.
+Techoo's visual identity is warm, emotionally supportive, and charming. The app should feel like a cozy companion helping users focus, not a cold productivity tool.
 
 ## Core Identity
 

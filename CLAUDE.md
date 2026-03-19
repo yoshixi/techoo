@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Comori is a personal time-tracking app that makes it easy to see planned vs. actual progress for short-term tasks. Built as a monorepo with a Next.js backend API and an Electron desktop client. Uses Turbo for build orchestration and pnpm for package management. See `docs/CONCEPT.md` for the full product concept.
+Techoo is a personal time-tracking app that makes it easy to see planned vs. actual progress for short-term tasks. Built as a monorepo with a Next.js backend API and an Electron desktop client. Uses Turbo for build orchestration and pnpm for package management. See `docs/CONCEPT.md` for the full product concept.
 
 ## Agent Notes
 - Always run `pnpm run check-types` after making edits to ensure we keep the repo type-safe. Keep this as part of your default workflow.

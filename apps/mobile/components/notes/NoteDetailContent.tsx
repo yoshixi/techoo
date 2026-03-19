@@ -2,7 +2,7 @@ import { useCallback, useState, useEffect } from 'react';
 import { View, Pressable, Alert, TextInput, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { X, Trash2, Archive, ArrowRightLeft } from 'lucide-react-native';
-import { useGetApiNotesId } from '@/gen/api/endpoints/comoriAPI.gen';
+import { useGetApiNotesId } from '@/gen/api/endpoints/techooAPI.gen';
 import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';

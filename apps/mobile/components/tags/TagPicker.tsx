@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { View, Modal, Pressable, FlatList } from 'react-native';
 import { Plus, Check, X } from 'lucide-react-native';
 import { useSWRConfig } from 'swr';
-import { useGetApiTags, usePostApiTags, getGetApiTagsKey } from '@/gen/api/endpoints/comoriAPI.gen';
+import { useGetApiTags, usePostApiTags, getGetApiTagsKey } from '@/gen/api/endpoints/techooAPI.gen';
 import { Text } from '@/components/ui/text';
 import { Badge, PressableBadge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';

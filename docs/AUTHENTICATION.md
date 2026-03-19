@@ -1,13 +1,13 @@
 ---
 title: "Authentication"
-brief_description: "Comori uses a **hybrid session + JWT** architecture. A long-lived session token (~7 days) is exchanged for a short-lived JWT (~15 min) that is sent with every API request. The JWT is verified server-side with zero database access (HMAC-SHA256 via `jose`)."
+brief_description: "Techoo uses a **hybrid session + JWT** architecture. A long-lived session token (~7 days) is exchanged for a short-lived JWT (~15 min) that is sent with every API request. The JWT is verified server-side with zero database access (HMAC-SHA256 via `jose`)."
 created_at: "2026-02-21"
 update_at: "2026-02-21"
 ---
 
 # Authentication
 
-Comori uses a **hybrid session + JWT** architecture. A long-lived session token (managed by better-auth defaults) is exchanged for a short-lived JWT (~15 min) that is sent with every API request. The JWT is verified server-side with zero database access (HMAC-SHA256 via `jose`).
+Techoo uses a **hybrid session + JWT** architecture. A long-lived session token (managed by better-auth defaults) is exchanged for a short-lived JWT (~15 min) that is sent with every API request. The JWT is verified server-side with zero database access (HMAC-SHA256 via `jose`).
 
 ## Token Architecture
 
@@ -29,13 +29,16 @@ Comori uses a **hybrid session + JWT** architecture. A long-lived session token 
 | Endpoint | Purpose |
 |----------|---------|
 | `POST,GET /api/auth/*` | better-auth (sign-up, sign-in, sign-out, OAuth callbacks) |
-| `POST /api/token` | Exchange session token for JWT |
+| `POST /api/token` | Exchange session token for JWT, or exchange short-lived code for session token + JWT |
 | `GET /api/session` | Look up user info from session token |
-| `GET /api/desktop-oauth` | Desktop OAuth initiation |
-| `GET /api/desktop-auth-callback` | Desktop OAuth callback |
-| `GET /api/desktop-link` | Desktop account linking (e.g. add Google to existing account) |
-| `GET /api/mobile-oauth` | Mobile OAuth initiation |
-| `GET /api/mobile-auth-callback` | Mobile OAuth callback |
+| `POST /api/session-code` | Create short-lived code from session token |
+| `GET /api/oauth/desktop` | Desktop OAuth initiation |
+| `GET /api/oauth/desktop/callback` | Desktop OAuth callback |
+| `GET /api/oauth/desktop-link` | Desktop account linking (e.g. add Google to existing account) |
+| `GET /api/oauth/mobile` | Mobile OAuth initiation |
+| `GET /api/oauth/mobile/callback` | Mobile OAuth callback |
+| `GET /api/oauth/mobile-link` | Mobile account linking |
+| `GET /api/oauth/mobile-link/callback` | Mobile account linking callback |
 | `POST /api/webhooks/*` | Google Calendar push notifications |
 | `GET /api/health`, `GET /api/doc` | Public info |
 
@@ -57,12 +60,12 @@ Both Electron and Mobile follow the same core pattern:
 
 | Aspect | Electron | Mobile |
 |--------|----------|--------|
-| **Session token storage** | `localStorage` | `expo-secure-store` (encrypted) |
+| **Session token storage** | Main process secure storage (`safeStorage`) | `expo-secure-store` (encrypted) |
 | **JWT cache** | In-memory variable | In-memory variable |
 | **Auth client library** | `better-auth/client` (`createAuthClient`) | Raw `fetch` calls to auth endpoints |
 | **OAuth mechanism** | System browser + loopback HTTP server on `127.0.0.1` | `expo-web-browser` (`openAuthSessionAsync`) + deep link |
-| **OAuth redirect target** | `http://127.0.0.1:<port>/callback?session_token=...` | `<app-deep-link>?session_token=...` (e.g. `exp+comori://auth-callback` in dev, `comori://auth-callback` in prod) |
-| **OAuth server endpoints** | `GET /api/desktop-oauth?provider=...&port=...` → `GET /api/desktop-auth-callback?port=...` | `GET /api/mobile-oauth?provider=...&redirect_uri=...` → `GET /api/mobile-auth-callback?redirect_uri=...` |
+| **OAuth redirect target** | `http://127.0.0.1:<port>/callback?code=...` | `<app-deep-link>?code=...` (e.g. `exp+techoo://auth-callback` in dev, `techoo://auth-callback` in prod) |
+| **OAuth server endpoints** | `GET /api/oauth/desktop?provider=...&port=...` → `GET /api/oauth/desktop/callback?port=...` | `GET /api/oauth/mobile?provider=...&redirect_uri=...` → `GET /api/oauth/mobile/callback?redirect_uri=...` |
 | **Main process auth** | JWT forwarded via IPC (`auth:token-update`) to tray/notifications | N/A |
 | **Auth guard** | `AuthGate` component wrapping `App` | Expo Router `Redirect` in `(tabs)/_layout.tsx` |
 | **Sign-out** | `authClient.signOut()` + `clearAuthState()` | `clearAuthState()` only (no server call) |
@@ -75,7 +78,7 @@ Renderer                    Main Process                 Server                 
   |-- signInWithOAuth('google') -->                         |                            |
   |                              |-- start loopback :PORT   |                            |
   |                              |-- shell.openExternal() --+---------------------------->|
-  |                              |                          | GET /desktop-oauth          |
+  |                              |                          | GET /oauth/desktop          |
   |                              |                          |   ?provider=google          |
   |                              |                          |   &port=PORT                |
   |                              |                          |<----------------------------|
@@ -84,15 +87,15 @@ Renderer                    Main Process                 Server                 
   |                              |                          |                    Google login
   |                              |                          |<--- /auth/callback ---------|
   |                              |                          |-- create session + cookie   |
-  |                              |                          |-- 302 /desktop-auth-callback|
-  |                              |                          |-- read cookie, get token    |
+  |                              |                          |-- 302 /oauth/desktop/callback|
+  |                              |                          |-- read cookie, create code  |
   |                              |                          |-- 302 127.0.0.1:PORT ------>|
-  |                              |<-- /callback?token=... --|                             |
+  |                              |<-- /callback?code=... ---|                             |
   |                              |-- resolve promise        |                             |
-  |<-- session token ------------|                          |                             |
-  |-- localStorage.set()        |                          |                             |
-  |-- POST /api/token --------->|                          |                             |
-  |<-- JWT                      |                          |                             |
+  |<-- code ---------------------|                          |                             |
+  |-- POST /api/token {code} -->|                          |                             |
+  |<-- { token, session_token } |                          |                             |
+  |-- persist session_token     |                          |                             |
 ```
 
 **Why a loopback server?** Electron runs as a native app with no registered URL scheme in dev. A temporary HTTP server on localhost receives the OAuth callback directly.
@@ -103,28 +106,28 @@ Renderer                    Main Process                 Server                 
 Mobile App                              Server                         System Browser
   |                                        |                                |
   |-- openAuthSessionAsync() ------------->|                                |
-  |   url: /mobile-oauth                   |                                |
+  |   url: /oauth/mobile                   |                                |
   |     ?provider=google                   |                                |
-  |     &redirect_uri=exp+comori://...     |                                |
-  |                                        | GET /mobile-oauth              |
+  |     &redirect_uri=exp+techoo://...     |                                |
+  |                                        | GET /oauth/mobile              |
   |                                        |<-------------------------------|
   |                                        |-- internal auth.handler()      |
   |                                        |-- 302 + state cookie --------->|
   |                                        |                       Google login
   |                                        |<--- /auth/callback ------------|
   |                                        |-- create session + cookie      |
-  |                                        |-- 302 /mobile-auth-callback    |
+  |                                        |-- 302 /oauth/mobile/callback   |
   |                                        |     ?redirect_uri=...          |
-  |                                        |-- read cookie, get token       |
-  |                                        |-- 302 redirect_uri+token ----->|
+  |                                        |-- read cookie, create code     |
+  |                                        |-- 302 redirect_uri+code ------>|
   |<-- intercepted by openAuthSessionAsync |                                |
-  |   result.url has session_token         |                                |
+  |   result.url has code                  |                                |
+  |-- POST /api/token {code} ------------>|                                |
+  |<-- { token, session_token }            |                                |
   |-- SecureStore.set(session_token)       |                                |
-  |-- POST /api/token ------------------->|                                |
-  |<-- JWT                                 |                                |
 ```
 
-**Why `redirect_uri` is passed dynamically:** Expo's deep link URL varies by environment — `exp+comori://auth-callback` in Expo Go, `comori://auth-callback` in production builds. The mobile app passes its actual URL via `Linking.createURL()` so the backend redirects to the correct scheme.
+**Why `redirect_uri` is passed dynamically:** Expo's deep link URL varies by environment — `exp+techoo://auth-callback` in Expo Go, `techoo://auth-callback` in production builds. The mobile app passes its actual URL via `Linking.createURL()` so the backend redirects to the correct scheme. The backend validates this against `MOBILE_REDIRECT_URIS`.
 
 **Why `openAuthSessionAsync`?** It uses `ASWebAuthenticationSession` (iOS) / Chrome Custom Tabs (Android), which intercepts the redirect to the app's URL scheme and returns it to the app without Safari needing to actually "open" the deep link.
 

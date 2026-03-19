@@ -1,5 +1,5 @@
-appId: com.comori.app
-productName: Comori
+appId: com.techoo.app
+productName: Techoo
 electronVersion: 38.1.2
 directories:
   buildResources: build
@@ -13,7 +13,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: Comori
+  executableName: Techoo
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
@@ -43,4 +43,4 @@ npmRebuild: false
 publish:
   provider: github
   owner: yoshixi
-  repo: comori
+  repo: techoo

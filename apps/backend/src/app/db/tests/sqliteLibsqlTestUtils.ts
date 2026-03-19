@@ -60,7 +60,7 @@ const migrateDB = async (db: ReturnType<typeof getTestDB>) => {
 }
 
 export async function createSqliteLibsqlTestContext(): Promise<SqliteLibsqlTestContext> {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'comori-d1-test-'))
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'techoo-d1-test-'))
   const dbPath = path.join(tmpDir, 'test.db')
   const url = `file:${dbPath}`
 

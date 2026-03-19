@@ -75,7 +75,7 @@ If you enjoy using React Native Reusables, please consider giving it a ⭐ on [G
 ## Set up for prod
 
 ```
-  pnpm exec eas secret:create --name EXPO_PUBLIC_API_BASE_URL --value https://api.comori.app
+  pnpm exec eas secret:create --name EXPO_PUBLIC_API_BASE_URL --value https://api.techoo.app
 ```
 
 

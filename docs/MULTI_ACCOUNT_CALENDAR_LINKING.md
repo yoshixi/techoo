@@ -10,7 +10,7 @@ update_at: "2026-02-19"
 This document describes how the app links and syncs Google calendars across multiple Google accounts.
 
 ## Goals
-- Allow a single Comori user to connect multiple Google accounts.
+- Allow a single Techoo user to connect multiple Google accounts.
 - Keep calendars and events scoped to the Google account that owns them.
 - Avoid repeated calls to Google userinfo by storing the provider email at link time.
 
@@ -22,7 +22,7 @@ This document describes how the app links and syncs Google calendars across mult
 5. **Settings > Available calendars** shows calendars for the selected account.
 
 ## Backend Flow (Linking)
-1. Electron opens `GET /api/desktop-link` in the system browser with the current session token.
+1. Electron creates a short-lived session code and opens `GET /api/oauth/desktop-link` in the system browser.
 2. The backend calls `POST /api/auth/link-social` to generate the OAuth URL and set the state cookie.
 3. The browser completes Google OAuth and returns to `GET /api/auth/callback/google`.
 4. better-auth links the account and inserts/updates a row in `accounts`.
@@ -44,7 +44,9 @@ This keeps calendars/events tied to the account that owns them.
 
 ## API Endpoints
 ### Linking
-- `GET /api/desktop-link?provider=google&port=<port>&session_token=<token>`
+- `POST /api/session-code` (Authorization: `Bearer <session_token>`)
+  - Returns a short-lived `code` used for browser redirects.
+- `GET /api/oauth/desktop-link?provider=google&port=<port>&session_code=<code>`
   - Opens in the system browser to ensure the OAuth state cookie is stored in the browser.
   - Redirects to Google OAuth and returns to the desktop callback.
 - `POST /api/auth/link-social`
