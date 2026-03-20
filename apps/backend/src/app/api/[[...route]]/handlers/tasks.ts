@@ -7,13 +7,12 @@ import {
   updateTaskRoute,
   deleteTaskRoute
 } from '../routes/tasks'
-import { getDb } from '../../../core/common.db'
 import { getAllTasks, getTaskById, createTask, updateTask, deleteTask } from '../../../core/tasks.db'
 
 // Task handlers
 export const listTasksHandler: RouteHandler<typeof listTasksRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
     // Validate and extract query parameters using the TaskQueryParamsModel schema
     const { ids, completed, hasActiveTimer, scheduled, startAtFrom, startAtTo, sortBy, order, nullsLast, tags } = c.req.valid('query')
@@ -41,7 +40,7 @@ export const listTasksHandler: RouteHandler<typeof listTasksRoute, AppBindings> 
 
 export const getTaskHandler: RouteHandler<typeof getTaskRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
     const { id } = c.req.valid('param')
 
@@ -72,7 +71,7 @@ export const getTaskHandler: RouteHandler<typeof getTaskRoute, AppBindings> = as
 
 export const createTaskHandler: RouteHandler<typeof createTaskRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
     const data = c.req.valid('json')
 
@@ -93,7 +92,7 @@ export const createTaskHandler: RouteHandler<typeof createTaskRoute, AppBindings
 
 export const updateTaskHandler: RouteHandler<typeof updateTaskRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
     const { id } = c.req.valid('param')
     const data = c.req.valid('json')
@@ -125,7 +124,7 @@ export const updateTaskHandler: RouteHandler<typeof updateTaskRoute, AppBindings
 
 export const deleteTaskHandler: RouteHandler<typeof deleteTaskRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
     const { id } = c.req.valid('param')
 

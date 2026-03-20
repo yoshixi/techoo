@@ -7,13 +7,12 @@ import {
   updateTagRoute,
   deleteTagRoute
 } from '../routes/tags'
-import { getDb } from '../../../core/common.db'
 import { getAllTags, getTagById, createTag, updateTag, deleteTag } from '../../../core/tags.db'
 
 // Tag handlers
 export const listTagsHandler: RouteHandler<typeof listTagsRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
 
     const tags = await getAllTags(db, user.id)
@@ -39,7 +38,7 @@ export const listTagsHandler: RouteHandler<typeof listTagsRoute, AppBindings> = 
 
 export const getTagHandler: RouteHandler<typeof getTagRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
     const { id } = c.req.valid('param')
 
@@ -70,7 +69,7 @@ export const getTagHandler: RouteHandler<typeof getTagRoute, AppBindings> = asyn
 
 export const createTagHandler: RouteHandler<typeof createTagRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
     const data = c.req.valid('json')
 
@@ -123,7 +122,7 @@ export const createTagHandler: RouteHandler<typeof createTagRoute, AppBindings> 
 
 export const updateTagHandler: RouteHandler<typeof updateTagRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
     const { id } = c.req.valid('param')
     const data = c.req.valid('json')
@@ -187,7 +186,7 @@ export const updateTagHandler: RouteHandler<typeof updateTagRoute, AppBindings> 
 
 export const deleteTagHandler: RouteHandler<typeof deleteTagRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
     const { id } = c.req.valid('param')
 

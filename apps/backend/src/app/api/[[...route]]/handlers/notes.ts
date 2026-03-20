@@ -8,14 +8,13 @@ import {
   deleteNoteRoute,
   convertNoteToTaskRoute
 } from '../routes/notes'
-import { getDb } from '../../../core/common.db'
 import { getAllNotes, getNoteById, createNote, updateNote, deleteNote, archiveNote, recordConversion } from '../../../core/notes.db'
 import { createTask } from '../../../core/tasks.db'
 
 // Note handlers
 export const listNotesHandler: RouteHandler<typeof listNotesRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
     const { includeArchived } = c.req.valid('query')
 
@@ -42,7 +41,7 @@ export const listNotesHandler: RouteHandler<typeof listNotesRoute, AppBindings> 
 
 export const getNoteHandler: RouteHandler<typeof getNoteRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
     const { id } = c.req.valid('param')
 
@@ -73,7 +72,7 @@ export const getNoteHandler: RouteHandler<typeof getNoteRoute, AppBindings> = as
 
 export const createNoteHandler: RouteHandler<typeof createNoteRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
     const data = c.req.valid('json')
 
@@ -94,7 +93,7 @@ export const createNoteHandler: RouteHandler<typeof createNoteRoute, AppBindings
 
 export const updateNoteHandler: RouteHandler<typeof updateNoteRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
     const { id } = c.req.valid('param')
     const data = c.req.valid('json')
@@ -126,7 +125,7 @@ export const updateNoteHandler: RouteHandler<typeof updateNoteRoute, AppBindings
 
 export const deleteNoteHandler: RouteHandler<typeof deleteNoteRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
     const { id } = c.req.valid('param')
 
@@ -157,7 +156,7 @@ export const deleteNoteHandler: RouteHandler<typeof deleteNoteRoute, AppBindings
 
 export const convertNoteToTaskHandler: RouteHandler<typeof convertNoteToTaskRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
     const { id } = c.req.valid('param')
 

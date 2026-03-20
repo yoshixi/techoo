@@ -20,11 +20,12 @@ import {
 import { createTaskRoute } from '../routes/tasks';
 import { createTaskHandler } from './tasks';
 import { createSqliteLibsqlTestContext, createTestRequest, createTestUser, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
+import type { DB } from '../../../core/common.db';
 
 type TestUser = { id: number; email: string; name: string };
 
 // Create a test app with timer and task routes
-const createTestApp = (getUser: () => TestUser | null) => {
+const createTestApp = (getUser: () => TestUser | null, getDb: () => DB) => {
   const app = new OpenAPIHono<AppBindings>();
 
   // Add CORS middleware like in the main app
@@ -45,6 +46,7 @@ const createTestApp = (getUser: () => TestUser | null) => {
     const user = getUser();
     if (user) {
       c.set('user', user);
+      c.set('db', getDb());
     }
     await next();
   });
@@ -72,7 +74,7 @@ describe('Timer Handlers (Simplified)', () => {
 
   beforeAll(async () => {
     testContext = await createSqliteLibsqlTestContext();
-    app = createTestApp(() => testUser);
+    app = createTestApp(() => testUser, () => testContext.db);
     request = createTestRequest(testContext)(app);
   });
 

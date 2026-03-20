@@ -1,13 +1,12 @@
 import type { RouteHandler } from '@hono/zod-openapi'
 import type { AppBindings } from '../types'
 import { listEventsRoute, getEventRoute } from '../routes/events'
-import { getDb } from '../../../core/common.db'
 import { getAllEvents, getEventById } from '../../../core/events.db'
 
 // GET /events - List calendar events with optional filters
 export const listEventsHandler: RouteHandler<typeof listEventsRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
     const query = c.req.valid('query')
 
@@ -27,7 +26,7 @@ export const listEventsHandler: RouteHandler<typeof listEventsRoute, AppBindings
 // GET /events/{id} - Get a specific event
 export const getEventHandler: RouteHandler<typeof getEventRoute, AppBindings> = async (c) => {
   try {
-    const db = getDb()
+    const db = c.get('db')
     const user = c.get('user')
     const { id } = c.req.valid('param')
 
