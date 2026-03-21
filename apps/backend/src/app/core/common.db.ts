@@ -79,6 +79,25 @@ export function tenantNameForUser(userId: number): string {
 }
 
 /**
+ * Creates the tenant DB for a user and seeds the user record.
+ * No-op in local dev (single DB mode). Throws on failure.
+ */
+export async function provisionTenant(user: { id: number; name: string; email: string }): Promise<void> {
+  const tenanso = getTenanso()
+  if (!tenanso) return // Local dev — single DB mode
+
+  const tenantName = tenantNameForUser(user.id)
+  await tenanso.createTenant(tenantName)
+
+  // Seed the user record into the tenant DB so FK constraints are satisfied.
+  const tenantDb = getTenantDbForUser(user.id)
+  await tenantDb
+    .insert(schema.usersTable)
+    .values({ id: user.id, name: user.name, email: user.email })
+    .onConflictDoNothing()
+}
+
+/**
  * Returns true if the user's tenant DB is provisioned and ready.
  * In local dev (single DB mode), always returns true.
  */
