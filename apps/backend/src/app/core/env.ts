@@ -1,74 +1,63 @@
 /**
  * Centralized environment variable access.
  *
- * validateEnv() runs once at application startup and throws if
- * required fields are missing. After that, getEnv() returns a
- * typed object — callers can trust that required fields are present.
+ * The Zod schema is the single source of truth for both the runtime
+ * validation (validateEnv) and the TypeScript type (AppEnv).
  */
+import { z } from 'zod'
 
-/** Env vars that must be set for the app to start. */
-interface RequiredEnv {
-  BETTER_AUTH_SECRET: string
-  BETTER_AUTH_URL: string
-  JWT_SECRET: string
-}
+const requiredString = z.string().min(1)
 
-/** Env vars that are optional or feature-gated. */
-interface OptionalEnv {
-  NODE_ENV?: string
-  TRUSTED_ORIGINS?: string
-  MOBILE_REDIRECT_URIS?: string
+const appEnvSchema = z.object({
+  // Authentication
+  BETTER_AUTH_SECRET: requiredString,
+  BETTER_AUTH_URL: requiredString,
+  JWT_SECRET: requiredString,
 
   // Google OAuth
-  GOOGLE_CLIENT_ID?: string
-  GOOGLE_CLIENT_SECRET?: string
-  GOOGLE_REDIRECT_URI?: string
+  GOOGLE_CLIENT_ID: requiredString,
+  GOOGLE_CLIENT_SECRET: requiredString,
+  GOOGLE_REDIRECT_URI: requiredString,
+
+  // Optional
+  NODE_ENV: z.string().optional(),
+  TRUSTED_ORIGINS: z.string().optional(),
+  MOBILE_REDIRECT_URIS: z.string().optional(),
 
   // Centralized DB (Turso)
-  TURSO_CONNECTION_URL?: string
-  TURSO_AUTH_TOKEN?: string
+  TURSO_CONNECTION_URL: z.string().optional(),
+  TURSO_AUTH_TOKEN: z.string().optional(),
 
   // Local dev DB
-  SQLITE_URL?: string
+  SQLITE_URL: z.string().optional(),
 
   // Multi-tenant (tenanso)
-  TURSO_ORG_SLUG?: string
-  TURSO_API_TOKEN?: string
-  TURSO_GROUP?: string
-  TURSO_GROUP_AUTH_TOKEN?: string
-  TURSO_TENANT_DB_URL?: string
-  TURSO_SEED_DB?: string
-  TURSO_API_BASE_URL?: string
+  TURSO_ORG_SLUG: z.string().optional(),
+  TURSO_API_TOKEN: z.string().optional(),
+  TURSO_GROUP: z.string().optional(),
+  TURSO_GROUP_AUTH_TOKEN: z.string().optional(),
+  TURSO_TENANT_DB_URL: z.string().optional(),
+  TURSO_SEED_DB: z.string().optional(),
+  TURSO_API_BASE_URL: z.string().optional(),
 
   // Webhooks
-  WEBHOOK_BASE_URL?: string
-}
+  WEBHOOK_BASE_URL: z.string().optional(),
+})
 
-export interface AppEnv extends RequiredEnv, OptionalEnv {}
-
-const REQUIRED_KEYS = [
-  'BETTER_AUTH_SECRET',
-  'BETTER_AUTH_URL',
-  'JWT_SECRET',
-] as const satisfies readonly (keyof RequiredEnv)[]
+export type AppEnv = z.infer<typeof appEnvSchema>
 
 /**
  * Validates that all required env vars are present.
  * Call once at application startup. Throws if any are missing.
  */
 export function validateEnv(): void {
-  const raw = process.env as Record<string, string | undefined>
-  const missing: string[] = []
-
-  for (const key of REQUIRED_KEYS) {
-    if (!raw[key]?.trim()) {
-      missing.push(key)
-    }
-  }
-
-  if (missing.length > 0) {
+  const result = appEnvSchema.safeParse(process.env)
+  if (!result.success) {
+    const messages = result.error.issues.map(
+      (issue) => `  ${issue.path.join('.')}: ${issue.message}`
+    )
     throw new Error(
-      `Missing required environment variables: ${missing.join(', ')}`
+      `Invalid environment variables:\n${messages.join('\n')}`
     )
   }
 }

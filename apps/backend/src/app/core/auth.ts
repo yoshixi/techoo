@@ -63,24 +63,16 @@ export const createAuth = () => {
 
   const secret = env.BETTER_AUTH_SECRET
   const betterAuthUrl = env.BETTER_AUTH_URL
-  const googleClientId = env.GOOGLE_CLIENT_ID ?? ""
-  const googleClientSecret = env.GOOGLE_CLIENT_SECRET ?? ""
-  const googleRedirectUri = env.GOOGLE_REDIRECT_URI ?? ""
-
-  if (!googleRedirectUri) {
-    const message = "GOOGLE_REDIRECT_URI is missing or empty"
-    if (isProduction) {
-      throw new Error(message)
-    }
-    console.error(message)
-  }
+  const googleClientId = env.GOOGLE_CLIENT_ID
+  const googleClientSecret = env.GOOGLE_CLIENT_SECRET
+  const googleRedirectUri = env.GOOGLE_REDIRECT_URI
 
   if (!isProduction) {
     console.log(`BETTER_AUTH_SECRET length ${secret.length}`)
     console.log(`BETTER_AUTH_URL length ${betterAuthUrl.length}`)
-    if (googleClientId) console.log(`GOOGLE_CLIENT_ID length ${googleClientId.length}`)
-    if (googleClientSecret) console.log(`GOOGLE_CLIENT_SECRET length ${googleClientSecret.length}`)
-    if (googleRedirectUri) console.log(`GOOGLE_REDIRECT_URI length ${googleRedirectUri.length}`)
+    console.log(`GOOGLE_CLIENT_ID length ${googleClientId.length}`)
+    console.log(`GOOGLE_CLIENT_SECRET length ${googleClientSecret.length}`)
+    console.log(`GOOGLE_REDIRECT_URI length ${googleRedirectUri.length}`)
   }
   return betterAuth({
     secret,

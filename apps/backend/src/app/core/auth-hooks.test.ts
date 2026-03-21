@@ -10,6 +10,7 @@ describe('Auth database hooks', () => {
     const env = process.env as Record<string, string>
     env.BETTER_AUTH_SECRET = 'test-better-auth-secret-at-least-32-chars-long'
     env.BETTER_AUTH_URL = 'http://localhost:8787'
+    env.JWT_SECRET = 'test-jwt-secret-at-least-32-characters-long'
     env.GOOGLE_CLIENT_ID = 'test-google-client-id'
     env.GOOGLE_CLIENT_SECRET = 'test-google-client-secret'
     env.GOOGLE_REDIRECT_URI = 'http://localhost:8787/api/auth/callback/google'
