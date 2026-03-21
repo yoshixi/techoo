@@ -52,9 +52,10 @@ export const googleCalendarWebhookHandler: RouteHandler<
       return c.json({}, 200)
     }
 
-    // Channel token format: "user-{id}:{uuid}" — extract tenant name
+    // Channel token format: "{group}-user-{id}:{uuid}" — extract user ID
     const tenantPart = channelToken?.split(':')[0]
-    const tenantUserId = tenantPart ? parseInt(tenantPart.replace('user-', ''), 10) : NaN
+    const userIdMatch = tenantPart?.match(/-user-(\d+)$/)
+    const tenantUserId = userIdMatch ? parseInt(userIdMatch[1], 10) : NaN
     if (!tenantPart || isNaN(tenantUserId)) {
       console.warn('Missing or invalid tenant in channel token:', channelToken)
       return c.json({}, 200)

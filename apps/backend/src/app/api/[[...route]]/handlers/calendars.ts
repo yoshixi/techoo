@@ -1,6 +1,7 @@
 import type { RouteHandler } from '@hono/zod-openapi'
 import type { AppBindings } from '../types'
 import { getEnv } from '../../../core/env'
+import { tenantNameForUser } from '../../../core/common.db'
 import {
   listAvailableCalendarsRoute,
   listCalendarsRoute,
@@ -443,8 +444,7 @@ export const watchCalendarHandler: RouteHandler<typeof watchCalendarRoute, AppBi
     const channelId = crypto.randomUUID()
 
     // Generate a verification token that includes the tenant name for webhook routing
-    const tenantName = `user-${user.id}`
-    const token = `${tenantName}:${crypto.randomUUID()}`
+    const token = `${tenantNameForUser(user.id)}:${crypto.randomUUID()}`
 
     // Create watch channel with Google
     const watchResult = await googleCalendarProvider.watchCalendar!(
