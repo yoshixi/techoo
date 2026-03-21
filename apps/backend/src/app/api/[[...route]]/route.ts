@@ -120,10 +120,12 @@ import {
   convertNoteToTaskHandler
 } from './handlers'
 
-// Validate required env vars at startup
-validateEnv()
+export type Auth = ReturnType<typeof createAuth>
 
-const app = new OpenAPIHono<AppBindings>().basePath('/api')
+export interface AppDeps {
+  auth?: Auth
+  skipEnvValidation?: boolean
+}
 
 const DEFAULT_MOBILE_REDIRECT_URIS = [
   'techoo://auth-callback',
@@ -150,10 +152,18 @@ const isAllowedMobileRedirectUri = (redirectUri: string) => {
   return allowed.includes(normalized)
 }
 
-// Hono's CORS middleware sets headers on c.res after await next(),
-// so it correctly applies to all responses including raw Response
-// objects returned by auth.handler().
-app.use('/*', cors({
+export function createApp(deps?: AppDeps) {
+  if (!deps?.skipEnvValidation) {
+    validateEnv()
+  }
+
+  const auth = deps?.auth ?? createAuth()
+  const app = new OpenAPIHono<AppBindings>().basePath('/api')
+
+  // Hono's CORS middleware sets headers on c.res after await next(),
+  // so it correctly applies to all responses including raw Response
+  // objects returned by auth.handler().
+  app.use('/*', cors({
   origin: (origin) => origin,
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
@@ -163,7 +173,6 @@ app.use('/*', cors({
 
 // Mount better-auth handler (sign-up, sign-in, sign-out, OAuth callbacks, etc.)
 app.on(['POST', 'GET'], '/auth/*', (c) => {
-  const auth = createAuth()
   return auth.handler(c.req.raw)
 })
 
@@ -172,7 +181,6 @@ app.on(['POST', 'GET'], '/auth/*', (c) => {
 //   - A session token via Authorization header → returns { token: JWT }
 //   - A short-lived exchange code in the body → returns { token: JWT, session_token }
 app.post('/token', async (c) => {
-  const auth = createAuth()
 
   // If a code is provided in the body, exchange it for a session token first.
   const body = await c.req.json().catch(() => ({}))
@@ -214,7 +222,7 @@ app.post('/token', async (c) => {
 
 // Session lookup endpoint: bearer session token → user/session data
 app.get('/session', async (c) => {
-  const auth = createAuth()
+
   let session = await auth.api.getSession({ headers: c.req.raw.headers })
   const authHeader = c.req.header('Authorization')
   if (!session && authHeader?.startsWith('Bearer ')) {
@@ -263,7 +271,7 @@ app.get('/oauth/desktop', async (c) => {
 
   // Call better-auth handler in-process (no network hop) to generate the OAuth
   // URL and set the state cookie on the browser response.
-  const auth = createAuth()
+
   const authResponse = await auth.handler(
     new Request(`${baseUrl}/api/auth/sign-in/social`, {
       method: 'POST',
@@ -345,7 +353,7 @@ app.get('/oauth/desktop-link', async (c) => {
   const baseUrl = url.origin
   const callbackURL = `http://127.0.0.1:${port}/callback?linked=1`
 
-  const auth = createAuth()
+
   const authResponse = await auth.handler(
     new Request(`${baseUrl}/api/auth/link-social`, {
       method: 'POST',
@@ -395,7 +403,7 @@ app.get('/oauth/mobile', async (c) => {
   const baseUrl = url.origin
   const callbackURL = `${baseUrl}/api/oauth/mobile/callback?redirect_uri=${encodeURIComponent(redirectUri)}`
 
-  const auth = createAuth()
+
   const authResponse = await auth.handler(
     new Request(`${baseUrl}/api/auth/sign-in/social`, {
       method: 'POST',
@@ -480,7 +488,7 @@ app.get('/oauth/mobile-link', async (c) => {
   const baseUrl = url.origin
   const callbackURL = `${baseUrl}/api/oauth/mobile-link/callback?redirect_uri=${encodeURIComponent(redirectUri)}`
 
-  const auth = createAuth()
+
   const authResponse = await auth.handler(
     new Request(`${baseUrl}/api/auth/link-social`, {
       method: 'POST',
@@ -652,8 +660,27 @@ app.doc('/doc', {
     description: 'API for the Techoo task management application with OpenAPI documentation'
   }
 })
-console.log(`starting the server`)
 
-// Export the app for use by the OpenAPI schema generator
-export { app as honoApp }
-export default app
+  return { app, auth }
+}
+
+// Lazy-init the default app so that importing createApp alone
+// (e.g. from tests) does not trigger validateEnv().
+let defaultApp: ReturnType<typeof createApp> | null = null
+
+function getDefaultApp() {
+  if (!defaultApp) {
+    console.log('starting the server')
+    defaultApp = createApp()
+  }
+  return defaultApp
+}
+
+// Export the app for use by the OpenAPI schema generator and Next.js runtime
+export const honoApp = new Proxy({} as ReturnType<typeof createApp>['app'], {
+  get(_, prop) {
+    return (getDefaultApp().app as any)[prop]
+  },
+})
+
+export default honoApp

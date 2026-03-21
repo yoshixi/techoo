@@ -1,7 +1,8 @@
 /**
  * E2E tests for multi-tenant flow.
  *
- * Spins up a mock Turso Platform API (like tenanso's own e2e test) that
+ * Uses the real Hono app from route.ts via createApp() with injected
+ * auth for OAuth mocking. Spins up a mock Turso Platform API that
  * manages local SQLite files. Tests the full flow:
  *
  *   Sign-up → tenant DB created → token exchange → CRUD tasks/notes →
@@ -20,8 +21,8 @@ import { pushSQLiteSchema } from 'drizzle-kit/api'
 import * as schema from '../../../db/schema/schema'
 import { resetDbForTests } from '../../../core/common.db'
 import { createAuth } from '../../../core/auth'
-import { signJwt } from '../../../core/jwt'
 import { googleCalendarProvider } from '../../../core/calendar-providers/google.service'
+import { createApp, type Auth } from '../route'
 
 // ---------------------------------------------------------------------------
 // Mock Turso Platform API (creates local SQLite files instead of real DBs)
@@ -120,7 +121,7 @@ describe('E2E: Multi-tenant auth, tasks & notes', () => {
 
   // App + request helper
   let request: (input: Request) => Promise<Response>
-  let testAuth: ReturnType<typeof createAuth>
+  let testAuth: Auth
 
   beforeAll(async () => {
     // Save existing env
@@ -172,109 +173,13 @@ describe('E2E: Multi-tenant auth, tasks & notes', () => {
     // Reset singleton DB instances so they pick up new env
     resetDbForTests()
 
-    // ----- Build the Hono app (mirrors route.ts) -----
-    // We import the real app fresh — but since route.ts is already loaded
-    // and uses module-level singletons, we build a test version that
-    // closely mirrors the real one.
-    const { OpenAPIHono } = await import('@hono/zod-openapi')
-    const { cors } = await import('hono/cors')
-    const { getTenantDbForUser } = await import('../../../core/common.db')
-    const { createOAuthService } = await import('../../../core/oauth.service')
-    const { createExchangeCode, consumeExchangeCode } = await import('../../../core/exchange-codes')
+    // ----- Create the real app via factory, skipping env validation -----
+    // (env vars are already set above but may not pass Zod's strict parse
+    //  due to the Cloudflare worker-configuration.d.ts literal types)
+    const result = createApp({ skipEnvValidation: true })
+    testAuth = result.auth
 
-    // Re-create auth (picks up fresh env)
-    testAuth = createAuth()
-    const auth = testAuth
-
-    const app = new OpenAPIHono<import('../types').AppBindings>().basePath('/api')
-
-    app.use('/*', cors({
-      origin: (origin) => origin,
-      allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowHeaders: ['Content-Type', 'Authorization'],
-      exposeHeaders: ['set-auth-token'],
-      credentials: true,
-    }))
-
-    // Mount better-auth
-    app.on(['POST', 'GET'], '/auth/*', (c) => auth.handler(c.req.raw))
-
-    // Token endpoint
-    app.post('/token', async (c) => {
-      const body = await c.req.json().catch(() => ({}))
-      const code = typeof body?.code === 'string' ? body.code.trim() : ''
-      let sessionToken: string | null = null
-
-      if (code) {
-        sessionToken = await consumeExchangeCode(code)
-        if (!sessionToken) return c.json({ error: 'Invalid or expired code' }, 400)
-      }
-
-      let session = await auth.api.getSession({ headers: c.req.raw.headers })
-      const authHeader = c.req.header('Authorization')
-      const bearerToken = sessionToken ?? (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null)
-      if (!session && bearerToken) {
-        const headers = new Headers(c.req.raw.headers)
-        headers.set('cookie', `better-auth.session_token=${bearerToken}`)
-        session = await auth.api.getSession({ headers })
-      }
-      if (!session) return c.json({ error: 'Unauthorized' }, 401)
-
-      const jwt = await signJwt({
-        id: Number(session.user.id),
-        email: session.user.email,
-        name: session.user.name,
-      })
-      if (sessionToken) return c.json({ token: jwt, session_token: sessionToken })
-      return c.json({ token: jwt })
-    })
-
-    // JWT middleware
-    app.use('/*', async (c, next) => {
-      const p = c.req.path
-      if (
-        p.startsWith('/api/auth') ||
-        p === '/api/token' ||
-        p === '/api/health'
-      ) return next()
-
-      const authHeader = c.req.header('Authorization')
-      if (!authHeader?.startsWith('Bearer ')) return c.json({ error: 'Unauthorized' }, 401)
-
-      try {
-        const { verifyJwt } = await import('../../../core/jwt')
-        const payload = await verifyJwt(authHeader.slice(7))
-        const userId = Number(payload.sub)
-        c.set('user', { id: userId, email: payload.email, name: payload.name })
-        c.set('db', getTenantDbForUser(userId))
-        c.set('oauth', createOAuthService(userId))
-        await next()
-      } catch {
-        return c.json({ error: 'Unauthorized' }, 401)
-      }
-    })
-
-    // Register routes
-    const routes = await import('../routes')
-    const handlers = await import('../handlers')
-
-    app.openapi(routes.listTasksRoute, handlers.listTasksHandler)
-    app.openapi(routes.getTaskRoute, handlers.getTaskHandler)
-    app.openapi(routes.createTaskRoute, handlers.createTaskHandler)
-    app.openapi(routes.updateTaskRoute, handlers.updateTaskHandler)
-    app.openapi(routes.deleteTaskRoute, handlers.deleteTaskHandler)
-
-    app.openapi(routes.listNotesRoute, handlers.listNotesHandler)
-    app.openapi(routes.getNoteRoute, handlers.getNoteHandler)
-    app.openapi(routes.createNoteRoute, handlers.createNoteHandler)
-    app.openapi(routes.updateNoteRoute, handlers.updateNoteHandler)
-    app.openapi(routes.deleteNoteRoute, handlers.deleteNoteHandler)
-    app.openapi(routes.convertNoteToTaskRoute, handlers.convertNoteToTaskHandler)
-
-    app.openapi(routes.getGoogleAuthStatusRoute, handlers.getGoogleAuthStatusHandler)
-    app.openapi(routes.listGoogleAccountsRoute, handlers.listGoogleAccountsHandler)
-
-    request = (input: Request) => app.request(input) as Promise<Response>
+    request = (input: Request) => result.app.request(input) as Promise<Response>
   })
 
   afterEach(() => {
