@@ -261,7 +261,7 @@ describe('E2E: Multi-tenant auth, tasks & notes', () => {
 
       // Verify tenant DB was created (file exists in temp dir)
       const userId = Number(data.user.id)
-      const tenantDbPath = path.join(tmpDir, 'dbs', `default-user-${userId}.db`)
+      const tenantDbPath = path.join(tmpDir, 'dbs', `user-${userId}.db`)
       expect(fs.existsSync(tenantDbPath)).toBe(true)
     })
 
@@ -431,7 +431,7 @@ describe('E2E: Multi-tenant auth, tasks & notes', () => {
 
       // Verify tenant DB was created
       const userId = Number(socialData.user.id)
-      const tenantDbPath = path.join(tmpDir, 'dbs', `default-user-${userId}.db`)
+      const tenantDbPath = path.join(tmpDir, 'dbs', `user-${userId}.db`)
       expect(fs.existsSync(tenantDbPath)).toBe(true)
 
       // Verify the user can create tasks in their tenant DB
@@ -460,7 +460,7 @@ describe('E2E: Multi-tenant auth, tasks & notes', () => {
       expect(jwt1).toBeTruthy()
 
       // Verify tenant exists
-      const tenantDbPath = path.join(tmpDir, 'dbs', `default-user-${userId}.db`)
+      const tenantDbPath = path.join(tmpDir, 'dbs', `user-${userId}.db`)
       expect(fs.existsSync(tenantDbPath)).toBe(true)
 
       // Sign in again (same user)
