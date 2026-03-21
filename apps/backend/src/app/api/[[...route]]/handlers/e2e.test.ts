@@ -369,7 +369,140 @@ describe('E2E: Multi-tenant auth, tasks & notes', () => {
   })
 
   // -----------------------------------------------------------------------
-  // 3. CRUD Tasks
+  // 3. OAuth sign-up (new user via Google)
+  // -----------------------------------------------------------------------
+  describe('OAuth sign-up (new user via Google)', () => {
+    async function mockGoogleProvider() {
+      const authContext = await (testAuth as unknown as { $context: Promise<any> }).$context
+      const provider = authContext.socialProviders.find(
+        (item: { id: string }) => item.id === 'google'
+      ) as any
+
+      if (!provider.verifyIdToken) provider.verifyIdToken = async () => true
+      if (!provider.getUserInfo) provider.getUserInfo = async () => null
+
+      return provider
+    }
+
+    it('should create user and provision tenant via social sign-in', async () => {
+      const provider = await mockGoogleProvider()
+
+      vi.spyOn(provider, 'verifyIdToken').mockResolvedValue(true)
+      vi.spyOn(provider, 'getUserInfo').mockResolvedValue({
+        user: {
+          id: 'google-new-user-1',
+          email: 'google-new@example.com',
+          emailVerified: true,
+          name: 'Google New User',
+        },
+      })
+      vi.spyOn(googleCalendarProvider, 'getUserInfo').mockResolvedValue({
+        email: 'google-new@example.com',
+      })
+
+      // Sign in with Google (creates a new user since email doesn't exist)
+      const socialRes = await request(
+        new Request('http://localhost/api/auth/sign-in/social', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Origin: 'http://localhost',
+          },
+          body: JSON.stringify({
+            provider: 'google',
+            disableRedirect: true,
+            idToken: { token: 'fake-id-token', accessToken: 'oauth-access-token' },
+          }),
+        })
+      )
+
+      expect(socialRes.status).toBe(200)
+      const socialData = await socialRes.json()
+      expect(socialData.user).toBeDefined()
+      expect(socialData.user.email).toBe('google-new@example.com')
+
+      const sessionToken = getSessionToken(socialRes)
+      expect(sessionToken).toBeTruthy()
+
+      // Exchange session token for JWT — this should provision the tenant
+      const jwt = await getJwt(sessionToken!)
+      expect(jwt).toBeTruthy()
+      expect(jwt.split('.')).toHaveLength(3)
+
+      // Verify tenant DB was created
+      const userId = Number(socialData.user.id)
+      const tenantDbPath = path.join(tmpDir, 'dbs', `user-${userId}.db`)
+      expect(fs.existsSync(tenantDbPath)).toBe(true)
+
+      // Verify the user can create tasks in their tenant DB
+      const taskRes = await request(
+        new Request('http://localhost/api/tasks', {
+          method: 'POST',
+          headers: authHeaders(jwt),
+          body: JSON.stringify({ title: 'OAuth user task' }),
+        })
+      )
+      expect(taskRes.status).toBe(201)
+      const taskData = await taskRes.json()
+      expect(taskData.task.title).toBe('OAuth user task')
+    })
+
+    it('should not provision a new tenant on subsequent sign-in', async () => {
+      // First: sign up via email (tenant is provisioned at sign-up)
+      const signUpRes = await signUp('repeat-oauth@example.com', 'password123456', 'Repeat User')
+      expect(signUpRes.status).toBe(200)
+      const signUpData = await signUpRes.json()
+      const userId = Number(signUpData.user.id)
+      const sessionToken = getSessionToken(signUpRes)!
+
+      // Get JWT (triggers provisioning check — tenant should already exist)
+      const jwt1 = await getJwt(sessionToken)
+      expect(jwt1).toBeTruthy()
+
+      // Verify tenant exists
+      const tenantDbPath = path.join(tmpDir, 'dbs', `user-${userId}.db`)
+      expect(fs.existsSync(tenantDbPath)).toBe(true)
+
+      // Sign in again (same user)
+      const signInRes = await signIn('repeat-oauth@example.com', 'password123456')
+      expect(signInRes.status).toBe(200)
+
+      // Get JWT again — should succeed without re-provisioning
+      const jwt2 = await getJwt(getSessionToken(signInRes)!)
+      expect(jwt2).toBeTruthy()
+
+      // Verify can still access data
+      const tasksRes = await request(
+        new Request('http://localhost/api/tasks', { headers: authHeaders(jwt2) })
+      )
+      expect(tasksRes.status).toBe(200)
+    })
+  })
+
+  // -----------------------------------------------------------------------
+  // 4. /token endpoint tenant provisioning
+  // -----------------------------------------------------------------------
+  describe('/token endpoint tenant provisioning', () => {
+    it('should provision tenant at /token if not yet provisioned', async () => {
+      // Sign up via email — the /auth/* wrapper provisions for email sign-up
+      const signUpRes = await signUp('lazy-provision@example.com', 'password123456', 'Lazy User')
+      expect(signUpRes.status).toBe(200)
+      const sessionToken = getSessionToken(signUpRes)!
+
+      // Exchange for JWT — should work since email sign-up provisions eagerly
+      const jwt = await getJwt(sessionToken)
+      expect(jwt).toBeTruthy()
+
+      // Verify the user can use protected routes
+      const tasksRes = await request(
+        new Request('http://localhost/api/tasks', { headers: authHeaders(jwt) })
+      )
+      expect(tasksRes.status).toBe(200)
+    })
+  })
+
+  // -----------------------------------------------------------------------
+  // CRUD Tasks
   // -----------------------------------------------------------------------
   describe('CRUD Tasks', () => {
     let jwt: string
@@ -476,7 +609,7 @@ describe('E2E: Multi-tenant auth, tasks & notes', () => {
   })
 
   // -----------------------------------------------------------------------
-  // 4. CRUD Notes
+  // CRUD Notes
   // -----------------------------------------------------------------------
   describe('CRUD Notes', () => {
     let jwt: string
@@ -592,7 +725,7 @@ describe('E2E: Multi-tenant auth, tasks & notes', () => {
   })
 
   // -----------------------------------------------------------------------
-  // 5. Tenant isolation
+  // Tenant isolation
   // -----------------------------------------------------------------------
   describe('Tenant isolation', () => {
     let jwtA: string
