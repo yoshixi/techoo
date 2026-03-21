@@ -74,11 +74,7 @@ export const createAuth = () => {
     console.log(`GOOGLE_CLIENT_SECRET length ${googleClientSecret.length}`)
     console.log(`GOOGLE_REDIRECT_URI length ${googleRedirectUri.length}`)
   }
-  // Mutable ref so databaseHooks can access the auth instance
-  // (filled immediately after betterAuth() returns).
-  let authRef: ReturnType<typeof betterAuth> | null = null
-
-  const auth = betterAuth({
+  return betterAuth({
     secret,
     baseURL: betterAuthUrl || "http://localhost:8787",
     database: drizzleAdapter(getMainDb(), {
@@ -176,12 +172,12 @@ export const createAuth = () => {
             } catch (error) {
               // Tenant provisioning failed — clean up the orphaned user from the main DB
               // so the user can retry sign-up. The `after` hook runs post-commit,
-              // so we must delete manually via better-auth's internal adapter.
+              // so we must delete manually.
               console.error(`Failed to provision tenant ${tenantName}, rolling back user:`, error);
-              if (authRef) {
-                const ctx = await (authRef as unknown as { $context: Promise<{ internalAdapter: { deleteUser: (id: string) => Promise<void> } }> }).$context;
-                await ctx.internalAdapter.deleteUser(String(userId));
-              }
+              const mainDb = getMainDb();
+              await mainDb.delete(sessionsTable).where(eq(sessionsTable.userId, userId));
+              await mainDb.delete(accountsTable).where(eq(accountsTable.userId, userId));
+              await mainDb.delete(usersTable).where(eq(usersTable.id, userId));
               throw error;
             }
           }
@@ -228,8 +224,5 @@ export const createAuth = () => {
     advanced: {
       database: { generateId: false },
     },
-  })
-
-  authRef = auth
-  return auth
+  });
 };
