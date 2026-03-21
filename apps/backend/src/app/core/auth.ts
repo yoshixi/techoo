@@ -155,23 +155,19 @@ export const createAuth = () => {
 
             const userId = Number(user.id);
             const tenantName = `user-${userId}`;
-            try {
-              await tenanso.createTenant(tenantName);
-              console.log(`Created tenant database: ${tenantName}`);
+            await tenanso.createTenant(tenantName);
+            console.log(`Created tenant database: ${tenantName}`);
 
-              // Seed the user record into the tenant DB so FK constraints are satisfied.
-              const tenantDb = getTenantDbForUser(userId);
-              await tenantDb
-                .insert(tenantUsersTable)
-                .values({
-                  id: userId,
-                  name: user.name || '',
-                  email: user.email || '',
-                })
-                .onConflictDoNothing();
-            } catch (error) {
-              console.error(`Failed to create tenant database ${tenantName}:`, error);
-            }
+            // Seed the user record into the tenant DB so FK constraints are satisfied.
+            const tenantDb = getTenantDbForUser(userId);
+            await tenantDb
+              .insert(tenantUsersTable)
+              .values({
+                id: userId,
+                name: user.name || '',
+                email: user.email || '',
+              })
+              .onConflictDoNothing();
           }
         }
       },
