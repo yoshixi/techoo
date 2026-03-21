@@ -5,7 +5,7 @@ import { signJwt, verifyJwt } from '../../core/jwt'
 import { getTenantDbForUser } from '../../core/common.db'
 import { createExchangeCode, consumeExchangeCode } from '../../core/exchange-codes'
 import { createOAuthService } from '../../core/oauth.service'
-import { getEnv } from '../../core/env'
+import { validateEnv, getEnv } from '../../core/env'
 import type { AppBindings } from './types'
 
 // Import route definitions from local routes directory
@@ -119,6 +119,9 @@ import {
   deleteNoteHandler,
   convertNoteToTaskHandler
 } from './handlers'
+
+// Validate required env vars at startup
+validateEnv()
 
 const app = new OpenAPIHono<AppBindings>().basePath('/api')
 

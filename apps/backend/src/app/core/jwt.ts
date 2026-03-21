@@ -7,19 +7,13 @@ let cachedIssuer: string | null = null;
 
 const getIssuer = () => {
   if (cachedIssuer) return cachedIssuer;
-  cachedIssuer = getEnv().BETTER_AUTH_URL || "http://localhost:8787";
+  cachedIssuer = getEnv().BETTER_AUTH_URL;
   return cachedIssuer;
 };
 
 const getJwtSecret = () => {
   if (cachedJwtSecret) return cachedJwtSecret;
-  const rawSecret = getEnv().JWT_SECRET || "";
-  if (!rawSecret) {
-    console.error("JWT_SECRET is missing or empty");
-    throw new Error("JWT_SECRET is required");
-  }
-  cachedJwtSecret = new TextEncoder().encode(rawSecret);
-  console.log(`JWT_SECRET length ${rawSecret.length}`);
+  cachedJwtSecret = new TextEncoder().encode(getEnv().JWT_SECRET);
   return cachedJwtSecret;
 };
 

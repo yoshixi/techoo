@@ -6,7 +6,6 @@ import { getMainDb } from "./internal/main-db";
 import { getTenanso, getTenantDbForUser } from "./common.db";
 import { usersTable as tenantUsersTable } from "../db/schema/schema";
 import { googleCalendarProvider } from "./calendar-providers/google.service";
-import { requireEnv } from "../lib/utils";
 import { getEnv } from "./env";
 import {
   usersTable,
@@ -62,10 +61,10 @@ export const createAuth = () => {
   const env = getEnv()
   const isProduction = env.NODE_ENV === "production"
 
-  const secret = requireEnv(env.BETTER_AUTH_SECRET, "BETTER_AUTH_SECRET", isProduction)
-  const betterAuthUrl = requireEnv(env.BETTER_AUTH_URL, "BETTER_AUTH_URL", isProduction)
-  const googleClientId = requireEnv(env.GOOGLE_CLIENT_ID, "GOOGLE_CLIENT_ID", isProduction)
-  const googleClientSecret = requireEnv(env.GOOGLE_CLIENT_SECRET, "GOOGLE_CLIENT_SECRET", isProduction)
+  const secret = env.BETTER_AUTH_SECRET
+  const betterAuthUrl = env.BETTER_AUTH_URL
+  const googleClientId = env.GOOGLE_CLIENT_ID ?? ""
+  const googleClientSecret = env.GOOGLE_CLIENT_SECRET ?? ""
   const googleRedirectUri = env.GOOGLE_REDIRECT_URI ?? ""
 
   if (!googleRedirectUri) {
@@ -77,8 +76,8 @@ export const createAuth = () => {
   }
 
   if (!isProduction) {
-    if (secret) console.log(`BETTER_AUTH_SECRET length ${secret.length}`)
-    if (betterAuthUrl) console.log(`BETTER_AUTH_URL length ${betterAuthUrl.length}`)
+    console.log(`BETTER_AUTH_SECRET length ${secret.length}`)
+    console.log(`BETTER_AUTH_URL length ${betterAuthUrl.length}`)
     if (googleClientId) console.log(`GOOGLE_CLIENT_ID length ${googleClientId.length}`)
     if (googleClientSecret) console.log(`GOOGLE_CLIENT_SECRET length ${googleClientSecret.length}`)
     if (googleRedirectUri) console.log(`GOOGLE_REDIRECT_URI length ${googleRedirectUri.length}`)
