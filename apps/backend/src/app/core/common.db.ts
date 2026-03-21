@@ -3,6 +3,7 @@ import { createTenanso, type TenansoInstance } from 'tenanso'
 import * as schema from '../db/schema/schema'
 import { getMainDb, resetMainDbForTests } from './internal/main-db'
 import { getEnv } from './env'
+import { type Result, Ok, Err } from './types'
 
 // Re-export so existing callers of common.db.getMainDb still compile,
 // but new code should prefer the user-scoped OAuthService or tenant DB.
@@ -98,13 +99,24 @@ export async function provisionTenant(user: { id: number; name: string; email: s
 }
 
 /**
- * Returns true if the user's tenant DB is provisioned and ready.
- * In local dev (single DB mode), always returns true.
+ * Validates that the user's tenant DB is provisioned and ready.
+ * Returns Ok() on success, Err(reason) on failure.
+ * In local dev (single DB mode), always returns Ok().
  */
-export async function isUserReady(userId: number): Promise<boolean> {
+export async function validateUserReady(userId: number): Promise<Result> {
   const tenanso = getTenanso()
-  if (!tenanso) return true
-  return tenanso.tenantExists(tenantNameForUser(userId))
+  if (!tenanso) return Ok()
+
+  try {
+    const exists = await tenanso.tenantExists(tenantNameForUser(userId))
+    if (!exists) {
+      return Err(`Tenant database for user ${userId} does not exist`)
+    }
+    return Ok()
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error)
+    return Err(`Failed to check tenant database for user ${userId}: ${reason}`)
+  }
 }
 
 export const resetDbForTests = () => {

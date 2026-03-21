@@ -2,7 +2,7 @@ import { OpenAPIHono } from '@hono/zod-openapi'
 import { cors } from 'hono/cors'
 import { createAuth } from '../../core/auth'
 import { signJwt, verifyJwt } from '../../core/jwt'
-import { getTenantDbForUser, isUserReady, provisionTenant } from '../../core/common.db'
+import { getTenantDbForUser, validateUserReady, provisionTenant } from '../../core/common.db'
 import { usersTable, sessionsTable, accountsTable } from '../../db/schema/schema'
 import { getMainDb } from '../../core/internal/main-db'
 import { eq } from 'drizzle-orm'
@@ -224,6 +224,7 @@ export function createApp(deps?: AppDeps) {
     if (code) {
       sessionToken = await consumeExchangeCode(code)
       if (!sessionToken) {
+        console.log(`Fails to exchange the code`)
         return c.json({ error: 'Invalid or expired code' }, 400)
       }
     }
@@ -244,13 +245,9 @@ export function createApp(deps?: AppDeps) {
     // Verify the user's tenant DB exists before issuing a JWT.
     // If tenant provisioning failed during sign-up, the user should not
     // proceed to the authenticated experience.
-    try {
-      const ready = await isUserReady(Number(session.user.id))
-      if (!ready) {
-        return c.json({ error: 'Account setup incomplete. Please try signing up again.' }, 503)
-      }
-    } catch (error) {
-      console.error('Failed to check tenant readiness:', error)
+    const readiness = await validateUserReady(Number(session.user.id))
+    if (!readiness.ok) {
+      console.error('User not ready:', readiness.error)
       return c.json({ error: 'Account setup incomplete. Please try signing up again.' }, 503)
     }
 
