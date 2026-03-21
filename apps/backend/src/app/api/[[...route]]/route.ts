@@ -2,7 +2,7 @@ import { OpenAPIHono } from '@hono/zod-openapi'
 import { cors } from 'hono/cors'
 import { createAuth } from '../../core/auth'
 import { signJwt, verifyJwt } from '../../core/jwt'
-import { getTenantDbForUser, getTenanso, tenantNameForUser } from '../../core/common.db'
+import { getTenantDbForUser, isUserReady } from '../../core/common.db'
 import { createExchangeCode, consumeExchangeCode } from '../../core/exchange-codes'
 import { createOAuthService } from '../../core/oauth.service'
 import { validateEnv, getEnv } from '../../core/env'
@@ -210,14 +210,9 @@ app.post('/token', async (c) => {
   // Verify the user's tenant DB exists before issuing a JWT.
   // If tenant provisioning failed during sign-up, the user should not
   // proceed to the authenticated experience.
-  const tenanso = getTenanso()
-  if (tenanso) {
-    const userId = Number(session.user.id)
-    const tenantName = tenantNameForUser(userId)
-    const exists = await tenanso.tenantExists(tenantName)
-    if (!exists) {
-      return c.json({ error: 'Account setup incomplete. Please try signing up again.' }, 503)
-    }
+  const ready = await isUserReady(Number(session.user.id))
+  if (!ready) {
+    return c.json({ error: 'Account setup incomplete. Please try signing up again.' }, 503)
   }
 
   const jwt = await signJwt({

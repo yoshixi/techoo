@@ -78,6 +78,16 @@ export function tenantNameForUser(userId: number): string {
   return `user-${userId}`
 }
 
+/**
+ * Returns true if the user's tenant DB is provisioned and ready.
+ * In local dev (single DB mode), always returns true.
+ */
+export async function isUserReady(userId: number): Promise<boolean> {
+  const tenanso = getTenanso()
+  if (!tenanso) return true
+  return tenanso.tenantExists(tenantNameForUser(userId))
+}
+
 export const resetDbForTests = () => {
   resetMainDbForTests()
   tenansoInstance = null
