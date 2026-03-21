@@ -210,8 +210,13 @@ app.post('/token', async (c) => {
   // Verify the user's tenant DB exists before issuing a JWT.
   // If tenant provisioning failed during sign-up, the user should not
   // proceed to the authenticated experience.
-  const ready = await isUserReady(Number(session.user.id))
-  if (!ready) {
+  try {
+    const ready = await isUserReady(Number(session.user.id))
+    if (!ready) {
+      return c.json({ error: 'Account setup incomplete. Please try signing up again.' }, 503)
+    }
+  } catch (error) {
+    console.error('Failed to check tenant readiness:', error)
     return c.json({ error: 'Account setup incomplete. Please try signing up again.' }, 503)
   }
 
