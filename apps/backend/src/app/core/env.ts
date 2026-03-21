@@ -6,13 +6,16 @@
  * typed object — callers can trust that required fields are present.
  */
 
-export interface AppEnv {
-  NODE_ENV?: string
-
-  // Authentication (required — validated at startup)
+/** Env vars that must be set for the app to start. */
+interface RequiredEnv {
   BETTER_AUTH_SECRET: string
   BETTER_AUTH_URL: string
   JWT_SECRET: string
+}
+
+/** Env vars that are optional or feature-gated. */
+interface OptionalEnv {
+  NODE_ENV?: string
   TRUSTED_ORIGINS?: string
   MOBILE_REDIRECT_URIS?: string
 
@@ -41,11 +44,13 @@ export interface AppEnv {
   WEBHOOK_BASE_URL?: string
 }
 
-const REQUIRED_KEYS: (keyof AppEnv)[] = [
+export interface AppEnv extends RequiredEnv, OptionalEnv {}
+
+const REQUIRED_KEYS = [
   'BETTER_AUTH_SECRET',
   'BETTER_AUTH_URL',
   'JWT_SECRET',
-]
+] as const satisfies readonly (keyof RequiredEnv)[]
 
 /**
  * Validates that all required env vars are present.
