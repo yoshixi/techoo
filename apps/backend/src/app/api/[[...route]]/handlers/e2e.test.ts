@@ -116,7 +116,7 @@ describe('E2E: Multi-tenant auth, tasks & notes', () => {
     'TURSO_GROUP',
     'TURSO_GROUP_AUTH_TOKEN',
     'TURSO_TENANT_DB_URL',
-    'TURSO_SEED_DB',
+    'TURSO_SEED_DB_URL',
   ]
 
   // App + request helper
@@ -166,7 +166,7 @@ describe('E2E: Multi-tenant auth, tasks & notes', () => {
     env.TURSO_GROUP_AUTH_TOKEN = 'fake-group-auth-token'
     // libsql client resolves file: URLs locally — use {tenant} placeholder
     env.TURSO_TENANT_DB_URL = `file:${dbDir}/{tenant}.db`
-    env.TURSO_SEED_DB = seedDbName
+    env.TURSO_SEED_DB_URL = `file:${seedPath}`
     // Point tenanso at mock server instead of real Turso API
     env.TURSO_API_BASE_URL = `http://127.0.0.1:${mockPort}`
 

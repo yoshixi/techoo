@@ -77,7 +77,7 @@ describe('migrate-tenants script', () => {
     'TURSO_GROUP',
     'TURSO_GROUP_AUTH_TOKEN',
     'TURSO_TENANT_DB_URL',
-    'TURSO_SEED_DB',
+    'TURSO_SEED_DB_URL',
     'TURSO_API_BASE_URL',
   ]
 
@@ -111,7 +111,7 @@ describe('migrate-tenants script', () => {
     env.TURSO_GROUP = 'default'
     env.TURSO_GROUP_AUTH_TOKEN = 'fake-group-auth-token'
     env.TURSO_TENANT_DB_URL = `file:${dbDir}/{tenant}.db`
-    env.TURSO_SEED_DB = seedDbName
+    env.TURSO_SEED_DB_URL = `file:${seedPath}`
     env.TURSO_API_BASE_URL = `http://127.0.0.1:${mockPort}`
 
     resetDbForTests()

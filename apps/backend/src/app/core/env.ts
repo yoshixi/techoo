@@ -37,7 +37,7 @@ const appEnvSchema = z.object({
   TURSO_GROUP: z.string().optional(),
   TURSO_GROUP_AUTH_TOKEN: z.string().optional(),
   TURSO_TENANT_DB_URL: z.string().optional(),
-  TURSO_SEED_DB: z.string().optional(),
+  TURSO_SEED_DB_URL: z.string().optional(),
   TURSO_API_BASE_URL: z.string().optional(),
 
   // Webhooks
