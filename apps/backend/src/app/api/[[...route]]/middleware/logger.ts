@@ -24,8 +24,6 @@ export function registerLoggerMiddleware(app: OpenAPIHono<AppBindings>) {
 
     if (status >= 500) {
       logger.error({ status, duration }, 'request completed')
-    } else if (status >= 400) {
-      logger.warn({ status, duration }, 'request completed')
     } else {
       logger.info({ status, duration }, 'request completed')
     }
