@@ -28,7 +28,7 @@ export const listNotesHandler: RouteHandler<typeof listNotesRoute, AppBindings> 
       200
     )
   } catch (error) {
-    console.error('Error fetching notes:', error)
+    c.get('logger').error({ err: error }, 'failed to fetch notes')
     return c.json(
       {
         error: 'Internal server error',
@@ -59,7 +59,7 @@ export const getNoteHandler: RouteHandler<typeof getNoteRoute, AppBindings> = as
 
     return c.json({ note }, 200)
   } catch (error) {
-    console.error('Error fetching note:', error)
+    c.get('logger').error({ err: error }, 'failed to fetch note')
     return c.json(
       {
         error: 'Internal server error',
@@ -80,7 +80,7 @@ export const createNoteHandler: RouteHandler<typeof createNoteRoute, AppBindings
 
     return c.json({ note }, 201)
   } catch (error) {
-    console.error('Error creating note:', error)
+    c.get('logger').error({ err: error }, 'failed to create note')
     return c.json(
       {
         error: 'Internal server error',
@@ -112,7 +112,7 @@ export const updateNoteHandler: RouteHandler<typeof updateNoteRoute, AppBindings
 
     return c.json({ note }, 200)
   } catch (error) {
-    console.error('Error updating note:', error)
+    c.get('logger').error({ err: error }, 'failed to update note')
     return c.json(
       {
         error: 'Internal server error',
@@ -143,7 +143,7 @@ export const deleteNoteHandler: RouteHandler<typeof deleteNoteRoute, AppBindings
 
     return c.json({ note }, 200)
   } catch (error) {
-    console.error('Error deleting note:', error)
+    c.get('logger').error({ err: error }, 'failed to delete note')
     return c.json(
       {
         error: 'Internal server error',
@@ -199,7 +199,7 @@ export const convertNoteToTaskHandler: RouteHandler<typeof convertNoteToTaskRout
 
     return c.json({ task, note: archivedNote }, 201)
   } catch (error) {
-    console.error('Error converting note to task:', error)
+    c.get('logger').error({ err: error }, 'failed to convert note to task')
     return c.json(
       {
         error: 'Internal server error',

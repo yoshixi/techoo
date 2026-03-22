@@ -18,7 +18,7 @@ export const listEventsHandler: RouteHandler<typeof listEventsRoute, AppBindings
 
     return c.json({ events, total: events.length }, 200)
   } catch (error) {
-    console.error('Error listing events:', error)
+    c.get('logger').error({ err: error }, 'failed to list events')
     return c.json({ error: 'Failed to retrieve events' }, 500)
   }
 }
@@ -38,7 +38,7 @@ export const getEventHandler: RouteHandler<typeof getEventRoute, AppBindings> = 
 
     return c.json({ event }, 200)
   } catch (error) {
-    console.error('Error getting event:', error)
+    c.get('logger').error({ err: error }, 'failed to get event')
     return c.json({ error: 'Failed to retrieve event' }, 500)
   }
 }

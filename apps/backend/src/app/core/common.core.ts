@@ -1,4 +1,5 @@
 import { z } from '@hono/zod-openapi'
+import { rootLogger } from '../lib/logger'
 
 // Shared function (no database access functions)
 // This file contains utility functions that don't require database access
@@ -12,7 +13,7 @@ export const IdSchema = z.coerce.number().int().positive().openapi({
 export function formatTimestamp(timestamp: Date): string {
   const date = timestamp
   if (Number.isNaN(date.getTime())) {
-    console.warn('Invalid timestamp value after conversion:', timestamp)
+    rootLogger.warn({ timestamp }, 'invalid timestamp value after conversion')
     return new Date(0).toISOString()
   }
 

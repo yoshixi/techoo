@@ -38,6 +38,7 @@ import {
 } from '../../../core/calendar-providers/google.service'
 import type { ProviderTokens } from '../../../core/calendar-providers/types'
 import { formatTimestamp, getCurrentTimestamp } from '../../../core/common.core'
+import { rootLogger } from '../../../lib/logger'
 
 // Helper function to convert watch channel to API format
 function convertWatchChannelToApi(channel: {
@@ -94,7 +95,7 @@ async function getValidTokensOrThrow(
 
     return { tokens: validTokens }
   } catch (error) {
-    console.error('Failed to refresh Google tokens:', error)
+    rootLogger.error({ err: error }, 'failed to refresh google tokens')
     return { errorMessage: 'Google OAuth token expired or invalid' }
   }
 }
@@ -135,7 +136,7 @@ export const listAvailableCalendarsHandler: RouteHandler<typeof listAvailableCal
 
     return c.json({ calendars: availableCalendars }, 200)
   } catch (error) {
-    console.error('Error listing available calendars:', error)
+    c.get('logger').error({ err: error }, 'failed to list available calendars')
     return c.json({ error: 'Failed to retrieve available calendars' }, 500)
   }
 }
@@ -150,7 +151,7 @@ export const listCalendarsHandler: RouteHandler<typeof listCalendarsRoute, AppBi
 
     return c.json({ calendars, total: calendars.length }, 200)
   } catch (error) {
-    console.error('Error listing calendars:', error)
+    c.get('logger').error({ err: error }, 'failed to list calendars')
     return c.json({ error: 'Failed to retrieve calendars' }, 500)
   }
 }
@@ -205,7 +206,7 @@ export const createCalendarHandler: RouteHandler<typeof createCalendarRoute, App
 
     return c.json({ calendar }, 201)
   } catch (error) {
-    console.error('Error creating calendar:', error)
+    c.get('logger').error({ err: error }, 'failed to create calendar')
     return c.json({ error: 'Failed to add calendar' }, 500)
   }
 }
@@ -225,7 +226,7 @@ export const getCalendarHandler: RouteHandler<typeof getCalendarRoute, AppBindin
 
     return c.json({ calendar }, 200)
   } catch (error) {
-    console.error('Error getting calendar:', error)
+    c.get('logger').error({ err: error }, 'failed to get calendar')
     return c.json({ error: 'Failed to retrieve calendar' }, 500)
   }
 }
@@ -246,7 +247,7 @@ export const updateCalendarHandler: RouteHandler<typeof updateCalendarRoute, App
 
     return c.json({ calendar }, 200)
   } catch (error) {
-    console.error('Error updating calendar:', error)
+    c.get('logger').error({ err: error }, 'failed to update calendar')
     return c.json({ error: 'Failed to update calendar' }, 500)
   }
 }
@@ -266,7 +267,7 @@ export const deleteCalendarHandler: RouteHandler<typeof deleteCalendarRoute, App
 
     return c.json({ calendar }, 200)
   } catch (error) {
-    console.error('Error deleting calendar:', error)
+    c.get('logger').error({ err: error }, 'failed to delete calendar')
     return c.json({ error: 'Failed to remove calendar' }, 500)
   }
 }
@@ -324,7 +325,7 @@ export const syncCalendarHandler: RouteHandler<typeof syncCalendarRoute, AppBind
       200
     )
   } catch (error) {
-    console.error('Error syncing calendar:', error)
+    c.get('logger').error({ err: error }, 'failed to sync calendar')
     return c.json({ error: 'Failed to sync calendar' }, 500)
   }
 }
@@ -365,7 +366,7 @@ export const syncAllCalendarsHandler: RouteHandler<typeof syncAllCalendarsRoute,
             calendar.providerAccountId
           )
           if ('errorMessage' in tokensResult) {
-            console.warn('Missing Google OAuth for account:', calendar.providerAccountId)
+            c.get('logger').warn({ providerAccountId: calendar.providerAccountId }, 'missing google oauth for account')
             continue
           }
           tokens = tokensResult.tokens
@@ -385,7 +386,7 @@ export const syncAllCalendarsHandler: RouteHandler<typeof syncAllCalendarsRoute,
 
         await updateCalendarLastSynced(db, calendarId)
       } catch (calError) {
-        console.error(`Error syncing calendar ${calendar.id}:`, calError)
+        c.get('logger').error({ err: calError, calendarId: calendar.id }, 'failed to sync calendar')
         // Continue with other calendars even if one fails
       }
     }
@@ -399,7 +400,7 @@ export const syncAllCalendarsHandler: RouteHandler<typeof syncAllCalendarsRoute,
       200
     )
   } catch (error) {
-    console.error('Error syncing all calendars:', error)
+    c.get('logger').error({ err: error }, 'failed to sync all calendars')
     return c.json({ error: 'Failed to sync calendars' }, 500)
   }
 }
@@ -469,7 +470,7 @@ export const watchCalendarHandler: RouteHandler<typeof watchCalendarRoute, AppBi
 
     return c.json({ watchChannel: convertWatchChannelToApi(watchChannel) }, 200)
   } catch (error) {
-    console.error('Error creating watch channel:', error)
+    c.get('logger').error({ err: error }, 'failed to create watch channel')
     return c.json({ error: 'Failed to create watch channel' }, 500)
   }
 }
@@ -508,7 +509,7 @@ export const stopWatchingCalendarHandler: RouteHandler<typeof stopWatchingCalend
       })
     } catch (stopError) {
       // Log but continue - channel may already be expired on Google's side
-      console.warn('Error stopping watch channel with Google:', stopError)
+      c.get('logger').warn({ err: stopError }, 'failed to stop watch channel with google')
     }
 
     // Delete from database
@@ -519,7 +520,7 @@ export const stopWatchingCalendarHandler: RouteHandler<typeof stopWatchingCalend
       200
     )
   } catch (error) {
-    console.error('Error stopping watch channel:', error)
+    c.get('logger').error({ err: error }, 'failed to stop watch channel')
     return c.json({ error: 'Failed to stop watch channel' }, 500)
   }
 }
@@ -558,7 +559,7 @@ export const getWatchStatusHandler: RouteHandler<typeof getWatchStatusRoute, App
       200
     )
   } catch (error) {
-    console.error('Error getting watch status:', error)
+    c.get('logger').error({ err: error }, 'failed to get watch status')
     return c.json({ error: 'Failed to retrieve watch status' }, 500)
   }
 }

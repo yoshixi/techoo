@@ -62,7 +62,7 @@ export const getGoogleAuthStatusHandler: RouteHandler<
       200
     )
   } catch (error) {
-    console.error('Error checking Google OAuth status:', error)
+    c.get('logger').error({ err: error }, 'failed to check google oauth status')
     return c.json({ error: 'Failed to check OAuth status' }, 500)
   }
 }
@@ -92,7 +92,7 @@ export const deleteGoogleAuthHandler: RouteHandler<
         try {
           await googleCalendarProvider.revokeToken(account.accessToken)
         } catch (revokeError) {
-          console.warn('Failed to revoke Google token (may already be invalid):', revokeError)
+          c.get('logger').warn({ err: revokeError }, 'failed to revoke google token, may already be invalid')
         }
       }
 
@@ -121,7 +121,7 @@ export const deleteGoogleAuthHandler: RouteHandler<
       try {
         await googleCalendarProvider.revokeToken(account.accessToken)
       } catch (revokeError) {
-        console.warn('Failed to revoke Google token (may already be invalid):', revokeError)
+        c.get('logger').warn({ err: revokeError }, 'failed to revoke google token, may already be invalid')
       }
     }
 
@@ -135,7 +135,7 @@ export const deleteGoogleAuthHandler: RouteHandler<
       200
     )
   } catch (error) {
-    console.error('Error disconnecting Google OAuth:', error)
+    c.get('logger').error({ err: error }, 'failed to disconnect google oauth')
     return c.json({ error: 'Failed to disconnect Google OAuth' }, 500)
   }
 }
@@ -152,7 +152,7 @@ export const listGoogleAccountsHandler: RouteHandler<
 
     return c.json({ accounts }, 200)
   } catch (error) {
-    console.error('Error listing Google OAuth accounts:', error)
+    c.get('logger').error({ err: error }, 'failed to list google oauth accounts')
     return c.json({ error: 'Failed to list OAuth accounts' }, 500)
   }
 }

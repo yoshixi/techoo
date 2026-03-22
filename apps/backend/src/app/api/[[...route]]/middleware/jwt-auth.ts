@@ -53,6 +53,11 @@ export function registerJwtAuthMiddleware(app: OpenAPIHono<AppBindings>) {
       })
       c.set('db', getTenantDbForUser(userId))
       c.set('oauth', createOAuthService(userId))
+      // Enrich logger with authenticated user context
+      const logger = c.get('logger')
+      if (logger) {
+        c.set('logger', logger.child({ userId }))
+      }
       await next()
     } catch {
       return c.json({ error: 'Unauthorized' }, 401)

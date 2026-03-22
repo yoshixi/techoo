@@ -40,7 +40,7 @@ export const listTaskCommentsHandler: RouteHandler<typeof listTaskCommentsRoute,
       200
     )
   } catch (error) {
-    console.error('Error listing comments:', error)
+    c.get('logger').error({ err: error }, 'failed to list comments')
     return c.json(
       {
         error: 'Internal server error',
@@ -71,7 +71,7 @@ export const createTaskCommentHandler: RouteHandler<typeof createTaskCommentRout
 
     return c.json({ comment }, 201)
   } catch (error) {
-    console.error('Error creating comment:', error)
+    c.get('logger').error({ err: error }, 'failed to create comment')
     return c.json(
       {
         error: 'Internal server error',
@@ -101,7 +101,7 @@ export const getTaskCommentHandler: RouteHandler<typeof getTaskCommentRoute, App
 
     return c.json({ comment }, 200)
   } catch (error) {
-    console.error('Error fetching comment:', error)
+    c.get('logger').error({ err: error }, 'failed to fetch comment')
     return c.json(
       {
         error: 'Internal server error',
@@ -132,7 +132,7 @@ export const updateTaskCommentHandler: RouteHandler<typeof updateTaskCommentRout
 
     return c.json({ comment }, 200)
   } catch (error) {
-    console.error('Error updating comment:', error)
+    c.get('logger').error({ err: error }, 'failed to update comment')
     return c.json(
       {
         error: 'Internal server error',
@@ -162,7 +162,7 @@ export const deleteTaskCommentHandler: RouteHandler<typeof deleteTaskCommentRout
 
     return c.json({ comment }, 200)
   } catch (error) {
-    console.error('Error deleting comment:', error)
+    c.get('logger').error({ err: error }, 'failed to delete comment')
     return c.json(
       {
         error: 'Internal server error',

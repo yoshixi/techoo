@@ -5,6 +5,9 @@ import { bearer } from "better-auth/plugins";
 import { getMainDb } from "./internal/main-db";
 import { googleCalendarProvider } from "./calendar-providers/google.service";
 import { getEnv } from "./env";
+import { rootLogger } from "../lib/logger";
+
+const authLogger = rootLogger.child({ module: 'auth' });
 import {
   usersTable,
   sessionsTable,
@@ -66,11 +69,13 @@ export const createAuth = () => {
   const googleRedirectUri = env.GOOGLE_REDIRECT_URI
 
   if (!isProduction) {
-    console.log(`BETTER_AUTH_SECRET length ${secret.length}`)
-    console.log(`BETTER_AUTH_URL length ${betterAuthUrl.length}`)
-    console.log(`GOOGLE_CLIENT_ID length ${googleClientId.length}`)
-    console.log(`GOOGLE_CLIENT_SECRET length ${googleClientSecret.length}`)
-    console.log(`GOOGLE_REDIRECT_URI length ${googleRedirectUri.length}`)
+    authLogger.debug({
+      secretLength: secret.length,
+      urlLength: betterAuthUrl.length,
+      googleClientIdLength: googleClientId.length,
+      googleClientSecretLength: googleClientSecret.length,
+      googleRedirectUriLength: googleRedirectUri.length,
+    }, 'auth config loaded')
   }
   return betterAuth({
     secret,
@@ -88,12 +93,7 @@ export const createAuth = () => {
     logger: {
       level: "debug",
       log: (level, message, ...args) => {
-        console.log({
-          level,
-          message,
-          metadata: args,
-          timestamp: new Date().toISOString()
-        });
+        authLogger[level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'debug']({ metadata: args }, String(message));
       }
     },
     emailAndPassword: { enabled: true },
@@ -154,7 +154,7 @@ export const createAuth = () => {
             try {
               await updateGoogleAccountProfile(account);
             } catch (error) {
-              console.warn("Failed to fetch Google account email:", error);
+              authLogger.warn({ err: error }, 'failed to fetch google account email');
             }
           }
         },
@@ -171,7 +171,7 @@ export const createAuth = () => {
             try {
               await updateGoogleAccountProfile(account);
             } catch (error) {
-              console.warn("Failed to refresh Google account profile:", error);
+              authLogger.warn({ err: error }, 'failed to refresh google account profile');
             }
           }
         }

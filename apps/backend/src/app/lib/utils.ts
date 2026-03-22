@@ -1,3 +1,5 @@
+import { rootLogger } from './logger'
+
 export function requireEnv(
   value: string | undefined,
   name: string,
@@ -8,7 +10,7 @@ export function requireEnv(
     if (isProduction) {
       throw new Error(message)
     }
-    console.error(message)
+    rootLogger.error(message)
     return ""
   }
   return value.trim()

@@ -1,3 +1,4 @@
+import type { Logger } from 'pino'
 import type { DB } from '../../core/common.db'
 import type { OAuthService } from '../../core/oauth.service'
 import type { createAuth } from '../../core/auth'
@@ -10,5 +11,7 @@ export type AppBindings = {
     user: { id: number; email: string; name: string }
     db: DB
     oauth: OAuthService
+    logger: Logger
+    requestId: string
   }
 }

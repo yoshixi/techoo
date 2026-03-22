@@ -22,7 +22,7 @@ export const getTaskActivitiesHandler: RouteHandler<typeof getTaskActivitiesRout
 
     return c.json({ activities }, 200)
   } catch (error) {
-    console.error('Error fetching task activities:', error)
+    c.get('logger').error({ err: error }, 'failed to fetch task activities')
     return c.json(
       {
         error: 'Internal server error',

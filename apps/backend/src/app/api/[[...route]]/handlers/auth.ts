@@ -27,7 +27,7 @@ export function createTokenHandler(auth: Auth): RouteHandler<typeof tokenRoute, 
     if (code) {
       sessionToken = await consumeExchangeCode(code)
       if (!sessionToken) {
-        console.log(`Fails to exchange the code`)
+        c.get('logger').info({}, 'failed to exchange the code')
         return c.json({ error: 'Invalid or expired code' }, 400)
       }
     }
@@ -51,7 +51,7 @@ export function createTokenHandler(auth: Auth): RouteHandler<typeof tokenRoute, 
           email: session.user.email,
         })
       } catch (error) {
-        console.error('Tenant provisioning failed at /token:', error)
+        c.get('logger').error({ err: error }, 'tenant provisioning failed at /token')
         return c.json({ error: 'Account setup failed. Please try again.' }, 503)
       }
     }

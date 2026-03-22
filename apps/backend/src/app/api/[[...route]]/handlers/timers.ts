@@ -34,7 +34,7 @@ export const listTimersHandler: RouteHandler<typeof listTimersRoute, AppBindings
       200
     )
   } catch (error) {
-    console.error('Error fetching timers:', error)
+    c.get('logger').error({ err: error }, 'failed to fetch timers')
     return c.json(
       {
         error: 'Internal server error',
@@ -71,7 +71,7 @@ export const getTaskTimersHandler: RouteHandler<typeof getTaskTimersRoute, AppBi
       200
     )
   } catch (error) {
-    console.error('Error fetching task timers:', error)
+    c.get('logger').error({ err: error }, 'failed to fetch task timers')
     return c.json(
       {
         error: 'Internal server error',
@@ -102,7 +102,7 @@ export const getTimerHandler: RouteHandler<typeof getTimerRoute, AppBindings> = 
 
     return c.json({ timer }, 200)
   } catch (error) {
-    console.error('Error fetching timer:', error)
+    c.get('logger').error({ err: error }, 'failed to fetch timer')
     return c.json(
       {
         error: 'Internal server error',
@@ -133,7 +133,7 @@ export const createTimerHandler: RouteHandler<typeof createTimerRoute, AppBindin
 
     return c.json({ timer }, 201)
   } catch (error) {
-    console.error('Error creating timer:', error)
+    c.get('logger').error({ err: error }, 'failed to create timer')
     return c.json(
       {
         error: 'Internal server error',
@@ -165,7 +165,7 @@ export const updateTimerHandler: RouteHandler<typeof updateTimerRoute, AppBindin
 
     return c.json({ timer }, 200)
   } catch (error) {
-    console.error('Error updating timer:', error)
+    c.get('logger').error({ err: error }, 'failed to update timer')
     return c.json(
       {
         error: 'Internal server error',
@@ -196,7 +196,7 @@ export const deleteTimerHandler: RouteHandler<typeof deleteTimerRoute, AppBindin
 
     return c.json({ timer }, 200)
   } catch (error) {
-    console.error('Error deleting timer:', error)
+    c.get('logger').error({ err: error }, 'failed to delete timer')
     return c.json(
       {
         error: 'Internal server error',

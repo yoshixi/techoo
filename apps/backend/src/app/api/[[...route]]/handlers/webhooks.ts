@@ -27,28 +27,25 @@ export const googleCalendarWebhookHandler: RouteHandler<
     const resourceState = c.req.header('X-Goog-Resource-State')
     const channelToken = c.req.header('X-Goog-Channel-Token')
 
-    console.log('Received Google Calendar webhook:', {
-      channelId,
-      resourceId,
-      resourceState,
-      channelToken
-    })
-
     // Validate required headers
     if (!channelId || !resourceId) {
-      console.warn('Missing required webhook headers')
+      c.get('logger').warn('missing required webhook headers')
       return c.json({}, 400)
     }
 
+    const logger = c.get('logger').child({ channelId, resourceId, resourceState })
+
+    logger.info('received google calendar webhook')
+
     // Handle sync messages (initial confirmation)
     if (resourceState === 'sync') {
-      console.log('Received sync notification for channel:', channelId)
+      logger.info('received sync notification')
       return c.json({}, 200)
     }
 
     // Handle exists/update messages (actual changes)
     if (resourceState !== 'exists') {
-      console.log('Unknown resource state:', resourceState)
+      logger.info('unknown resource state')
       return c.json({}, 200)
     }
 
@@ -57,7 +54,7 @@ export const googleCalendarWebhookHandler: RouteHandler<
     const userIdMatch = tenantPart?.match(/-user-(\d+)$/)
     const tenantUserId = userIdMatch ? parseInt(userIdMatch[1], 10) : NaN
     if (!tenantPart || isNaN(tenantUserId)) {
-      console.warn('Missing or invalid tenant in channel token:', channelToken)
+      logger.warn({ channelToken }, 'missing or invalid tenant in channel token')
       return c.json({}, 200)
     }
     const db = getTenantDbForUser(tenantUserId)
@@ -66,22 +63,22 @@ export const googleCalendarWebhookHandler: RouteHandler<
     // Find the watch channel
     const watchChannel = await getWatchChannelByChannelId(db, channelId)
     if (!watchChannel) {
-      console.warn('Watch channel not found:', channelId)
+      logger.warn('watch channel not found')
       return c.json({}, 200) // Return 200 to prevent retries
     }
 
     // Verify token if set
     if (watchChannel.token && watchChannel.token !== channelToken) {
-      console.warn('Token mismatch for channel:', channelId)
+      logger.warn('token mismatch for channel')
       return c.json({}, 200) // Return 200 to prevent retries
     }
 
     // Get the calendar
     const calendar = await getCalendarByIdOnly(db, watchChannel.calendarId)
     if (!calendar) {
-      console.warn(
-        'Calendar not found for watch channel:',
-        watchChannel.calendarId
+      logger.warn(
+        { watchChannelCalendarId: watchChannel.calendarId },
+        'calendar not found for watch channel'
       )
       return c.json({}, 200)
     }
@@ -89,7 +86,7 @@ export const googleCalendarWebhookHandler: RouteHandler<
     // Get user ID from calendar (stored as string in API model)
     const userId = parseInt(calendar.userId, 10)
     if (isNaN(userId)) {
-      console.warn('Invalid user ID for calendar:', calendar.id)
+      logger.warn({ calendarId: calendar.id }, 'invalid user ID for calendar')
       return c.json({}, 200)
     }
 
@@ -99,7 +96,7 @@ export const googleCalendarWebhookHandler: RouteHandler<
       calendar.providerAccountId
     )
     if (!account || !account.accessToken) {
-      console.warn('Google account not found for user:', userId)
+      logger.warn({ userId }, 'google account not found for user')
       return c.json({}, 200)
     }
 
@@ -145,17 +142,15 @@ export const googleCalendarWebhookHandler: RouteHandler<
       // Update last synced timestamp
       await updateCalendarLastSynced(db, calendarId)
 
-      console.log(
-        `Webhook sync completed for calendar ${calendar.id}: ${eventsCount} events`
-      )
+      logger.info({ calendarId: calendar.id, eventsCount }, 'webhook sync completed')
     } catch (syncError) {
-      console.error('Error syncing calendar from webhook:', syncError)
+      logger.error({ err: syncError }, 'failed to sync calendar from webhook')
       // Still return 200 to prevent retries
     }
 
     return c.json({}, 200)
   } catch (error) {
-    console.error('Error handling Google Calendar webhook:', error)
+    c.get('logger').error({ err: error }, 'failed to handle google calendar webhook')
     // Return 200 to prevent Google from retrying
     return c.json({}, 200)
   }

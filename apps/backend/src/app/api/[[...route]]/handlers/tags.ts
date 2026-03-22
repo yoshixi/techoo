@@ -25,7 +25,7 @@ export const listTagsHandler: RouteHandler<typeof listTagsRoute, AppBindings> = 
       200
     )
   } catch (error) {
-    console.error('Error fetching tags:', error)
+    c.get('logger').error({ err: error }, 'failed to fetch tags')
     return c.json(
       {
         error: 'Internal server error',
@@ -56,7 +56,7 @@ export const getTagHandler: RouteHandler<typeof getTagRoute, AppBindings> = asyn
 
     return c.json({ tag }, 200)
   } catch (error) {
-    console.error('Error fetching tag:', error)
+    c.get('logger').error({ err: error }, 'failed to fetch tag')
     return c.json(
       {
         error: 'Internal server error',
@@ -109,7 +109,7 @@ export const createTagHandler: RouteHandler<typeof createTagRoute, AppBindings> 
       )
     }
 
-    console.error('Error creating tag:', error)
+    c.get('logger').error({ err: error }, 'failed to create tag')
     return c.json(
       {
         error: 'Internal server error',
@@ -173,7 +173,7 @@ export const updateTagHandler: RouteHandler<typeof updateTagRoute, AppBindings> 
       )
     }
 
-    console.error('Error updating tag:', error)
+    c.get('logger').error({ err: error }, 'failed to update tag')
     return c.json(
       {
         error: 'Internal server error',
@@ -204,7 +204,7 @@ export const deleteTagHandler: RouteHandler<typeof deleteTagRoute, AppBindings> 
 
     return c.json({ tag }, 200)
   } catch (error) {
-    console.error('Error deleting tag:', error)
+    c.get('logger').error({ err: error }, 'failed to delete tag')
     return c.json(
       {
         error: 'Internal server error',

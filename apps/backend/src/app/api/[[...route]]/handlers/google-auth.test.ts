@@ -10,6 +10,7 @@ import {
   type SqliteLibsqlTestContext
 } from '../../../db/tests/sqliteLibsqlTestUtils'
 import { accountsTable } from '../../../db/schema/schema'
+import pino from 'pino'
 import type { DB } from '../../../core/common.db'
 import { createOAuthService } from '../../../core/oauth.service'
 
@@ -19,6 +20,8 @@ const createTestApp = (getUser: () => TestUser | null, getDb: () => DB) => {
   const app = new OpenAPIHono<AppBindings>()
 
   app.use('/*', async (c, next) => {
+    c.set('logger', pino({ level: 'silent' }))
+    c.set('requestId', 'test-request-id')
     const user = getUser()
     if (user) {
       c.set('user', user)

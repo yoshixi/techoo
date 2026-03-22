@@ -2,6 +2,7 @@ import { OpenAPIHono } from '@hono/zod-openapi'
 import { cors } from 'hono/cors'
 import { createAuth } from '../../core/auth'
 import { validateEnv } from '../../core/env'
+import { rootLogger } from '../../lib/logger'
 import type { AppBindings, Auth } from './types'
 
 // Import route definitions from local routes directory
@@ -128,6 +129,7 @@ import {
 import { registerOAuthRoutes } from './handlers/oauth'
 
 // Import middleware
+import { registerLoggerMiddleware } from './middleware/logger'
 import { registerBetterAuthHandler } from './middleware/better-auth'
 import { registerJwtAuthMiddleware } from './middleware/jwt-auth'
 
@@ -145,6 +147,9 @@ export function createApp(deps?: AppDeps) {
 
   const auth = deps?.auth ?? createAuth()
   const app = new OpenAPIHono<AppBindings>().basePath('/api')
+
+  // Logger middleware — must be first to capture all requests
+  registerLoggerMiddleware(app)
 
   // Hono's CORS middleware sets headers on c.res after await next(),
   // so it correctly applies to all responses including raw Response
@@ -260,7 +265,7 @@ let defaultApp: ReturnType<typeof createApp> | null = null
 
 function getDefaultApp() {
   if (!defaultApp) {
-    console.log('starting the server')
+    rootLogger.info('starting the server')
     defaultApp = createApp()
   }
   return defaultApp

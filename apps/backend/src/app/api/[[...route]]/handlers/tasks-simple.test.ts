@@ -23,6 +23,7 @@ import {
   createTimerHandler,
   getTaskTimersHandler
 } from './timers';
+import pino from 'pino';
 import { createSqliteLibsqlTestContext, createTestRequest, createTestUser, type SqliteLibsqlTestContext } from '../../../db/tests/sqliteLibsqlTestUtils';
 import type { DB } from '../../../core/common.db';
 
@@ -47,6 +48,8 @@ const createTestApp = (getUser: () => TestUser | null, getDb: () => DB) => {
 
   // Inject test user context (simulates JWT auth middleware)
   app.use('/*', async (c, next) => {
+    c.set('logger', pino({ level: 'silent' }));
+    c.set('requestId', 'test-request-id');
     const user = getUser();
     if (user) {
       c.set('user', user);

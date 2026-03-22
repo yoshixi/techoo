@@ -27,7 +27,7 @@ export const listTasksHandler: RouteHandler<typeof listTasksRoute, AppBindings> 
       200
     )
   } catch (error) {
-    console.error('Error fetching tasks:', error)
+    c.get('logger').error({ err: error }, 'failed to fetch tasks')
     return c.json(
       {
         error: 'Internal server error',
@@ -58,7 +58,7 @@ export const getTaskHandler: RouteHandler<typeof getTaskRoute, AppBindings> = as
 
     return c.json({ task }, 200)
   } catch (error) {
-    console.error('Error fetching task:', error)
+    c.get('logger').error({ err: error }, 'failed to fetch task')
     return c.json(
       {
         error: 'Internal server error',
@@ -79,7 +79,7 @@ export const createTaskHandler: RouteHandler<typeof createTaskRoute, AppBindings
 
     return c.json({ task }, 201)
   } catch (error) {
-    console.error('Error creating task:', error)
+    c.get('logger').error({ err: error }, 'failed to create task')
     return c.json(
       {
         error: 'Internal server error',
@@ -111,7 +111,7 @@ export const updateTaskHandler: RouteHandler<typeof updateTaskRoute, AppBindings
 
     return c.json({ task }, 200)
   } catch (error) {
-    console.error('Error updating task:', error)
+    c.get('logger').error({ err: error }, 'failed to update task')
     return c.json(
       {
         error: 'Internal server error',
@@ -142,7 +142,7 @@ export const deleteTaskHandler: RouteHandler<typeof deleteTaskRoute, AppBindings
 
     return c.json({ task }, 200)
   } catch (error) {
-    console.error('Error deleting task:', error)
+    c.get('logger').error({ err: error }, 'failed to delete task')
     return c.json(
       {
         error: 'Internal server error',
