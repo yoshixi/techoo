@@ -5,10 +5,14 @@ import { rootLogger } from '../../../lib/logger'
 export function registerLoggerMiddleware(app: OpenAPIHono<AppBindings>) {
   app.use('/*', async (c, next) => {
     const requestId = crypto.randomUUID()
+    const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown'
+    const country = c.req.header('cf-ipcountry') || 'unknown'
     const logger = rootLogger.child({
       requestId,
       method: c.req.method,
       path: c.req.path,
+      ip,
+      country,
     })
 
     c.set('logger', logger)
