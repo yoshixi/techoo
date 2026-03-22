@@ -19,7 +19,8 @@
     "migrate:all": "DOTENV_CONFIG_PATH=.env npx tsx scripts/migrate-all.ts",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "e2e": "npx tsx scripts/e2e.ts"
   },
   "exports": {
     ".": "./src/app/api/[[...route]]/route.ts"
