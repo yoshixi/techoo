@@ -16,6 +16,7 @@
     "drizzle:push:prod": "DOTENV_CONFIG_PATH=.env.prod drizzle-kit push --config ./drizzle.config.ts",
     "drizzle:push:seed": "DOTENV_CONFIG_PATH=.env.prod drizzle-kit push --config ./drizzle.config.seed.ts",
     "migrate:tenants": "DOTENV_CONFIG_PATH=.env.prod npx tsx scripts/migrate-tenants.ts",
+    "migrate:all": "DOTENV_CONFIG_PATH=.env npx tsx scripts/migrate-all.ts",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -32,7 +33,7 @@
     "drizzle-orm": "^0.44.7",
     "hono": "^4.10.6",
     "jose": "^6.1.3",
-    "tenanso": "^0.2.0",
+    "tenanso": "^0.2.1",
     "zod": "^4.1.13"
   },
   "devDependencies": {

@@ -21,10 +21,18 @@ import { resetDbForTests, getTenanso } from '../src/app/core/common.db'
 function createMockTursoApi(dataDir: string) {
   const app = new Hono()
   const dbFilePath = (name: string) => path.join(dataDir, `${name}.db`)
+  const dbGroups = new Map<string, string>()
 
   app.get('/v1/organizations/:org/databases', (c) => {
+    const groupFilter = c.req.query('group')
     const files = fs.readdirSync(dataDir).filter((f) => f.endsWith('.db'))
-    const databases = files.map((f) => ({ Name: f.replace('.db', '') }))
+    let databases = files.map((f) => {
+      const name = f.replace('.db', '')
+      return { Name: name, group: dbGroups.get(name) ?? 'default' }
+    })
+    if (groupFilter) {
+      databases = databases.filter((db) => db.group === groupFilter)
+    }
     return c.json({ databases })
   })
 
@@ -35,7 +43,7 @@ function createMockTursoApi(dataDir: string) {
   })
 
   app.post('/v1/organizations/:org/databases', async (c) => {
-    const body = (await c.req.json()) as { name: string; seed?: { type: string; name: string } }
+    const body = (await c.req.json()) as { name: string; group?: string; seed?: { type: string; name: string } }
     const dbPath = dbFilePath(body.name)
     if (body.seed?.name) {
       const seedPath = dbFilePath(body.seed.name)
@@ -44,12 +52,15 @@ function createMockTursoApi(dataDir: string) {
     } else {
       fs.writeFileSync(dbPath, '')
     }
-    return c.json({ Name: body.name }, 200)
+    dbGroups.set(body.name, body.group ?? 'default')
+    return c.json({ database: { Name: body.name } }, 200)
   })
 
   app.delete('/v1/organizations/:org/databases/:name', (c) => {
-    const dbPath = dbFilePath(c.req.param('name'))
+    const name = c.req.param('name')
+    const dbPath = dbFilePath(name)
     if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath)
+    dbGroups.delete(name)
     return c.json({}, 200)
   })
 

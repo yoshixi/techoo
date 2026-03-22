@@ -76,6 +76,9 @@ export function tenantNameForUser(userId: number): string {
 /**
  * Creates the tenant DB for a user and seeds the user record.
  * No-op in local dev (single DB mode). Throws on failure.
+ *
+ * tenanso 0.2.1+ polls the health endpoint after creation,
+ * so the DB is ready to use when createTenant() resolves.
  */
 export async function provisionTenant(user: { id: number; name: string; email: string }): Promise<void> {
   const tenanso = getTenanso()
@@ -85,25 +88,11 @@ export async function provisionTenant(user: { id: number; name: string; email: s
   await tenanso.createTenant(tenantName)
 
   // Seed the user record into the tenant DB so FK constraints are satisfied.
-  // Turso has a short propagation delay after database creation, so we retry.
   const tenantDb = getTenantDbForUser(user.id)
-  const maxRetries = 5
-  const delayMs = 1000
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      await tenantDb
-        .insert(schema.usersTable)
-        .values({ id: user.id, name: user.name, email: user.email })
-        .onConflictDoNothing()
-      return
-    } catch (error) {
-      if (attempt === maxRetries) {
-        throw new Error(`Failed to seed tenant DB after ${maxRetries} attempts`, { cause: error })
-      }
-      console.log(`Tenant DB not ready yet (attempt ${attempt}/${maxRetries}), retrying in ${delayMs}ms...`)
-      await new Promise((resolve) => setTimeout(resolve, delayMs))
-    }
-  }
+  await tenantDb
+    .insert(schema.usersTable)
+    .values({ id: user.id, name: user.name, email: user.email })
+    .onConflictDoNothing()
 }
 
 /**
