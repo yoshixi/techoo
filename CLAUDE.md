@@ -13,16 +13,15 @@ Techoo is a personal time-tracking app that makes it easy to see planned vs. act
 
 ## Development Environment
 
-This project uses **devenv** for environment management. Before starting development:
+This project uses **Nix flakes** for environment management. The development shell is activated automatically via direnv, or manually:
 
 ```sh
-devenv shell  # Enter the development environment
+nix develop  # Enter the development environment
 ```
 
-Devenv provides:
+The flake provides:
 - Git, pnpm, and turso-cli
-- Python environment for SQLite operations
-- Custom task runners
+- Python environment for SQLite operations (node-gyp / better-sqlite3)
 
 ## Common Commands
 
@@ -55,10 +54,10 @@ pnpm run format
 
 ```sh
 # Run all tests
-devenv shell -- pnpm run test
+pnpm run test
 
-# Run tests for a specific package (using devenv tasks)
-devenv tasks run web:test
+# Run tests for a specific package
+pnpm --filter web run test:oneshot
 
 # Watch mode for tests in web app
 pnpm --filter web run test:watch
@@ -130,9 +129,6 @@ For local development, use schema push for quick iteration without maintaining m
 
 2. **Push changes to local database**
    ```sh
-   # Enter devenv shell first
-   devenv shell
-
    # Push schema changes directly to local database
    pnpm --filter web run drizzle:push:local
    ```
@@ -152,9 +148,6 @@ For production, use proper migrations to maintain schema versioning and history:
 
 2. **Generate migration**
    ```sh
-   # Enter devenv shell first
-   devenv shell
-
    # Ensure TURSO_CONNECTION_URL and TURSO_AUTH_TOKEN are set
    pnpm --filter web run drizzle:generate:prod
    ```
@@ -167,7 +160,6 @@ For production, use proper migrations to maintain schema versioning and history:
 
 4. **Apply migration to production**
    ```sh
-   # Still in devenv shell with TURSO credentials set
    pnpm --filter web run drizzle:migrate:prod
    ```
 
@@ -180,7 +172,7 @@ For production, use proper migrations to maintain schema versioning and history:
 **Important notes:**
 - **Local:** Use `drizzle:push:local` for fast iteration without migration history
 - **Production:** Always use `drizzle:generate:prod` + `drizzle:migrate:prod` to maintain migration history
-- Always run these commands within `devenv shell` to ensure the correct environment
+- Ensure you are in the nix development shell (via direnv or `nix develop`)
 - Never manually edit migration files after they've been generated
 - Migration files must be committed to version control for production deployments
 - Each environment uses a separate config file: `drizzle.config.local.ts` and `drizzle.config.prod.ts`
@@ -284,7 +276,7 @@ Shared data fetching and mutations live in `hooks/useTasksData.ts`. UI primitive
 - **SWR**: Data fetching for React
 - **Orval**: OpenAPI code generator
 - **Vitest**: Testing framework
-- **devenv**: Development environment manager (Nix-based)
+- **Nix flakes**: Development environment manager
 
 ## Planning Documentation
 
