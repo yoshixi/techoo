@@ -56,15 +56,20 @@ async function api(
   path: string,
   options: { method?: string; body?: unknown; headers?: Record<string, string> } = {}
 ): Promise<{ status: number; data: any; headers: Headers }> {
+  const method = options.method || 'GET'
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    Origin: BASE_URL,  // Required by better-auth for CSRF protection
     ...options.headers,
   }
-  const res = await fetch(`${API}${path}`, {
-    method: options.method || 'GET',
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  })
+  // POST/PUT/DELETE with no explicit body → send empty JSON object
+  // (better-auth expects a parseable JSON body on POST requests)
+  const needsBody = method !== 'GET' && method !== 'HEAD'
+  const body = options.body
+    ? JSON.stringify(options.body)
+    : needsBody ? '{}' : undefined
+
+  const res = await fetch(`${API}${path}`, { method, headers, body })
   const data = await res.json().catch(() => null)
   return { status: res.status, data, headers: res.headers }
 }
