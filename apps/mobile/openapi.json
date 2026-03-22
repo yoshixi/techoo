@@ -7,6 +7,88 @@
   },
   "components": {
     "schemas": {
+      "TokenResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "JWT token"
+          },
+          "session_token": {
+            "type": "string",
+            "description": "Session token (returned when exchanging a code)"
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong",
+            "example": "Task not found"
+          },
+          "code": {
+            "type": "string",
+            "description": "Optional error code",
+            "example": "TASK_NOT_FOUND"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "TokenRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Short-lived exchange code to trade for a session token"
+          }
+        }
+      },
+      "SessionResponse": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "number"
+              },
+              "email": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "name"
+            ]
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "SessionCodeResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Short-lived exchange code"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
       "HealthResponse": {
         "type": "object",
         "properties": {
@@ -170,24 +252,6 @@
         "required": [
           "tasks",
           "total"
-        ]
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string",
-            "description": "Error message describing what went wrong",
-            "example": "Task not found"
-          },
-          "code": {
-            "type": "string",
-            "description": "Optional error code",
-            "example": "TASK_NOT_FOUND"
-          }
-        },
-        "required": [
-          "error"
         ]
       },
       "TaskResponse": {
@@ -1398,6 +1462,130 @@
     "parameters": {}
   },
   "paths": {
+    "/api/token": {
+      "post": {
+        "summary": "Exchange session or code for JWT",
+        "description": "Accepts either a session token via Authorization header or a short-lived exchange code in the body. Returns a JWT token.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JWT token issued successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or expired code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Account setup failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/session": {
+      "get": {
+        "summary": "Session lookup",
+        "description": "Look up user and session data from a bearer session token.",
+        "responses": {
+          "200": {
+            "description": "Session found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/session-code": {
+      "post": {
+        "summary": "Create exchange code",
+        "description": "Create a short-lived code tied to a session token, used for OAuth redirects.",
+        "responses": {
+          "200": {
+            "description": "Exchange code created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionCodeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing session token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid session token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "summary": "Health check",
@@ -1421,6 +1609,27 @@
         "summary": "Get all tasks",
         "description": "Retrieve all tasks",
         "parameters": [
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "exclusiveMinimum": true,
+                "description": "Numeric ID",
+                "example": 1
+              },
+              "description": "Filter tasks by IDs (comma-separated)",
+              "example": [
+                1,
+                2
+              ]
+            },
+            "required": false,
+            "description": "Filter tasks by IDs (comma-separated)",
+            "name": "ids",
+            "in": "query"
+          },
           {
             "schema": {
               "type": "string",
@@ -2205,6 +2414,30 @@
             "required": false,
             "description": "IDs of the tasks to get timers for",
             "name": "taskIds",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Filter timers with startTime >= this timestamp",
+              "example": "2024-01-01T00:00:00.000Z"
+            },
+            "required": false,
+            "description": "Filter timers with startTime >= this timestamp",
+            "name": "startTimeFrom",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Filter timers with startTime < this timestamp",
+              "example": "2024-01-15T00:00:00.000Z"
+            },
+            "required": false,
+            "description": "Filter timers with startTime < this timestamp",
+            "name": "startTimeTo",
             "in": "query"
           }
         ],

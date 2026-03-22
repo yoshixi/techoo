@@ -14,6 +14,10 @@ import type { GetApiTasksNullsLast } from './getApiTasksNullsLast';
 
 export type GetApiTasksParams = {
   /**
+   * Filter tasks by IDs (comma-separated)
+   */
+  ids?: number[];
+  /**
    * Filter tasks by completion status
    */
   completed?: GetApiTasksCompleted;

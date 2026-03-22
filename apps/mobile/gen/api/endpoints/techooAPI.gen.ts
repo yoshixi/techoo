@@ -40,6 +40,8 @@ import type {
   OAuthAccountsResponse,
   OAuthDisconnectResponse,
   OAuthStatusResponse,
+  SessionCodeResponse,
+  SessionResponse,
   StopWatchResponse,
   TagListResponse,
   TagResponse,
@@ -50,6 +52,8 @@ import type {
   TaskResponse,
   TimerListResponse,
   TimerResponse,
+  TokenRequest,
+  TokenResponse,
   UpdateCalendar,
   UpdateNote,
   UpdateTag,
@@ -62,6 +66,135 @@ import type {
 } from '../schemas';
 
 import { customInstance } from '../../../lib/api/mutator';
+
+/**
+ * Accepts either a session token via Authorization header or a short-lived exchange code in the body. Returns a JWT token.
+ * @summary Exchange session or code for JWT
+ */
+export const postApiToken = (tokenRequest?: TokenRequest) => {
+  return customInstance<TokenResponse>({
+    url: `/api/token`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: tokenRequest,
+  });
+};
+
+export const getPostApiTokenMutationFetcher = () => {
+  return (_: Key, { arg }: { arg: TokenRequest }) => {
+    return postApiToken(arg);
+  };
+};
+export const getPostApiTokenMutationKey = () => [`/api/token`] as const;
+
+export type PostApiTokenMutationResult = NonNullable<Awaited<ReturnType<typeof postApiToken>>>;
+export type PostApiTokenMutationError = ErrorResponse | ErrorResponse | ErrorResponse;
+
+/**
+ * @summary Exchange session or code for JWT
+ */
+export const usePostApiToken = <TError = ErrorResponse | ErrorResponse | ErrorResponse>(options?: {
+  swr?: SWRMutationConfiguration<
+    Awaited<ReturnType<typeof postApiToken>>,
+    TError,
+    Key,
+    TokenRequest,
+    Awaited<ReturnType<typeof postApiToken>>
+  > & { swrKey?: string };
+}) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const swrKey = swrOptions?.swrKey ?? getPostApiTokenMutationKey();
+  const swrFn = getPostApiTokenMutationFetcher();
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Look up user and session data from a bearer session token.
+ * @summary Session lookup
+ */
+export const getApiSession = () => {
+  return customInstance<SessionResponse>({ url: `/api/session`, method: 'GET' });
+};
+
+export const getGetApiSessionKey = () => [`/api/session`] as const;
+
+export type GetApiSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getApiSession>>>;
+export type GetApiSessionQueryError = ErrorResponse;
+
+/**
+ * @summary Session lookup
+ */
+export const useGetApiSession = <TError = ErrorResponse>(options?: {
+  swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiSession>>, TError> & {
+    swrKey?: Key;
+    enabled?: boolean;
+  };
+}) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const isEnabled = swrOptions?.enabled !== false;
+  const swrKey = swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiSessionKey() : null));
+  const swrFn = () => getApiSession();
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * Create a short-lived code tied to a session token, used for OAuth redirects.
+ * @summary Create exchange code
+ */
+export const postApiSessionCode = () => {
+  return customInstance<SessionCodeResponse>({ url: `/api/session-code`, method: 'POST' });
+};
+
+export const getPostApiSessionCodeMutationFetcher = () => {
+  return (_: Key, __: { arg: Arguments }) => {
+    return postApiSessionCode();
+  };
+};
+export const getPostApiSessionCodeMutationKey = () => [`/api/session-code`] as const;
+
+export type PostApiSessionCodeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof postApiSessionCode>>
+>;
+export type PostApiSessionCodeMutationError = ErrorResponse | ErrorResponse;
+
+/**
+ * @summary Create exchange code
+ */
+export const usePostApiSessionCode = <TError = ErrorResponse | ErrorResponse>(options?: {
+  swr?: SWRMutationConfiguration<
+    Awaited<ReturnType<typeof postApiSessionCode>>,
+    TError,
+    Key,
+    Arguments,
+    Awaited<ReturnType<typeof postApiSessionCode>>
+  > & { swrKey?: string };
+}) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const swrKey = swrOptions?.swrKey ?? getPostApiSessionCodeMutationKey();
+  const swrFn = getPostApiSessionCodeMutationFetcher();
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
 
 /**
  * Check if the API is running

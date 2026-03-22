@@ -37,10 +37,8 @@ yarn-error.log*
 .DS_Store
 *.pem
 
-# Devenv
-.devenv*
-devenv.local.nix
-devenv.local.yaml
+# Nix
+result
 
 # direnv
 .direnv
