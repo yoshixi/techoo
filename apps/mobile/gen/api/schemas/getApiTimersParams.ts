@@ -11,4 +11,12 @@ export type GetApiTimersParams = {
    * IDs of the tasks to get timers for
    */
   taskIds?: number[];
+  /**
+   * Filter timers with startTime >= this timestamp
+   */
+  startTimeFrom?: string;
+  /**
+   * Filter timers with startTime < this timestamp
+   */
+  startTimeTo?: string;
 };

@@ -1,7 +1,6 @@
 import type { OpenAPIHono } from '@hono/zod-openapi'
 import { eq } from 'drizzle-orm'
-import type { Auth } from '../route'
-import type { AppBindings } from '../types'
+import type { AppBindings, Auth } from '../types'
 import { provisionTenant } from '../../../core/common.db'
 import { usersTable, sessionsTable, accountsTable } from '../../../db/schema/schema'
 import { getMainDb } from '../../../core/internal/main-db'

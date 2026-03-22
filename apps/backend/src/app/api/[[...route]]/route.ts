@@ -2,7 +2,7 @@ import { OpenAPIHono } from '@hono/zod-openapi'
 import { cors } from 'hono/cors'
 import { createAuth } from '../../core/auth'
 import { validateEnv } from '../../core/env'
-import type { AppBindings } from './types'
+import type { AppBindings, Auth } from './types'
 
 // Import route definitions from local routes directory
 import {
@@ -121,16 +121,17 @@ import {
   // Auth handlers
   createTokenHandler,
   createSessionHandler,
-  createSessionCodeHandler,
-  // OAuth registration
-  registerOAuthRoutes
+  createSessionCodeHandler
 } from './handlers'
+
+// Import OAuth route registration (not a handler, so imported directly)
+import { registerOAuthRoutes } from './handlers/oauth'
 
 // Import middleware
 import { registerBetterAuthHandler } from './middleware/better-auth'
 import { registerJwtAuthMiddleware } from './middleware/jwt-auth'
 
-export type Auth = ReturnType<typeof createAuth>
+export type { Auth }
 
 export interface AppDeps {
   auth?: Auth

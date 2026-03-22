@@ -1,6 +1,5 @@
 import type { OpenAPIHono } from '@hono/zod-openapi'
-import type { AppBindings } from '../types'
-import type { Auth } from '../route'
+import type { AppBindings, Auth } from '../types'
 import { createExchangeCode, consumeExchangeCode } from '../../../core/exchange-codes'
 import { isAllowedMobileRedirectUri } from '../middleware/mobile-redirect'
 

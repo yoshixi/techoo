@@ -1,6 +1,5 @@
 import type { RouteHandler } from '@hono/zod-openapi'
-import type { AppBindings } from '../types'
-import type { Auth } from '../route'
+import type { AppBindings, Auth } from '../types'
 import { tokenRoute, sessionRoute, sessionCodeRoute } from '../routes/auth'
 import { signJwt } from '../../../core/jwt'
 import { validateUserReady, provisionTenant } from '../../../core/common.db'
