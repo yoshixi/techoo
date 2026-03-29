@@ -31,7 +31,7 @@ export function registerBetterAuthHandler(app: OpenAPIHono<AppBindings>, auth: A
             email: data?.user?.email || '',
           })
         } catch (error) {
-          c.get('logger').error({ err: error, userId }, 'tenant provisioning failed, rolling back user')
+          c.get('logger').error({ err: error, userId }, `tenant provisioning failed, rolling back user: ${error}`)
           const mainDb = getMainDb()
           await mainDb.delete(sessionsTable).where(eq(sessionsTable.userId, userId))
           await mainDb.delete(accountsTable).where(eq(accountsTable.userId, userId))

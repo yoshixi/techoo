@@ -14,6 +14,7 @@ export * from './events'
 export * from './webhooks'
 export * from './notes'
 export * from './auth'
+export * from './account'
 
 // Health check handler
 export const healthHandler: RouteHandler<typeof healthRoute, AppBindings> = (c) => {
