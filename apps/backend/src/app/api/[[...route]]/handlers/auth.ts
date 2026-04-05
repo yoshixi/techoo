@@ -5,13 +5,15 @@ import { signJwt } from '../../../core/jwt'
 import { validateUserReady, provisionTenant } from '../../../core/common.db'
 import { createExchangeCode, consumeExchangeCode } from '../../../core/exchange-codes'
 
-// Helper: resolve session from Authorization header or cookie
+// Helper: resolve session from Authorization header or cookie.
+// Uses the bearer() plugin — pass the token via Authorization header
+// so it works in both dev (HTTP) and prod (HTTPS) where cookie names differ.
 async function resolveSession(auth: Auth, headers: Headers, bearerToken: string | null) {
   let session = await auth.api.getSession({ headers })
   if (!session && bearerToken) {
-    const cookieHeaders = new Headers(headers)
-    cookieHeaders.set('cookie', `better-auth.session_token=${bearerToken}`)
-    session = await auth.api.getSession({ headers: cookieHeaders })
+    const bearerHeaders = new Headers(headers)
+    bearerHeaders.set('Authorization', `Bearer ${bearerToken}`)
+    session = await auth.api.getSession({ headers: bearerHeaders })
   }
   return session
 }

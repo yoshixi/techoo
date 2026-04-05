@@ -62,7 +62,9 @@ import {
   // Auth routes
   tokenRoute,
   sessionRoute,
-  sessionCodeRoute
+  sessionCodeRoute,
+  // Account routes
+  deleteAccountRoute,
 } from './routes'
 
 // Import handlers from local handlers directory
@@ -122,7 +124,9 @@ import {
   // Auth handlers
   createTokenHandler,
   createSessionHandler,
-  createSessionCodeHandler
+  createSessionCodeHandler,
+  // Account handlers
+  deleteAccountHandler,
 } from './handlers'
 
 // Import OAuth route registration (not a handler, so imported directly)
@@ -242,6 +246,9 @@ export function createApp(deps?: AppDeps) {
   app.openapi(updateNoteRoute, updateNoteHandler)
   app.openapi(deleteNoteRoute, deleteNoteHandler)
   app.openapi(convertNoteToTaskRoute, convertNoteToTaskHandler)
+
+  // Register account routes
+  app.openapi(deleteAccountRoute, deleteAccountHandler)
 
   // Register webhook routes
   app.openapi(googleCalendarWebhookRoute, googleCalendarWebhookHandler)

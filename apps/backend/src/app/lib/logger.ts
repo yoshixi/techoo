@@ -13,11 +13,31 @@ function getLogger(): Logger {
       level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
       timestamp: pino.stdTimeFunctions.isoTime,
       serializers: {
-        err: pino.stdSerializers.err,
+        err(err: unknown) {
+          if (err instanceof Error) {
+            return {
+              type: err.constructor.name,
+              message: err.message,
+              stack: err.stack,
+              ...(err.cause ? { cause: String(err.cause) } : {}),
+            }
+          }
+          return err
+        },
       },
       browser: {
-        write: (o) => {
-          console.log(JSON.stringify(o))
+        serialize: true,
+        write: (o: object) => {
+          const obj = o as Record<string, unknown>
+          // Pino browser mode emits numeric levels; convert to labels.
+          const LEVEL_LABELS: Record<number, string> = {
+            10: 'trace', 20: 'debug', 30: 'info',
+            40: 'warn', 50: 'error', 60: 'fatal',
+          }
+          if (typeof obj.level === 'number') {
+            obj.level = LEVEL_LABELS[obj.level] ?? String(obj.level)
+          }
+          console.log(JSON.stringify(obj))
         },
       },
     })

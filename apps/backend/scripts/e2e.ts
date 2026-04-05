@@ -365,6 +365,35 @@ async function testSignIn() {
   })
 }
 
+async function testCleanup() {
+  console.log('\n--- Cleanup ---')
+
+  // Sign in to get a fresh session + JWT for the cleanup call
+  const signInRes = await api('/auth/sign-in/email', {
+    method: 'POST',
+    body: { email: TEST_EMAIL, password: TEST_PASSWORD },
+  })
+  const sessionToken = signInRes.headers.get('set-auth-token')!
+  const jwt = await sessionToJwt(sessionToken)
+
+  await test('DELETE /account → delete test user and all data', async () => {
+    const res = await api('/account', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${jwt}` },
+    })
+    assertStatus(res, 200)
+    assert(res.data.message === 'Account deleted', `message: ${res.data.message}`)
+  })
+
+  await test('POST /auth/sign-in/email → reject after account deletion', async () => {
+    const res = await api('/auth/sign-in/email', {
+      method: 'POST',
+      body: { email: TEST_EMAIL, password: TEST_PASSWORD },
+    })
+    assertNotStatus(res, 200)
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -388,6 +417,7 @@ async function main() {
   await testCrudNotes(jwt)
   await testSignOut(sessionToken)
   await testSignIn()
+  await testCleanup()
 
   console.log(`\n${'─'.repeat(40)}`)
   console.log(`${passCount} passed, ${failCount} failed`)
