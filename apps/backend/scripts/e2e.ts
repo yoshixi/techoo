@@ -196,115 +196,58 @@ async function testTokenExchange(sessionToken: string) {
   return jwt
 }
 
-async function testCrudTasks(jwt: string) {
-  console.log('\n--- CRUD Tasks ---')
+async function testCrudTodos(jwt: string) {
+  console.log('\n--- CRUD Todos ---')
 
   const auth = { Authorization: `Bearer ${jwt}` }
-  let taskId: number
+  let todoId: string
 
-  await test('GET /tasks → empty list', async () => {
-    const res = await api('/tasks', { headers: auth })
+  await test('GET /v1/todos?done=false → empty list', async () => {
+    const res = await api('/v1/todos?done=false', { headers: auth })
     assertStatus(res, 200)
-    assert(res.data.total === 0, `expected 0 tasks, got ${res.data.total}`)
+    assert(Array.isArray(res.data.data), 'should return data array')
+    assert(res.data.data.length === 0, `expected 0 todos, got ${res.data.data.length}`)
   })
 
-  await test('POST /tasks → create', async () => {
-    const res = await api('/tasks', {
+  await test('POST /v1/todos → create', async () => {
+    const res = await api('/v1/todos', {
       method: 'POST',
       headers: auth,
-      body: { title: 'E2E Task', description: 'Created by e2e script' },
+      body: { title: 'E2E Todo' },
     })
     assertStatus(res, 201)
-    assert(res.data.task.title === 'E2E Task', `title: ${res.data.task.title}`)
-    taskId = res.data.task.id
+    assert(res.data.data.title === 'E2E Todo', `title: ${res.data.data.title}`)
+    assert(typeof res.data.data.id === 'string', 'should return string id')
+    todoId = res.data.data.id
   })
 
-  await test('GET /tasks/:id → read', async () => {
-    const res = await api(`/tasks/${taskId}`, { headers: auth })
+  await test('GET /v1/todos?done=false → list includes created todo', async () => {
+    const res = await api('/v1/todos?done=false', { headers: auth })
     assertStatus(res, 200)
-    assert(res.data.task.title === 'E2E Task', `title: ${res.data.task.title}`)
+    const found = res.data.data.find((t: { id: string }) => t.id === todoId)
+    assert(found !== undefined, 'list should include created todo')
+    assert(found.title === 'E2E Todo', `title: ${found.title}`)
   })
 
-  await test('PUT /tasks/:id → update', async () => {
-    const res = await api(`/tasks/${taskId}`, {
-      method: 'PUT',
+  await test('PATCH /v1/todos/:id → update', async () => {
+    const res = await api(`/v1/todos/${todoId}`, {
+      method: 'PATCH',
       headers: auth,
-      body: { title: 'Updated E2E Task' },
+      body: { title: 'Updated E2E Todo' },
     })
     assertStatus(res, 200)
-    assert(res.data.task.title === 'Updated E2E Task', `title: ${res.data.task.title}`)
+    assert(res.data.data.title === 'Updated E2E Todo', `title: ${res.data.data.title}`)
   })
 
-  await test('DELETE /tasks/:id → delete', async () => {
-    const res = await api(`/tasks/${taskId}`, { method: 'DELETE', headers: auth })
+  await test('DELETE /v1/todos/:id → delete', async () => {
+    const res = await api(`/v1/todos/${todoId}`, { method: 'DELETE', headers: auth })
     assertStatus(res, 200)
   })
 
-  await test('GET /tasks/:id → 404 after delete', async () => {
-    const res = await api(`/tasks/${taskId}`, { headers: auth })
-    assertStatus(res, 404)
-  })
-}
-
-async function testCrudNotes(jwt: string) {
-  console.log('\n--- CRUD Notes ---')
-
-  const auth = { Authorization: `Bearer ${jwt}` }
-  let noteId: number
-
-  await test('GET /notes → empty list', async () => {
-    const res = await api('/notes', { headers: auth })
+  await test('GET /v1/todos?done=false → empty after delete', async () => {
+    const res = await api('/v1/todos?done=false', { headers: auth })
     assertStatus(res, 200)
-    assert(res.data.total === 0, `expected 0 notes, got ${res.data.total}`)
-  })
-
-  await test('POST /notes → create', async () => {
-    const res = await api('/notes', {
-      method: 'POST',
-      headers: auth,
-      body: { title: 'E2E Note', content: 'Created by e2e script' },
-    })
-    assertStatus(res, 201)
-    assert(res.data.note.title === 'E2E Note', `title: ${res.data.note.title}`)
-    noteId = res.data.note.id
-  })
-
-  await test('GET /notes/:id → read', async () => {
-    const res = await api(`/notes/${noteId}`, { headers: auth })
-    assertStatus(res, 200)
-    assert(res.data.note.title === 'E2E Note', `title: ${res.data.note.title}`)
-  })
-
-  await test('PUT /notes/:id → update', async () => {
-    const res = await api(`/notes/${noteId}`, {
-      method: 'PUT',
-      headers: auth,
-      body: { title: 'Updated E2E Note' },
-    })
-    assertStatus(res, 200)
-    assert(res.data.note.title === 'Updated E2E Note', `title: ${res.data.note.title}`)
-  })
-
-  await test('POST /notes/:id/task_conversions → convert to task', async () => {
-    const res = await api(`/notes/${noteId}/task_conversions`, {
-      method: 'POST',
-      headers: auth,
-    })
-    assertStatus(res, 201)
-    assert(res.data.task !== undefined, 'should return task')
-    assert(res.data.task.title === 'Updated E2E Note', `task title: ${res.data.task.title}`)
-    await api(`/tasks/${res.data.task.id}`, { method: 'DELETE', headers: auth })
-  })
-
-  await test('DELETE /notes/:id → delete', async () => {
-    const createRes = await api('/notes', {
-      method: 'POST',
-      headers: auth,
-      body: { title: 'To delete' },
-    })
-    assertStatus(createRes, 201)
-    const res = await api(`/notes/${createRes.data.note.id}`, { method: 'DELETE', headers: auth })
-    assertStatus(res, 200)
+    assert(res.data.data.length === 0, `expected 0 todos after delete, got ${res.data.data.length}`)
   })
 }
 
@@ -358,10 +301,10 @@ async function testSignIn() {
     assertNotStatus(res, 200)
   })
 
-  await test('GET /tasks → access protected route after sign-in', async () => {
-    const res = await api('/tasks', { headers: { Authorization: `Bearer ${jwt}` } })
+  await test('GET /v1/todos?done=false → access protected route after sign-in', async () => {
+    const res = await api('/v1/todos?done=false', { headers: { Authorization: `Bearer ${jwt}` } })
     assertStatus(res, 200)
-    assert(Array.isArray(res.data.tasks), 'should return tasks array')
+    assert(Array.isArray(res.data.data), 'should return data array')
   })
 }
 
@@ -413,8 +356,7 @@ async function main() {
 
   const sessionToken = await testSignUp()
   const jwt = await testTokenExchange(sessionToken)
-  await testCrudTasks(jwt)
-  await testCrudNotes(jwt)
+  await testCrudTodos(jwt)
   await testSignOut(sessionToken)
   await testSignIn()
   await testCleanup()
