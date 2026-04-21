@@ -103,6 +103,7 @@ export const createAuth = () => {
         trustedProviders: ["google"],
         updateUserInfoOnLink: true,
       },
+      encryptOAuthTokens: true,
     },
     socialProviders: {
       ...(googleClientId && googleClientSecret

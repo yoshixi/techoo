@@ -1,7 +1,7 @@
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { cors } from 'hono/cors'
 import { createAuth } from '../../core/auth'
-import { validateEnv } from '../../core/env'
+import { getEnv, validateEnv } from '../../core/env'
 import { rootLogger } from '../../lib/logger'
 import type { AppBindings, Auth } from './types'
 
@@ -118,6 +118,27 @@ export interface AppDeps {
   skipEnvValidation?: boolean
 }
 
+function getAllowedCorsOrigins(): Set<string> {
+  const env = getEnv()
+  const allowed = new Set<string>()
+
+  const addOrigin = (value: string | undefined) => {
+    if (!value) return
+    try {
+      allowed.add(new URL(value).origin)
+    } catch {
+      rootLogger.warn({ value }, 'ignoring invalid CORS origin')
+    }
+  }
+
+  addOrigin(env.BETTER_AUTH_URL)
+  for (const origin of (env.TRUSTED_ORIGINS || '').split(',')) {
+    addOrigin(origin.trim())
+  }
+
+  return allowed
+}
+
 export function createApp(deps?: AppDeps) {
   if (!deps?.skipEnvValidation) {
     validateEnv()
@@ -132,8 +153,24 @@ export function createApp(deps?: AppDeps) {
   // Hono's CORS middleware sets headers on c.res after await next(),
   // so it correctly applies to all responses including raw Response
   // objects returned by auth.handler().
+  const allowedCorsOrigins = getAllowedCorsOrigins()
   app.use('/*', cors({
-    origin: (origin) => origin,
+    origin: (origin) => {
+      if (!origin) return ''
+
+      try {
+        const requestOrigin = new URL(origin).origin
+        if (allowedCorsOrigins.has(requestOrigin)) {
+          return requestOrigin
+        }
+
+        rootLogger.warn({ origin: requestOrigin }, 'blocked CORS origin')
+        return ''
+      } catch {
+        rootLogger.warn({ origin }, 'blocked malformed CORS origin')
+        return ''
+      }
+    },
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
     exposeHeaders: ['set-auth-token'],
