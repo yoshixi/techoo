@@ -3,6 +3,7 @@ import { accountsTable, type SelectAccount } from '../db/schema/schema'
 import { type DB } from './common.db'
 import { formatTimestamp, getCurrentTimestamp } from './common.core'
 import type { ProviderType, OAuthToken, OAuthAccount } from './oauth.core'
+import { protectSensitiveValue, readPossiblyProtectedValue } from './data-protection'
 
 // Internal types for token data (compatible with accounts table)
 export interface OAuthTokenData {
@@ -16,6 +17,21 @@ export interface UpdateOAuthToken {
   accessToken?: string
   refreshToken?: string | null
   expiresAt?: Date
+}
+
+async function decryptAccountTokens(account: SelectAccount): Promise<SelectAccount> {
+  return {
+    ...account,
+    accessToken: account.accessToken
+      ? await readPossiblyProtectedValue(account.accessToken)
+      : account.accessToken,
+    refreshToken: account.refreshToken
+      ? await readPossiblyProtectedValue(account.refreshToken)
+      : account.refreshToken,
+    idToken: account.idToken
+      ? await readPossiblyProtectedValue(account.idToken)
+      : account.idToken
+  }
 }
 
 // Convert account record to API token format
@@ -63,7 +79,7 @@ export async function getOAuthTokenForAccount(
         eq(accountsTable.accountId, accountId)
       )
     )
-  return account || null
+  return account ? decryptAccountTokens(account) : null
 }
 
 // List linked OAuth accounts for a provider
@@ -138,8 +154,14 @@ export async function updateOAuthToken(
     updatedAt: now
   }
 
-  if (data.accessToken !== undefined) updateData.accessToken = data.accessToken
-  if (data.refreshToken !== undefined) updateData.refreshToken = data.refreshToken
+  if (data.accessToken !== undefined) {
+    updateData.accessToken = await protectSensitiveValue(data.accessToken)
+  }
+  if (data.refreshToken !== undefined) {
+    updateData.refreshToken = data.refreshToken
+      ? await protectSensitiveValue(data.refreshToken)
+      : data.refreshToken
+  }
   if (data.expiresAt !== undefined) updateData.accessTokenExpiresAt = data.expiresAt
 
   const [updatedAccount] = await db
@@ -148,7 +170,7 @@ export async function updateOAuthToken(
     .where(eq(accountsTable.id, existingAccount.id))
     .returning()
 
-  return updatedAccount || null
+  return updatedAccount ? decryptAccountTokens(updatedAccount) : null
 }
 
 // Note: We don't provide upsertOAuthToken or deleteOAuthToken because

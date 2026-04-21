@@ -6,6 +6,7 @@
 import { eq } from 'drizzle-orm'
 import { getMainDb } from './internal/main-db'
 import { oauthExchangeCodesTable } from '../db/schema/schema'
+import { protectSensitiveValue, readPossiblyProtectedValue } from './data-protection'
 
 const EXCHANGE_CODE_TTL_MS = 5 * 60 * 1000
 
@@ -23,10 +24,11 @@ export async function createExchangeCode(
   const code = crypto.randomUUID()
   const codeHash = await hashExchangeCode(code)
   const expiresAt = new Date(Date.now() + EXCHANGE_CODE_TTL_MS)
+  const protectedSessionToken = await protectSensitiveValue(sessionToken)
   const db = getMainDb()
   await db.insert(oauthExchangeCodesTable).values({
     codeHash,
-    sessionToken,
+    sessionToken: protectedSessionToken,
     expiresAt,
   })
   return code
@@ -52,5 +54,5 @@ export async function consumeExchangeCode(
   await db
     .delete(oauthExchangeCodesTable)
     .where(eq(oauthExchangeCodesTable.id, row.id))
-  return row.sessionToken
+  return readPossiblyProtectedValue(row.sessionToken)
 }
