@@ -6,6 +6,7 @@ import { getMainDb } from "./internal/main-db";
 import { googleCalendarProvider } from "./calendar-providers/google.service";
 import { getEnv } from "./env";
 import { rootLogger } from "../lib/logger";
+import { readPossiblyProtectedValue } from "./data-protection";
 
 const authLogger = rootLogger.child({ module: 'auth' });
 import {
@@ -29,9 +30,14 @@ const updateGoogleAccountProfile = async (account: {
   if (account.userId === undefined || account.userId === null) return;
   if (account.id === undefined || account.id === null) return;
 
+  const accessToken = await readPossiblyProtectedValue(account.accessToken);
+  const refreshToken = account.refreshToken
+    ? await readPossiblyProtectedValue(account.refreshToken)
+    : "";
+
   const info = await googleCalendarProvider.getUserInfo?.({
-    accessToken: account.accessToken,
-    refreshToken: account.refreshToken || "",
+    accessToken,
+    refreshToken,
     expiresAt: account.accessTokenExpiresAt || new Date(0)
   });
 
@@ -155,7 +161,7 @@ export const createAuth = () => {
             try {
               await updateGoogleAccountProfile(account);
             } catch (error) {
-              authLogger.warn({ err: error }, 'failed to fetch google account email');
+              authLogger.error({ err: error }, 'failed to fetch google account email');
             }
           }
         },
@@ -172,7 +178,7 @@ export const createAuth = () => {
             try {
               await updateGoogleAccountProfile(account);
             } catch (error) {
-              authLogger.warn({ err: error }, 'failed to refresh google account profile');
+              authLogger.error({ err: error }, 'failed to refresh google account profile');
             }
           }
         }
