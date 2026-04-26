@@ -49,11 +49,13 @@ export function useTodos(options?: {
       return { done: 'false' as const, limit: TODO_LIST_LIMIT }
     }
     if (options?.from != null && options?.to != null) {
+      const fromIso = new Date(options.from * 1000).toISOString()
+      const toIso = new Date(options.to * 1000).toISOString()
       const includeCompleted = options.includeCompletedInRange !== false
       if (includeCompleted) {
-        return { from: options.from, to: options.to, limit: TODO_LIST_LIMIT }
+        return { from: fromIso, to: toIso, limit: TODO_LIST_LIMIT }
       }
-      return { from: options.from, to: options.to, done: 'false' as const, limit: TODO_LIST_LIMIT }
+      return { from: fromIso, to: toIso, done: 'false' as const, limit: TODO_LIST_LIMIT }
     }
     return { done: 'false' as const, limit: TODO_LIST_LIMIT }
   }, [options?.from, options?.to, options?.showAll, options?.fetchAll, options?.includeCompletedInRange])
@@ -88,17 +90,16 @@ export function useTodos(options?: {
 
   const createTodo = useCallback(
     async (title: string, startsAt?: number, endsAt?: number) => {
-      const now = Math.floor(Date.now() / 1000)
       const optimisticTodo: Todo = {
         id: -Math.abs(Date.now()),
         title,
         description: null,
-        starts_at: startsAt ?? null,
-        ends_at: endsAt ?? null,
+        starts_at: startsAt != null ? new Date(startsAt * 1000).toISOString() : null,
+        ends_at: endsAt != null ? new Date(endsAt * 1000).toISOString() : null,
         is_all_day: 0,
         done: 0,
         done_at: null,
-        created_at: now
+        created_at: new Date().toISOString()
       }
 
       mutate(
@@ -112,8 +113,8 @@ export function useTodos(options?: {
       try {
         const res = await postApiV1Todos({
           title,
-          starts_at: startsAt,
-          ends_at: endsAt
+          starts_at: startsAt != null ? new Date(startsAt * 1000).toISOString() : undefined,
+          ends_at: endsAt != null ? new Date(endsAt * 1000).toISOString() : undefined
         })
         mutate((current) => stripTempTodos(current, res.data), { revalidate: false })
       } catch {
@@ -126,14 +127,13 @@ export function useTodos(options?: {
   const toggleDone = useCallback(
     async (id: number, currentDone: number) => {
       const newDone = currentDone === 1 ? 0 : 1
-      const now = Math.floor(Date.now() / 1000)
 
       mutate(
         (current) => {
           if (!current) return current
           return {
             data: current.data.map((t) =>
-              t.id === id ? { ...t, done: newDone, done_at: newDone === 1 ? now : null } : t
+              t.id === id ? { ...t, done: newDone, done_at: newDone === 1 ? new Date().toISOString() : null } : t
             )
           }
         },
@@ -162,18 +162,34 @@ export function useTodos(options?: {
         done?: number
       }
     ) => {
+      const isoUpdates = {
+        ...updates,
+        starts_at:
+          updates.starts_at !== undefined
+            ? updates.starts_at != null
+              ? new Date(updates.starts_at * 1000).toISOString()
+              : null
+            : undefined,
+        ends_at:
+          updates.ends_at !== undefined
+            ? updates.ends_at != null
+              ? new Date(updates.ends_at * 1000).toISOString()
+              : null
+            : undefined
+      }
+
       mutate(
         (current) => {
           if (!current) return current
           return {
-            data: current.data.map((t) => (t.id === id ? ({ ...t, ...updates } as Todo) : t))
+            data: current.data.map((t) => (t.id === id ? ({ ...t, ...isoUpdates } as Todo) : t))
           }
         },
         { revalidate: false }
       )
 
       try {
-        const res = await patchApiV1TodosId(id, updates)
+        const res = await patchApiV1TodosId(id, isoUpdates)
         mergeTodoFromServer(id, res.data)
       } catch {
         await mutate()

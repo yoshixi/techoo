@@ -98,17 +98,17 @@ components:
           nullable: true
           description: Optional longer notes for this todo
         starts_at:
-          type: integer
+          type: string
           nullable: true
-          minimum: 0
+          format: date-time
           description: Start time (nullable for unscheduled todos)
-          example: 1712300400
+          example: 2024-04-05T14:00:00.000Z
         ends_at:
-          type: integer
+          type: string
           nullable: true
-          minimum: 0
+          format: date-time
           description: End time (nullable)
-          example: 1712300400
+          example: 2024-04-05T14:00:00.000Z
         is_all_day:
           type: integer
           minimum: 0
@@ -120,16 +120,16 @@ components:
           maximum: 1
           description: 1 = completed
         done_at:
-          type: integer
+          type: string
           nullable: true
-          minimum: 0
-          description: UTC Unix timestamp (seconds)
-          example: 1712300400
+          format: date-time
+          description: RFC3339 timestamp
+          example: 2024-04-05T14:00:00.000Z
         created_at:
-          type: integer
-          minimum: 0
-          description: UTC Unix timestamp (seconds)
-          example: 1712300400
+          type: string
+          format: date-time
+          description: RFC3339 timestamp
+          example: 2024-04-05T14:00:00.000Z
       required:
         - id
         - title
@@ -166,15 +166,11 @@ components:
           type: string
           nullable: true
         starts_at:
-          type: integer
-          minimum: 0
-          description: UTC Unix timestamp (seconds)
-          example: 1712300400
+          type: string
+          format: date-time
         ends_at:
-          type: integer
-          minimum: 0
-          description: UTC Unix timestamp (seconds)
-          example: 1712300400
+          type: string
+          format: date-time
         is_all_day:
           type: integer
           minimum: 0
@@ -192,17 +188,13 @@ components:
           type: string
           nullable: true
         starts_at:
-          type: integer
+          type: string
           nullable: true
-          minimum: 0
-          description: UTC Unix timestamp (seconds)
-          example: 1712300400
+          format: date-time
         ends_at:
-          type: integer
+          type: string
           nullable: true
-          minimum: 0
-          description: UTC Unix timestamp (seconds)
-          example: 1712300400
+          format: date-time
         is_all_day:
           type: integer
           minimum: 0
@@ -223,8 +215,10 @@ components:
         body:
           type: string
         posted_at:
-          type: integer
-          minimum: 0
+          type: string
+          format: date-time
+          description: RFC3339 timestamp
+          example: 2024-04-05T14:00:00.000Z
         events:
           type: array
           items:
@@ -284,8 +278,8 @@ components:
           type: string
           minLength: 1
         posted_at:
-          type: integer
-          minimum: 0
+          type: string
+          format: date-time
           description: Defaults to now if omitted
         event_ids:
           type: array
@@ -343,11 +337,15 @@ components:
           maximum: 1
           description: 1 = pinned to top
         created_at:
-          type: integer
-          minimum: 0
+          type: string
+          format: date-time
+          description: RFC3339 timestamp
+          example: 2024-04-05T14:00:00.000Z
         updated_at:
-          type: integer
-          minimum: 0
+          type: string
+          format: date-time
+          description: RFC3339 timestamp
+          example: 2024-04-05T14:00:00.000Z
       required:
         - id
         - title
@@ -927,19 +925,19 @@ paths:
       description: Retrieve todos with optional date range and completion filters
       parameters:
         - schema:
-            type: integer
-            nullable: true
-            description: Range start (UTC Unix timestamp)
+            type: string
+            format: date-time
+            description: Range start (RFC3339)
           required: false
-          description: Range start (UTC Unix timestamp)
+          description: Range start (RFC3339)
           name: from
           in: query
         - schema:
-            type: integer
-            nullable: true
-            description: Range end (UTC Unix timestamp)
+            type: string
+            format: date-time
+            description: Range end (RFC3339)
           required: false
-          description: Range end (UTC Unix timestamp)
+          description: Range end (RFC3339)
           name: to
           in: query
         - schema:
@@ -1077,19 +1075,19 @@ paths:
         window, or `limit`+`offset` (newest first, paginated) for all posts.
       parameters:
         - schema:
-            type: integer
-            nullable: true
-            description: Range start (UTC Unix seconds). Use with `to` for a time window.
+            type: string
+            format: date-time
+            description: Range start (RFC3339). Use with `to` for a time window.
           required: false
-          description: Range start (UTC Unix seconds). Use with `to` for a time window.
+          description: Range start (RFC3339). Use with `to` for a time window.
           name: from
           in: query
         - schema:
-            type: integer
-            nullable: true
-            description: Range end (UTC Unix seconds). Use with `from` for a time window.
+            type: string
+            format: date-time
+            description: Range end (RFC3339). Use with `from` for a time window.
           required: false
-          description: Range end (UTC Unix seconds). Use with `from` for a time window.
+          description: Range end (RFC3339). Use with `from` for a time window.
           name: to
           in: query
         - schema:
@@ -1177,6 +1175,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PostResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Not found
           content:

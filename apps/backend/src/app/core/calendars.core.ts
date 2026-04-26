@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi'
-import { IdSchema } from './common.core'
+import { IdSchema, Rfc3339Schema } from './common.core'
 import { ProviderTypeEnum } from './oauth.core'
 
 // Calendar model (API representation)
@@ -34,15 +34,15 @@ export const CalendarModel = z.object({
     description: 'Whether the calendar is enabled for sync',
     example: true
   }),
-  lastSyncedAt: z.string().nullable().openapi({
+  lastSyncedAt: Rfc3339Schema.nullable().openapi({
     description: 'Timestamp of last sync',
     example: '2024-01-01T10:00:00.000Z'
   }),
-  createdAt: z.string().openapi({
+  createdAt: Rfc3339Schema.openapi({
     description: 'Timestamp when the calendar was added',
     example: '2024-01-01T10:00:00.000Z'
   }),
-  updatedAt: z.string().openapi({
+  updatedAt: Rfc3339Schema.openapi({
     description: 'Timestamp when the calendar was last updated',
     example: '2024-01-01T15:30:00.000Z'
   })

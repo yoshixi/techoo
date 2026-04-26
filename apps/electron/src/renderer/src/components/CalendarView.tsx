@@ -20,6 +20,7 @@ import { Input } from './ui/input'
 import { Dialog, DialogContent } from './ui/dialog'
 import { cn } from '../lib/utils'
 import { useTodos } from '../hooks/useTodos'
+import type { Todo as ApiTodo } from '../gen/api/schemas'
 import {
   MINUTES_PER_DAY,
   DAY_MS,
@@ -1015,8 +1016,23 @@ export function CalendarViewInner({
 // CalendarView — self-contained wrapper with data fetching + create dialog
 // ============================================================================
 
+/**
+ * Converts an API Todo (string RFC3339 timestamps) to the internal CalendarView
+ * Todo shape (Unix number timestamps).
+ */
+export function apiTodoToCalendar(t: ApiTodo): Todo {
+  return {
+    ...t,
+    starts_at: t.starts_at != null ? new Date(t.starts_at).getTime() / 1000 : null,
+    ends_at: t.ends_at != null ? new Date(t.ends_at).getTime() / 1000 : null,
+    done_at: t.done_at != null ? new Date(t.done_at).getTime() / 1000 : null,
+    created_at: new Date(t.created_at).getTime() / 1000
+  }
+}
+
 export function CalendarView(): React.JSX.Element {
-  const { todos, createTodo, updateTodo, deleteTodo } = useTodos({ showAll: true })
+  const { todos: apiTodos, createTodo, updateTodo, deleteTodo } = useTodos({ showAll: true })
+  const todos = apiTodos.map(apiTodoToCalendar)
   const [visibleDate, setVisibleDate] = useState<Date>(() => startOfDay(new Date()))
 
   // Create dialog state

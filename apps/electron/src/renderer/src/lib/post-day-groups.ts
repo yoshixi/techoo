@@ -10,8 +10,8 @@ function startOfLocalDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate())
 }
 
-function localDayKeyFromUnix(tsSec: number): string {
-  const d = new Date(tsSec * 1000)
+function localDayKey(ts: string): string {
+  const d = new Date(ts)
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
@@ -21,8 +21,8 @@ function localDayKeyFromUnix(tsSec: number): string {
 /**
  * Heading for a calendar day in the user's local timezone (posts feed).
  */
-export function formatPostDayHeading(tsSec: number, nowMs = Date.now()): string {
-  const postDay = startOfLocalDay(new Date(tsSec * 1000))
+export function formatPostDayHeading(ts: string, nowMs = Date.now()): string {
+  const postDay = startOfLocalDay(new Date(ts))
   const today = startOfLocalDay(new Date(nowMs))
   const diffDays = Math.round((today.getTime() - postDay.getTime()) / 86400000)
   if (diffDays === 0) return 'Today'
@@ -41,7 +41,7 @@ export function formatPostDayHeading(tsSec: number, nowMs = Date.now()): string 
 export function groupPostsByLocalDay(posts: Post[]): PostDayGroup[] {
   const groups: PostDayGroup[] = []
   for (const post of posts) {
-    const dayKey = localDayKeyFromUnix(post.posted_at)
+    const dayKey = localDayKey(post.posted_at)
     const last = groups[groups.length - 1]
     if (last && last.dayKey === dayKey) {
       last.posts.push(post)

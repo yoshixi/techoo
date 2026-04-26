@@ -18,23 +18,23 @@ const DEFAULT_BLOCK_SEC = 30 * 60
 /** Primary list scope — avoids mixing “today” with custom dates or “all open” with range. */
 type ListScope = 'today' | 'range' | 'all'
 
-function formatTime(unixSeconds: number): string {
-  return new Date(unixSeconds * 1000).toLocaleTimeString(undefined, {
+function formatTime(ts: string): string {
+  return new Date(ts).toLocaleTimeString(undefined, {
     hour: '2-digit',
     minute: '2-digit'
   })
 }
 
-function formatDate(unixSeconds: number): string {
-  return new Date(unixSeconds * 1000).toLocaleDateString('en-US', {
+function formatDate(ts: string): string {
+  return new Date(ts).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric'
   })
 }
 
-function toDateInputValue(ts: number): string {
-  const d = new Date(ts * 1000)
+function toDateInputValue(ts: string): string {
+  const d = new Date(ts)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
@@ -43,12 +43,17 @@ function startOfDayUnixFromDateInput(dateStr: string): number {
   return Math.floor(d.getTime() / 1000)
 }
 
+function tsToSec(ts: string | null): number {
+  return ts != null ? new Date(ts).getTime() / 1000 : 0
+}
+
 function isOverdue(todo: Todo, nowSec: number): boolean {
   if (todo.done === 1) return false
   if (todo.is_all_day === 1) return false
   if (todo.starts_at == null) return false
-  const end = todo.ends_at ?? todo.starts_at + DEFAULT_BLOCK_SEC
-  return end < nowSec
+  const startSec = tsToSec(todo.starts_at)
+  const endSec = todo.ends_at != null ? tsToSec(todo.ends_at) : startSec + DEFAULT_BLOCK_SEC
+  return endSec < nowSec
 }
 
 function useNowSec(intervalMs = 30_000): number {
@@ -352,8 +357,8 @@ function TodoItem({
               className="text-[11px] px-2 py-0.5 rounded gap-1 pointer-events-none"
             >
               <Clock className="w-3 h-3" />
-              {formatTime(todo.starts_at)}
-              {todo.ends_at != null && ` – ${formatTime(todo.ends_at)}`}
+              {formatTime(todo.starts_at!)}
+              {todo.ends_at != null && ` – ${formatTime(todo.ends_at!)}`}
             </Badge>
           ) : (
             <Badge variant="outline" className="text-[11px] px-2 py-0.5 rounded gap-1 text-muted-foreground">
@@ -425,12 +430,12 @@ function TodoDetailDialog({
   )
   const [startTime, setStartTime] = useState(() =>
     todo.starts_at != null
-      ? `${String(new Date(todo.starts_at * 1000).getHours()).padStart(2, '0')}:${String(new Date(todo.starts_at * 1000).getMinutes()).padStart(2, '0')}`
+      ? `${String(new Date(todo.starts_at).getHours()).padStart(2, '0')}:${String(new Date(todo.starts_at).getMinutes()).padStart(2, '0')}`
       : ''
   )
   const [endTime, setEndTime] = useState(() =>
     todo.ends_at != null
-      ? `${String(new Date(todo.ends_at * 1000).getHours()).padStart(2, '0')}:${String(new Date(todo.ends_at * 1000).getMinutes()).padStart(2, '0')}`
+      ? `${String(new Date(todo.ends_at).getHours()).padStart(2, '0')}:${String(new Date(todo.ends_at).getMinutes()).padStart(2, '0')}`
       : ''
   )
   const [allDay, setAllDay] = useState(todo.is_all_day === 1)
@@ -446,12 +451,12 @@ function TodoDetailDialog({
     )
     setStartTime(
       todo.starts_at != null
-        ? `${String(new Date(todo.starts_at * 1000).getHours()).padStart(2, '0')}:${String(new Date(todo.starts_at * 1000).getMinutes()).padStart(2, '0')}`
+        ? `${String(new Date(todo.starts_at).getHours()).padStart(2, '0')}:${String(new Date(todo.starts_at).getMinutes()).padStart(2, '0')}`
         : ''
     )
     setEndTime(
       todo.ends_at != null
-        ? `${String(new Date(todo.ends_at * 1000).getHours()).padStart(2, '0')}:${String(new Date(todo.ends_at * 1000).getMinutes()).padStart(2, '0')}`
+        ? `${String(new Date(todo.ends_at).getHours()).padStart(2, '0')}:${String(new Date(todo.ends_at).getMinutes()).padStart(2, '0')}`
         : ''
     )
     setAllDay(todo.is_all_day === 1)
@@ -460,7 +465,7 @@ function TodoDetailDialog({
 
   const relatedPosts = useMemo(() => {
     const linked = posts.filter((p) => p.todos.some((t) => t.id === todo.id))
-    return [...linked].sort((a, b) => a.posted_at - b.posted_at)
+    return [...linked].sort((a, b) => new Date(a.posted_at).getTime() - new Date(b.posted_at).getTime())
   }, [posts, todo.id])
 
   const buildSchedulePatch = useCallback(() => {
@@ -727,10 +732,10 @@ function sortTodos(todos: Todo[], pinIncompleteFirst: boolean): Todo[] {
   return [...todos].sort((a, b) => {
     if (pinIncompleteFirst && a.done !== b.done) return a.done - b.done
     if (a.starts_at != null && b.starts_at != null) {
-      if (a.starts_at !== b.starts_at) return a.starts_at - b.starts_at
+      if (a.starts_at !== b.starts_at) return tsToSec(a.starts_at) - tsToSec(b.starts_at)
     } else if (a.starts_at != null) return -1
     else if (b.starts_at != null) return 1
-    return a.created_at - b.created_at
+    return tsToSec(a.created_at) - tsToSec(b.created_at)
   })
 }
 

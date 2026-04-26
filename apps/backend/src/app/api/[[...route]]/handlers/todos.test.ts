@@ -86,7 +86,7 @@ describe('Todo Handlers', () => {
       },
     ])
 
-    const res = await request(new Request('http://localhost/v1/todos?done=false&from=200'))
+    const res = await request(new Request('http://localhost/v1/todos?done=false&from=1970-01-01T00:03:20.000Z'))
 
     expect(res.status).toBe(200)
     const data = await res.json()
@@ -118,7 +118,7 @@ describe('Todo Handlers', () => {
       },
     ])
 
-    const res = await request(new Request('http://localhost/v1/todos?done=false&to=300'))
+    const res = await request(new Request('http://localhost/v1/todos?done=false&to=1970-01-01T00:05:00.000Z'))
 
     expect(res.status).toBe(200)
     const data = await res.json()

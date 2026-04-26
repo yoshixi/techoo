@@ -1,15 +1,13 @@
 import { z } from '@hono/zod-openapi'
-import { IdSchema } from './common.core'
-
-const UnixTimestampSchema = z.number().int().min(0)
+import { IdSchema, Rfc3339Schema } from './common.core'
 
 export const NoteModel = z.object({
   id: IdSchema,
   title: z.string().openapi({ example: 'Quick idea about auth flow' }),
   body: z.string().nullable().openapi({ description: 'Full Markdown content' }),
   pinned: z.number().int().min(0).max(1).openapi({ description: '1 = pinned to top' }),
-  created_at: UnixTimestampSchema,
-  updated_at: UnixTimestampSchema,
+  created_at: Rfc3339Schema,
+  updated_at: Rfc3339Schema,
 }).openapi('Note')
 
 export const CreateNoteModel = z.object({

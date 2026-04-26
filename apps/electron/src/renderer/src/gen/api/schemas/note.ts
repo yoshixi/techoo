@@ -25,8 +25,8 @@ export interface Note {
    * @maximum 1
    */
   pinned: number
-  /** @minimum 0 */
-  created_at: number
-  /** @minimum 0 */
-  updated_at: number
+  /** RFC3339 timestamp */
+  created_at: string
+  /** RFC3339 timestamp */
+  updated_at: string
 }

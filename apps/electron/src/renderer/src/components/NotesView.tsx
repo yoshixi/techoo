@@ -18,7 +18,7 @@ function NoteListItem({
   isSelected: boolean
   onSelect: () => void
 }): React.JSX.Element {
-  const d = new Date(note.updated_at * 1000)
+  const d = new Date(note.updated_at)
   const dateStr = `${d.getMonth() + 1}/${d.getDate()}`
   const preview = note.body?.split('\n')[0] ?? ''
 
@@ -70,7 +70,7 @@ export function NotesView(): React.JSX.Element {
       : notes
     return [...filtered].sort((a, b) => {
       if (a.pinned !== b.pinned) return b.pinned - a.pinned
-      return b.updated_at - a.updated_at
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
     })
   }, [notes, search])
 

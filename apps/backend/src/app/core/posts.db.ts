@@ -1,6 +1,7 @@
 import { eq, and, sql, desc, inArray } from 'drizzle-orm'
 import { postsTable, postEventsTable, postTodosTable, calendarEventsTable, calendarsTable, todosTable, type SelectPost } from '../db/schema/schema'
 import { type DB } from './common.db'
+import { unixToIso } from './common.core'
 import type { Post, CreatePost, UpdatePost } from './posts.core'
 import { MAX_POSTS_PAGINATED_LIMIT } from './list-limits'
 import { type Result, Ok, Err } from './types'
@@ -42,7 +43,7 @@ async function convertDbPostToApi(db: DB, row: SelectPost): Promise<Post> {
   return {
     id: row.id,
     body: row.body,
-    posted_at: row.postedAt,
+    posted_at: unixToIso(row.postedAt),
     events,
     todos,
   }

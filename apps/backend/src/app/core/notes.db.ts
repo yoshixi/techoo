@@ -1,6 +1,7 @@
 import { eq, and, desc } from 'drizzle-orm'
 import { notesTable, type SelectNote } from '../db/schema/schema'
 import { type DB } from './common.db'
+import { unixToIso } from './common.core'
 import type { Note, CreateNote, UpdateNote } from './notes.core'
 
 function convertDbNoteToApi(row: SelectNote): Note {
@@ -9,8 +10,8 @@ function convertDbNoteToApi(row: SelectNote): Note {
     title: row.title,
     body: row.body ?? null,
     pinned: row.pinned,
-    created_at: row.createdAt,
-    updated_at: row.updatedAt,
+    created_at: unixToIso(row.createdAt),
+    updated_at: unixToIso(row.updatedAt),
   }
 }
 

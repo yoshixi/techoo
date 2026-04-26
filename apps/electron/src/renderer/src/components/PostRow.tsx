@@ -27,7 +27,7 @@ export function PostRow({
     if (!editing) setDraft(post.body)
   }, [post.body, post.id, editing])
 
-  const timeStr = new Date(post.posted_at * 1000).toLocaleTimeString(undefined, {
+  const timeStr = new Date(post.posted_at).toLocaleTimeString(undefined, {
     hour: '2-digit',
     minute: '2-digit'
   })

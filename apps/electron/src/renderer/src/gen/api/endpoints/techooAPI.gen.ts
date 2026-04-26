@@ -517,12 +517,12 @@ export const getPatchApiV1PostsIdMutationKey = (id: number) => [`/api/v1/posts/$
 export type PatchApiV1PostsIdMutationResult = NonNullable<
   Awaited<ReturnType<typeof patchApiV1PostsId>>
 >
-export type PatchApiV1PostsIdMutationError = ErrorResponse | ErrorResponse
+export type PatchApiV1PostsIdMutationError = ErrorResponse | ErrorResponse | ErrorResponse
 
 /**
  * @summary Update a post
  */
-export const usePatchApiV1PostsId = <TError = ErrorResponse | ErrorResponse>(
+export const usePatchApiV1PostsId = <TError = ErrorResponse | ErrorResponse | ErrorResponse>(
   id: number,
   options?: {
     swr?: SWRMutationConfiguration<

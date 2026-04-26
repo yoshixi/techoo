@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi'
-import { IdSchema } from './common.core'
+import { IdSchema, Rfc3339Schema } from './common.core'
 import { ProviderTypeEnum } from './oauth.core'
 
 // Calendar event model (API representation)
@@ -26,11 +26,11 @@ export const CalendarEventModel = z.object({
     description: 'Event description',
     example: 'Weekly team sync'
   }),
-  startAt: z.string().openapi({
+  startAt: Rfc3339Schema.openapi({
     description: 'Event start time',
     example: '2024-01-15T10:00:00.000Z'
   }),
-  endAt: z.string().openapi({
+  endAt: Rfc3339Schema.openapi({
     description: 'Event end time',
     example: '2024-01-15T11:00:00.000Z'
   }),
@@ -42,11 +42,11 @@ export const CalendarEventModel = z.object({
     description: 'Event location',
     example: 'Conference Room A'
   }),
-  createdAt: z.string().openapi({
+  createdAt: Rfc3339Schema.openapi({
     description: 'Timestamp when the event was imported',
     example: '2024-01-01T10:00:00.000Z'
   }),
-  updatedAt: z.string().openapi({
+  updatedAt: Rfc3339Schema.openapi({
     description: 'Timestamp when the event was last updated',
     example: '2024-01-01T15:30:00.000Z'
   })
@@ -73,11 +73,11 @@ export const CalendarEventQueryParamsModel = z.object({
   calendarId: IdSchema.optional().openapi({
     description: 'Filter events by calendar ID'
   }),
-  startDate: z.string().optional().openapi({
+  startDate: Rfc3339Schema.optional().openapi({
     description: 'Filter events starting from this date (inclusive)',
     example: '2024-01-01T00:00:00.000Z'
   }),
-  endDate: z.string().optional().openapi({
+  endDate: Rfc3339Schema.optional().openapi({
     description: 'Filter events ending before this date (inclusive)',
     example: '2024-01-31T23:59:59.000Z'
   }),

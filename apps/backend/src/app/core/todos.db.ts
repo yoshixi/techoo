@@ -1,6 +1,7 @@
 import { eq, and, sql, or, isNull } from 'drizzle-orm'
 import { todosTable, type SelectTodo } from '../db/schema/schema'
 import { type DB } from './common.db'
+import { unixToIso } from './common.core'
 import type { Todo, CreateTodo, UpdateTodo } from './todos.core'
 
 function convertDbTodoToApi(row: SelectTodo): Todo {
@@ -8,12 +9,12 @@ function convertDbTodoToApi(row: SelectTodo): Todo {
     id: row.id,
     title: row.title,
     description: row.description ?? null,
-    starts_at: row.startsAt ?? null,
-    ends_at: row.endsAt ?? null,
+    starts_at: row.startsAt != null ? unixToIso(row.startsAt) : null,
+    ends_at: row.endsAt != null ? unixToIso(row.endsAt) : null,
     is_all_day: row.isAllDay,
     done: row.done,
-    done_at: row.doneAt ?? null,
-    created_at: row.createdAt,
+    done_at: row.doneAt != null ? unixToIso(row.doneAt) : null,
+    created_at: unixToIso(row.createdAt),
   }
 }
 

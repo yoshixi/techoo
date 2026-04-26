@@ -11,18 +11,10 @@ export interface UpdateTodo {
   title?: string
   /** @nullable */
   description?: string | null
-  /**
-   * UTC Unix timestamp (seconds)
-   * @minimum 0
-   * @nullable
-   */
-  starts_at?: number | null
-  /**
-   * UTC Unix timestamp (seconds)
-   * @minimum 0
-   * @nullable
-   */
-  ends_at?: number | null
+  /** @nullable */
+  starts_at?: string | null
+  /** @nullable */
+  ends_at?: string | null
   /**
    * @minimum 0
    * @maximum 1

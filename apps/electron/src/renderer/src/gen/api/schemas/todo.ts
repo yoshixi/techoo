@@ -21,16 +21,14 @@ export interface Todo {
   description?: string | null
   /**
    * Start time (nullable for unscheduled todos)
-   * @minimum 0
    * @nullable
    */
-  starts_at: number | null
+  starts_at: string | null
   /**
    * End time (nullable)
-   * @minimum 0
    * @nullable
    */
-  ends_at: number | null
+  ends_at: string | null
   /**
    * 1 = all-day todo
    * @minimum 0
@@ -44,14 +42,10 @@ export interface Todo {
    */
   done: number
   /**
-   * UTC Unix timestamp (seconds)
-   * @minimum 0
+   * RFC3339 timestamp
    * @nullable
    */
-  done_at: number | null
-  /**
-   * UTC Unix timestamp (seconds)
-   * @minimum 0
-   */
-  created_at: number
+  done_at: string | null
+  /** RFC3339 timestamp */
+  created_at: string
 }

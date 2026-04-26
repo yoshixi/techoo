@@ -1,7 +1,5 @@
 import { z } from '@hono/zod-openapi'
-import { IdSchema } from './common.core'
-
-const UnixTimestampSchema = z.number().int().min(0)
+import { IdSchema, Rfc3339Schema, Rfc3339InputSchema } from './common.core'
 
 // Linked event/todo summaries included in post responses
 const LinkedEventModel = z.object({
@@ -17,14 +15,14 @@ const LinkedTodoModel = z.object({
 export const PostModel = z.object({
   id: IdSchema,
   body: z.string(),
-  posted_at: UnixTimestampSchema,
+  posted_at: Rfc3339Schema,
   events: z.array(LinkedEventModel),
   todos: z.array(LinkedTodoModel),
 }).openapi('Post')
 
 export const CreatePostModel = z.object({
   body: z.string().min(1),
-  posted_at: UnixTimestampSchema.optional().openapi({ description: 'Defaults to now if omitted' }),
+  posted_at: Rfc3339InputSchema.optional().openapi({ description: 'Defaults to now if omitted' }),
   event_ids: z.array(z.number().int()).optional().default([]),
   todo_ids: z.array(IdSchema).optional().default([]),
 }).openapi('CreatePost')
@@ -37,11 +35,11 @@ export const UpdatePostModel = z.object({
 
 export const PostQueryParamsModel = z
   .object({
-    from: z.coerce.number().int().optional().openapi({
-      description: 'Range start (UTC Unix seconds). Use with `to` for a time window.',
+    from: Rfc3339InputSchema.optional().openapi({
+      description: 'Range start (RFC3339). Use with `to` for a time window.',
     }),
-    to: z.coerce.number().int().optional().openapi({
-      description: 'Range end (UTC Unix seconds). Use with `from` for a time window.',
+    to: Rfc3339InputSchema.optional().openapi({
+      description: 'Range end (RFC3339). Use with `from` for a time window.',
     }),
     limit: z.coerce.number().int().min(1).max(10000).optional().openapi({
       description:

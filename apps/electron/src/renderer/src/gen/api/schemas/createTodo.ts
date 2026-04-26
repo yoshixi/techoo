@@ -11,16 +11,8 @@ export interface CreateTodo {
   title: string
   /** @nullable */
   description?: string | null
-  /**
-   * UTC Unix timestamp (seconds)
-   * @minimum 0
-   */
-  starts_at?: number
-  /**
-   * UTC Unix timestamp (seconds)
-   * @minimum 0
-   */
-  ends_at?: number
+  starts_at?: string
+  ends_at?: string
   /**
    * @minimum 0
    * @maximum 1

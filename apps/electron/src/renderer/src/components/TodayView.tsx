@@ -4,7 +4,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Dialog, DialogContent } from './ui/dialog'
 import { Badge } from './ui/badge'
-import { CalendarViewInner } from './CalendarView'
+import { CalendarViewInner, apiTodoToCalendar } from './CalendarView'
 import { PostComposer, type PostComposerContext } from './PostComposer'
 import { PostRow } from './PostRow'
 import { useTodos } from '../hooks/useTodos'
@@ -15,8 +15,10 @@ import type { Post, Todo } from '../gen/api/schemas'
 
 /* ------------------------------------------------------------------ */
 
-function formatTime(ts: number): string {
-  return new Date(ts * 1000).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+const tsToSec = (ts: string | null): number => (ts != null ? new Date(ts).getTime() / 1000 : 0)
+
+function formatTime(ts: string): string {
+  return new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
 }
 
 /** Matches calendar default block length when `ends_at` is missing */
@@ -28,11 +30,12 @@ function pickRunningTodo(todos: Todo[], nowSec: number): Todo | null {
   for (const t of open) {
     if (t.is_all_day === 1) continue
     if (t.starts_at == null) continue
-    const end = t.ends_at ?? t.starts_at + DEFAULT_TODO_DURATION_SEC
-    if (t.starts_at <= nowSec && nowSec < end) inTimedWindow.push(t)
+    const startSec = tsToSec(t.starts_at)
+    const endSec = t.ends_at != null ? tsToSec(t.ends_at) : startSec + DEFAULT_TODO_DURATION_SEC
+    if (startSec <= nowSec && nowSec < endSec) inTimedWindow.push(t)
   }
   if (inTimedWindow.length > 0) {
-    return inTimedWindow.reduce((a, b) => ((a.starts_at ?? 0) <= (b.starts_at ?? 0) ? a : b))
+    return inTimedWindow.reduce((a, b) => (tsToSec(a.starts_at) <= tsToSec(b.starts_at) ? a : b))
   }
   const allDay = open.filter((t) => t.is_all_day === 1)
   if (allDay.length > 0) return allDay[0]
@@ -41,9 +44,9 @@ function pickRunningTodo(todos: Todo[], nowSec: number): Todo | null {
 
 function pickNextTimedTodo(todos: Todo[], nowSec: number): Todo | null {
   const open = todos.filter((t) => t.done === 0 && t.is_all_day !== 1 && t.starts_at != null)
-  const future = open.filter((t) => (t.starts_at as number) > nowSec)
+  const future = open.filter((t) => tsToSec(t.starts_at) > nowSec)
   if (future.length === 0) return null
-  return future.reduce((a, b) => ((a.starts_at as number) <= (b.starts_at as number) ? a : b))
+  return future.reduce((a, b) => (tsToSec(a.starts_at) <= tsToSec(b.starts_at) ? a : b))
 }
 
 function usePeriodicNow(intervalMs = 30_000): number {
@@ -75,13 +78,15 @@ function LogFocusStatusLine({ todos, nowSec }: { todos: Todo[]; nowSec: number }
     if (running.is_all_day === 1) {
       main = `Now · ${running.title} · All day`
     } else if (running.starts_at != null) {
-      const end = running.ends_at ?? running.starts_at + DEFAULT_TODO_DURATION_SEC
-      main = `Now · ${running.title} · until ${formatTime(end)}`
+      const endTs =
+        running.ends_at ??
+        new Date(tsToSec(running.starts_at) * 1000 + DEFAULT_TODO_DURATION_SEC * 1000).toISOString()
+      main = `Now · ${running.title} · until ${formatTime(endTs)}`
     } else {
       main = `Now · ${running.title}`
     }
   } else if (next && next.starts_at != null) {
-    main = `Next · ${next.title} · ${formatTime(next.starts_at)}`
+    main = `Next · ${next.title} · ${formatTime(next.starts_at!)}`
   } else {
     main = 'No upcoming timed blocks'
   }
@@ -180,7 +185,7 @@ function WorkSidePanel({
   const nowSec = usePeriodicNow()
   const scheduled = useMemo(() => {
     const open = todos.filter((t) => t.done === 0 && t.starts_at != null)
-    return [...open].sort((a, b) => (a.starts_at as number) - (b.starts_at as number))
+    return [...open].sort((a, b) => tsToSec(a.starts_at) - tsToSec(b.starts_at))
   }, [todos])
 
   return (
@@ -199,7 +204,11 @@ function WorkSidePanel({
           <p className="text-xs text-muted-foreground">No timed todos today.</p>
         ) : (
           scheduled.map((todo) => {
-            const end = todo.ends_at ?? (todo.starts_at as number) + DEFAULT_TODO_DURATION_SEC
+            const endTs =
+              todo.ends_at ??
+              new Date(
+                tsToSec(todo.starts_at) * 1000 + DEFAULT_TODO_DURATION_SEC * 1000
+              ).toISOString()
             const isRunning = pickRunningTodo([todo], nowSec)?.id === todo.id
             return (
               <div
@@ -212,7 +221,7 @@ function WorkSidePanel({
               >
                 <div className="font-medium leading-tight truncate">{todo.title}</div>
                 <div className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">
-                  {formatTime(todo.starts_at as number)} – {formatTime(end)}
+                  {formatTime(todo.starts_at!)} – {formatTime(endTs)}
                 </div>
               </div>
             )
@@ -279,10 +288,10 @@ function TodayTodoPanel({
     const source = showCompleted ? todos : todos.filter((t) => t.done === 0)
     return [...source].sort((a, b) => {
       if (a.done !== b.done) return a.done - b.done
-      if (a.starts_at != null && b.starts_at != null) return a.starts_at - b.starts_at
+      if (a.starts_at != null && b.starts_at != null) return tsToSec(a.starts_at) - tsToSec(b.starts_at)
       if (a.starts_at != null) return -1
       if (b.starts_at != null) return 1
-      return a.created_at - b.created_at
+      return tsToSec(a.created_at) - tsToSec(b.created_at)
     })
   }, [todos, showCompleted])
 
@@ -360,7 +369,7 @@ function TodayTodoPanel({
                   </span>
                   {todo.starts_at != null && (
                     <Badge variant="outline" className="ml-1.5 text-[9px] px-1 py-0 h-3.5 rounded">
-                      {formatTime(todo.starts_at)}
+                      {formatTime(todo.starts_at!)}
                     </Badge>
                   )}
                 </div>
@@ -426,7 +435,7 @@ function TodayLogPanel({
   )
 
   const sorted = useMemo(
-    () => [...posts].sort((a, b) => b.posted_at - a.posted_at),
+    () => [...posts].sort((a, b) => new Date(b.posted_at).getTime() - new Date(a.posted_at).getTime()),
     [posts]
   )
 
@@ -524,6 +533,7 @@ export function TodayView(): React.JSX.Element {
   const prevRailTab = useRef(railTab)
   const prevFocusMode = useRef(focusMode)
 
+  const calendarTodos = useMemo(() => todos.map(apiTodoToCalendar), [todos])
   const todosForPostHash = useMemo(() => todos.filter((t) => t.done === 0), [todos])
 
   const applyRunningTodoContext = useCallback(() => {
@@ -622,7 +632,7 @@ export function TodayView(): React.JSX.Element {
           <>
             <main className="flex flex-col flex-1 min-h-0">
               <CalendarViewInner
-                todos={todos}
+                todos={calendarTodos}
                 viewMode="day"
                 hideHeader
                 onCreateRange={handleCreateRange}

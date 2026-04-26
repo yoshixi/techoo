@@ -28,8 +28,8 @@ export function usePosts(options?: { from: number; to: number; limit?: number })
   const params = useMemo((): GetApiV1PostsParams => {
     const base = options ?? todayBoundaries()
     return {
-      from: base.from,
-      to: base.to,
+      from: new Date(base.from * 1000).toISOString(),
+      to: new Date(base.to * 1000).toISOString(),
       ...(options?.limit !== undefined ? { limit: options.limit } : {})
     }
   }, [options])
@@ -40,11 +40,10 @@ export function usePosts(options?: { from: number; to: number; limit?: number })
 
   const createPost = useCallback(
     async (body: string, eventIds: number[], todoIds: number[]) => {
-      const now = Math.floor(Date.now() / 1000)
       const optimistic: Post = {
         id: -Math.abs(Date.now()),
         body,
-        posted_at: now,
+        posted_at: new Date().toISOString(),
         events: [],
         todos: []
       }

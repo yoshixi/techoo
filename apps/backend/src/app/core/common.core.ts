@@ -10,6 +10,24 @@ export const IdSchema = z.coerce.number().int().positive().openapi({
   example: 1,
 })
 
+/** Convert a Unix timestamp (seconds) to an RFC3339 string. */
+export function unixToIso(unix: number): string {
+  return new Date(unix * 1000).toISOString()
+}
+
+function isoToUnix(s: string): number {
+  return Math.floor(new Date(s).getTime() / 1000)
+}
+
+/** RFC3339 datetime string — for API response fields backed by Unix storage. */
+export const Rfc3339Schema = z.iso.datetime().openapi({
+  description: 'RFC3339 timestamp',
+  example: '2024-04-05T14:00:00.000Z',
+})
+
+/** RFC3339 string that transforms to Unix seconds — for API input fields (body / query params). */
+export const Rfc3339InputSchema = z.iso.datetime().transform(isoToUnix)
+
 export function formatTimestamp(timestamp: Date): string {
   const date = timestamp
   if (Number.isNaN(date.getTime())) {

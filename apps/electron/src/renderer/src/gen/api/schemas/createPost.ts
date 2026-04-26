@@ -9,11 +9,8 @@
 export interface CreatePost {
   /** @minLength 1 */
   body: string
-  /**
-   * Defaults to now if omitted
-   * @minimum 0
-   */
-  posted_at?: number
+  /** Defaults to now if omitted */
+  posted_at?: string
   event_ids?: number[]
   todo_ids?: number[]
 }
