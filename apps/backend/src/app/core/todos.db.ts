@@ -51,10 +51,38 @@ export async function getTodosByRange(
 }
 
 export async function getIncompleteTodos(db: DB, userId: number, limitRows: number): Promise<Todo[]> {
+  return getIncompleteTodosWithBounds(db, userId, undefined, undefined, limitRows)
+}
+
+export async function getIncompleteTodosWithBounds(
+  db: DB,
+  userId: number,
+  from: number | undefined,
+  to: number | undefined,
+  limitRows: number
+): Promise<Todo[]> {
+  const conditions = [eq(todosTable.userId, userId), eq(todosTable.done, 0)]
+
+  if (from !== undefined && to !== undefined) {
+    conditions.push(
+      or(
+        isNull(todosTable.startsAt),
+        and(sql`${todosTable.startsAt} >= ${from}`, sql`${todosTable.startsAt} < ${to}`)
+      )!
+    )
+  } else {
+    if (from !== undefined) {
+      conditions.push(sql`${todosTable.startsAt} >= ${from}`)
+    }
+    if (to !== undefined) {
+      conditions.push(sql`${todosTable.startsAt} < ${to}`)
+    }
+  }
+
   const rows = await db
     .select()
     .from(todosTable)
-    .where(and(eq(todosTable.userId, userId), eq(todosTable.done, 0)))
+    .where(and(...conditions))
     .orderBy(sql`${todosTable.startsAt} IS NULL`, todosTable.startsAt, todosTable.createdAt)
     .limit(limitRows)
 
@@ -69,23 +97,7 @@ export async function getIncompleteTodosInRange(
   to: number,
   limitRows: number
 ): Promise<Todo[]> {
-  const rows = await db
-    .select()
-    .from(todosTable)
-    .where(
-      and(
-        eq(todosTable.userId, userId),
-        eq(todosTable.done, 0),
-        or(
-          isNull(todosTable.startsAt),
-          and(sql`${todosTable.startsAt} >= ${from}`, sql`${todosTable.startsAt} < ${to}`)
-        )
-      )
-    )
-    .orderBy(sql`${todosTable.startsAt} IS NULL`, todosTable.startsAt, todosTable.createdAt)
-    .limit(limitRows)
-
-  return rows.map(convertDbTodoToApi)
+  return getIncompleteTodosWithBounds(db, userId, from, to, limitRows)
 }
 
 export async function getTodoById(db: DB, userId: number, todoId: number): Promise<Todo | null> {

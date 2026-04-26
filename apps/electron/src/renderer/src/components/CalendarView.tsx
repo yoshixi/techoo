@@ -187,6 +187,8 @@ type CalendarViewProps = {
   onTodoMove?: (todo: Todo, range: { starts_at: number; ends_at: number }) => void
   /** Callback when user drags to create a new time range */
   onCreateRange?: (range: { starts_at: number; ends_at: number }) => void
+  /** Callback when the visible anchor day changes via navigation */
+  onAnchorDateChange?: (date: Date) => void
   /** Calendar events to display */
   calendarEvents?: CalendarEvent[]
   /** Hide the header bar (navigation, zoom, view mode buttons) */
@@ -212,6 +214,7 @@ export function CalendarViewInner({
   onTodoDelete,
   onTodoMove,
   onCreateRange,
+  onAnchorDateChange,
   calendarEvents = [],
   hideHeader,
   headerTrailing,
@@ -319,6 +322,10 @@ export function CalendarViewInner({
   const weekStart = useMemo(() => startOfWeek(anchorDate), [anchorDate])
   const activeBase = viewMode === 'day' ? dayStart : weekStart
   const dayCount = viewMode === 'day' ? 1 : 7
+
+  React.useEffect(() => {
+    onAnchorDateChange?.(dayStart)
+  }, [dayStart, onAnchorDateChange])
 
   // ==========================================================================
   // Memoized: Todo Layout Calculation
@@ -1010,6 +1017,7 @@ export function CalendarViewInner({
 
 export function CalendarView(): React.JSX.Element {
   const { todos, createTodo, updateTodo, deleteTodo } = useTodos({ showAll: true })
+  const [visibleDate, setVisibleDate] = useState<Date>(() => startOfDay(new Date()))
 
   // Create dialog state
   const [createDraft, setCreateDraft] = useState<{
@@ -1042,11 +1050,22 @@ export function CalendarView(): React.JSX.Element {
     if (!createDraft || !createDraft.title.trim()) return
     setIsCreating(true)
     try {
-      const today = new Date()
       const [sh, sm] = createDraft.startTime.split(':').map(Number)
       const [eh, em] = createDraft.endTime.split(':').map(Number)
-      const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), sh, sm)
-      const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), eh, em)
+      const startDate = new Date(
+        visibleDate.getFullYear(),
+        visibleDate.getMonth(),
+        visibleDate.getDate(),
+        sh,
+        sm
+      )
+      const endDate = new Date(
+        visibleDate.getFullYear(),
+        visibleDate.getMonth(),
+        visibleDate.getDate(),
+        eh,
+        em
+      )
       await createTodo(
         createDraft.title.trim(),
         Math.floor(startDate.getTime() / 1000),
@@ -1056,7 +1075,7 @@ export function CalendarView(): React.JSX.Element {
     } finally {
       setIsCreating(false)
     }
-  }, [createDraft, createTodo])
+  }, [createDraft, createTodo, visibleDate])
 
   // Handle drag-to-move
   const handleTodoMove = useCallback(
@@ -1079,6 +1098,7 @@ export function CalendarView(): React.JSX.Element {
       <CalendarViewInner
         todos={todos}
         onCreateRange={handleCreateRange}
+        onAnchorDateChange={setVisibleDate}
         onTodoMove={handleTodoMove}
         onTodoDelete={handleTodoDelete}
         headerTrailing={

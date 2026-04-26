@@ -44,6 +44,7 @@ export const updatePostRoute = createRoute({
   },
   responses: {
     200: { content: { 'application/json': { schema: PostResponseModel } }, description: 'Post updated' },
+    400: { content: { 'application/json': { schema: ErrorResponseModel } }, description: 'Bad request' },
     404: { content: { 'application/json': { schema: ErrorResponseModel } }, description: 'Not found' },
     500: { content: { 'application/json': { schema: ErrorResponseModel } }, description: 'Internal error' },
   },

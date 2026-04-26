@@ -4,6 +4,7 @@ import { listTodosRoute, createTodoRoute, updateTodoRoute, deleteTodoRoute } fro
 import {
   getTodosByRange,
   getIncompleteTodos,
+  getIncompleteTodosWithBounds,
   getIncompleteTodosInRange,
   createTodo,
   updateTodo,
@@ -22,6 +23,8 @@ export const listTodosHandler: RouteHandler<typeof listTodosRoute, AppBindings> 
     if (done === 'false') {
       if (from !== undefined && to !== undefined) {
         todos = await getIncompleteTodosInRange(db, user.id, from, to, lim)
+      } else if (from !== undefined || to !== undefined) {
+        todos = await getIncompleteTodosWithBounds(db, user.id, from, to, lim)
       } else {
         todos = await getIncompleteTodos(db, user.id, lim)
       }
