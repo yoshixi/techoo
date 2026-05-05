@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
 import { useCalendarSettings } from '@/hooks/useCalendarSettings';
 import { linkGoogleAccount } from '@/lib/oauth';
+import { showApiError } from '@/lib/showApiError';
 
 // ---------------------------------------------------------------------------
 // Collapsible Section — matches Electron's CollapsibleSection pattern
@@ -130,8 +131,8 @@ export function SettingsContent() {
       await linkGoogleAccount();
       setLinkStatus('success');
       await refresh();
-    } catch {
-      setLinkStatus('error');
+    } catch (err) {
+      showApiError(err, 'Link failed');
     } finally {
       setIsLinking(false);
     }
@@ -144,7 +145,7 @@ export function SettingsContent() {
       try {
         await addCalendar(providerCalendarId, name);
       } catch {
-        Alert.alert('Error', 'Failed to add calendar');
+        /* API failure reported from customInstance */
       } finally {
         setAddingCalendarId(null);
       }
@@ -158,7 +159,7 @@ export function SettingsContent() {
       try {
         await syncCalendar(calendarId);
       } catch {
-        Alert.alert('Error', 'Failed to sync calendar');
+        /* API failure reported from customInstance */
       } finally {
         setSyncingCalendarId(null);
       }
@@ -172,7 +173,7 @@ export function SettingsContent() {
       try {
         await removeCalendar(calendarId);
       } catch {
-        Alert.alert('Error', 'Failed to remove calendar');
+        /* API failure reported from customInstance */
       } finally {
         setRemovingCalendarId(null);
       }
@@ -185,7 +186,7 @@ export function SettingsContent() {
       try {
         await toggleCalendarEnabled(calendarId, enabled);
       } catch {
-        Alert.alert('Error', 'Failed to toggle calendar');
+        /* API failure reported from customInstance */
       }
     },
     [toggleCalendarEnabled]

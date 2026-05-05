@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store'
-import { API_BASE_URL } from './api/mutator'
+import { API_BASE_URL } from './api/baseUrl'
 
 const SESSION_TOKEN_KEY = 'session_token'
 

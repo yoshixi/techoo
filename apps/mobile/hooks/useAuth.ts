@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { initAuth, getJwt, clearAuthState, getSessionToken } from '@/lib/auth'
-import { API_BASE_URL } from '@/lib/api/mutator'
+import { API_BASE_URL } from '@/lib/api/baseUrl'
 
 export interface AuthUser {
   id: string

@@ -4,17 +4,22 @@ import { Text } from '@/components/ui/text';
 import { THEME } from '@/lib/theme';
 
 export interface NoteComposerProps {
-  onCreateNote: (text: string) => void;
+  onCreateNote: (text: string) => void | Promise<void>;
 }
 
 export function NoteComposer({ onCreateNote }: NoteComposerProps) {
   const [text, setText] = useState('');
   const [isFocused, setIsFocused] = useState(false);
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     if (!text.trim()) return;
-    onCreateNote(text.trim());
-    setText('');
+    const trimmed = text.trim();
+    try {
+      await Promise.resolve(onCreateNote(trimmed));
+      setText('');
+    } catch {
+      setText(trimmed);
+    }
   }, [text, onCreateNote]);
 
   return (
@@ -32,7 +37,7 @@ export function NoteComposer({ onCreateNote }: NoteComposerProps) {
         }}
         returnKeyType="done"
         blurOnSubmit
-        onSubmitEditing={handleSubmit}
+        onSubmitEditing={() => void handleSubmit()}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
       />

@@ -25,7 +25,7 @@ import { pickRunningTodo } from '@/lib/runningTodo';
 import { WeekDayStrip } from '@/components/today/WeekDayStrip';
 import { PlanLogToggle } from '@/components/today/PlanLogToggle';
 import { PlanComposerSchedule } from '@/components/today/PlanComposerSchedule';
-import { dayBoundsUnix, isSameLocalDay, startOfLocalDay } from '@/lib/dayBounds';
+import { dayBoundsLocal, isSameLocalDay, startOfLocalDay } from '@/lib/dayBounds';
 import { formatTodoClockTime } from '@/lib/time';
 import { getSmartPlanRange, PLAN_DEFAULT_DURATION_MIN } from '@/lib/planDefaultStart';
 
@@ -41,8 +41,8 @@ function todoScheduleClockLabel(t: Todo): string {
 
 function sortTodosForPlan(list: Todo[]): Todo[] {
   return [...list].sort((a, b) => {
-    const as = a.starts_at ?? a.created_at;
-    const bs = b.starts_at ?? b.created_at;
+    const as = new Date(a.starts_at ?? a.created_at).getTime();
+    const bs = new Date(b.starts_at ?? b.created_at).getTime();
     return as - bs;
   });
 }
@@ -53,7 +53,7 @@ export default function TodayScreen() {
   const [selectedDay, setSelectedDay] = useState(() => startOfLocalDay(new Date()));
   const { mode, setMode } = useTodayPlanLogMode();
 
-  const bounds = useMemo(() => dayBoundsUnix(selectedDay), [selectedDay]);
+  const bounds = useMemo(() => dayBoundsLocal(selectedDay), [selectedDay]);
   const viewingToday = isSameLocalDay(selectedDay, new Date());
 
   const {
@@ -63,8 +63,8 @@ export default function TodayScreen() {
     createTodo,
     mutate: mutateTodos,
   } = useTodos({
-    from: bounds.from,
-    to: bounds.to,
+    from: bounds.start,
+    to: bounds.endExclusive,
     includeCompletedInRange: false,
   });
 
@@ -74,7 +74,7 @@ export default function TodayScreen() {
     createPost,
     deletePost,
     mutate: mutatePosts,
-  } = usePosts({ from: bounds.from, to: bounds.to });
+  } = usePosts({ from: bounds.start, to: bounds.endExclusive });
 
   const [draft, setDraft] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -84,34 +84,52 @@ export default function TodayScreen() {
   const [todoSubmitting, setTodoSubmitting] = useState(false);
   const [planAllDay, setPlanAllDay] = useState(false);
   const [planStartAt, setPlanStartAt] = useState(() => {
-    const b = dayBoundsUnix(startOfLocalDay(new Date()));
-    return getSmartPlanRange(true, b.from, b.to, [], Date.now(), PLAN_DEFAULT_DURATION_MIN).start;
+    const b = dayBoundsLocal(startOfLocalDay(new Date()));
+    return getSmartPlanRange(
+      true,
+      b.start,
+      b.endExclusive,
+      [],
+      Date.now(),
+      PLAN_DEFAULT_DURATION_MIN
+    ).start;
   });
   const [planEndAt, setPlanEndAt] = useState(() => {
-    const b = dayBoundsUnix(startOfLocalDay(new Date()));
-    return getSmartPlanRange(true, b.from, b.to, [], Date.now(), PLAN_DEFAULT_DURATION_MIN).end;
+    const b = dayBoundsLocal(startOfLocalDay(new Date()));
+    return getSmartPlanRange(
+      true,
+      b.start,
+      b.endExclusive,
+      [],
+      Date.now(),
+      PLAN_DEFAULT_DURATION_MIN
+    ).end;
   });
   const [refreshing, setRefreshing] = useState(false);
 
   /** Stable key so SWR identity changes do not reset times; updates when day / today flag / open timed tasks on day change. */
   const planTimeDefaultsKey = useMemo(() => {
+    const lo = bounds.start.getTime();
+    const hi = bounds.endExclusive.getTime();
     const parts: string[] = [];
     for (const t of todos) {
       if (t.done !== 0) continue;
       if (t.is_all_day === 1) continue;
       if (t.starts_at == null) continue;
-      if (t.starts_at < bounds.from || t.starts_at >= bounds.to) continue;
-      parts.push(`${t.id}:${t.starts_at}:${t.ends_at ?? ''}`);
+      const s = new Date(t.starts_at).getTime();
+      if (s < lo || s >= hi) continue;
+      const e = t.ends_at != null ? new Date(t.ends_at).getTime() : '';
+      parts.push(`${t.id}:${s}:${e}`);
     }
     parts.sort();
-    return `${bounds.from}:${bounds.to}:${viewingToday ? 1 : 0}:${parts.join('|')}`;
-  }, [todos, bounds.from, bounds.to, viewingToday]);
+    return `${lo}:${hi}:${viewingToday ? 1 : 0}:${parts.join('|')}`;
+  }, [todos, bounds.start, bounds.endExclusive, viewingToday]);
 
   useEffect(() => {
     const { start, end } = getSmartPlanRange(
       viewingToday,
-      bounds.from,
-      bounds.to,
+      bounds.start,
+      bounds.endExclusive,
       todos,
       Date.now(),
       PLAN_DEFAULT_DURATION_MIN
@@ -123,19 +141,21 @@ export default function TodayScreen() {
 
   /** API includes unscheduled (`starts_at` null) on every day; scope Plan + header to this calendar day. */
   const dayScopedTodos = useMemo(() => {
+    const lo = bounds.start.getTime();
+    const hi = bounds.endExclusive.getTime();
     return todos.filter((t) => {
       if (t.starts_at == null) return viewingToday;
-      return t.starts_at >= bounds.from && t.starts_at < bounds.to;
+      const s = new Date(t.starts_at).getTime();
+      return s >= lo && s < hi;
     });
-  }, [todos, bounds.from, bounds.to, viewingToday]);
+  }, [todos, bounds.start, bounds.endExclusive, viewingToday]);
 
   const sortedTodos = useMemo(() => sortTodosForPlan(dayScopedTodos), [dayScopedTodos]);
 
   const todosForPostHash = useMemo(() => todos.filter((t) => t.done === 0), [todos]);
 
   const applyRunningTodoContext = useCallback(() => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const running = pickRunningTodo(todos, nowSec);
+    const running = pickRunningTodo(todos, new Date());
     if (running) {
       setLogComposerContext({ type: 'todo', id: running.id, title: running.title });
     }
@@ -149,7 +169,10 @@ export default function TodayScreen() {
   }, [mode, applyRunningTodoContext]);
 
   const sortedPosts = useMemo(
-    () => [...posts].sort((a, b) => b.posted_at - a.posted_at),
+    () =>
+      [...posts].sort(
+        (a, b) => new Date(b.posted_at).getTime() - new Date(a.posted_at).getTime()
+      ),
     [posts]
   );
 
@@ -157,13 +180,19 @@ export default function TodayScreen() {
     const open = sortedTodos;
     const timed = open.filter((t) => t.starts_at != null);
     if (timed.length === 0) return open[0] ?? null;
-    return timed.sort((a, b) => (a.starts_at ?? 0) - (b.starts_at ?? 0))[0] ?? null;
+    return timed.sort(
+      (a, b) =>
+        new Date(a.starts_at!).getTime() - new Date(b.starts_at!).getTime()
+    )[0] ?? null;
   }, [sortedTodos]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([mutateTodos(), mutatePosts()]);
-    setRefreshing(false);
+    try {
+      await Promise.all([mutateTodos(), mutatePosts()]);
+    } finally {
+      setRefreshing(false);
+    }
   }, [mutateTodos, mutatePosts]);
 
   const onSubmitPost = useCallback(async () => {
@@ -188,20 +217,20 @@ export default function TodayScreen() {
     setTodoSubmitting(true);
     try {
       if (planAllDay) {
-        await createTodo(title, bounds.from, undefined, 1);
+        await createTodo(title, bounds.start, undefined, 1);
       } else {
-        const startSec = Math.floor(planStartAt.getTime() / 1000);
-        let endSec = Math.floor(planEndAt.getTime() / 1000);
-        if (endSec <= startSec) {
-          endSec = startSec + PLAN_DEFAULT_DURATION_MIN * 60;
+        let endAt = planEndAt;
+        if (endAt.getTime() <= planStartAt.getTime()) {
+          endAt = new Date(planStartAt);
+          endAt.setMinutes(endAt.getMinutes() + PLAN_DEFAULT_DURATION_MIN);
         }
-        await createTodo(title, startSec, endSec);
+        await createTodo(title, planStartAt, endAt);
       }
       setTodoDraft('');
     } finally {
       setTodoSubmitting(false);
     }
-  }, [todoDraft, planAllDay, bounds.from, planStartAt, planEndAt, createTodo]);
+  }, [todoDraft, planAllDay, bounds.start, planStartAt, planEndAt, createTodo]);
 
   const applyPlanStart = useCallback((date: Date) => {
     setPlanStartAt(date);
@@ -322,7 +351,11 @@ export default function TodayScreen() {
                       className="flex-row items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5"
                     >
                       <Pressable
-                        onPress={() => void toggleDone(t.id, t.done)}
+                        onPress={() =>
+                          void toggleDone(t.id, t.done).catch(() => {
+                            /* failure surfaced in customInstance */
+                          })
+                        }
                         className="h-9 w-9 items-center justify-center rounded-full border border-border"
                       >
                         {t.done === 1 ? <Check size={18} className="text-green-600" /> : null}

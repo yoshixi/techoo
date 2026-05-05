@@ -15,23 +15,30 @@ export default function TodosScreen() {
   const sorted = useMemo(() => {
     return [...todos].sort((a, b) => {
       if (a.done !== b.done) return a.done - b.done;
-      const as = a.starts_at ?? a.created_at;
-      const bs = b.starts_at ?? b.created_at;
+      const as = new Date(a.starts_at ?? a.created_at).getTime();
+      const bs = new Date(b.starts_at ?? b.created_at).getTime();
       return as - bs;
     });
   }, [todos]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await mutate();
-    setRefreshing(false);
+    try {
+      await mutate();
+    } finally {
+      setRefreshing(false);
+    }
   }, [mutate]);
 
   const renderItem = useCallback(
     ({ item }: { item: Todo }) => (
       <View className="mb-2 flex-row items-center gap-3 rounded-xl border border-border bg-card px-3 py-3">
         <Pressable
-          onPress={() => void toggleDone(item.id, item.done)}
+          onPress={() =>
+            void toggleDone(item.id, item.done).catch(() => {
+              /* failure surfaced in customInstance */
+            })
+          }
           className="h-9 w-9 items-center justify-center rounded-full border border-border"
         >
           {item.done === 1 ? <Check size={18} className="text-green-600" /> : null}
@@ -42,7 +49,7 @@ export default function TodosScreen() {
           </Text>
           {item.starts_at != null ? (
             <Text className="mt-0.5 text-xs text-muted-foreground">
-              {new Date(item.starts_at * 1000).toLocaleString(undefined, {
+              {new Date(item.starts_at).toLocaleString(undefined, {
                 dateStyle: 'medium',
                 timeStyle: 'short',
               })}

@@ -561,14 +561,17 @@ components:
         lastSyncedAt:
           type: string
           nullable: true
+          format: date-time
           description: Timestamp of last sync
           example: 2024-01-01T10:00:00.000Z
         createdAt:
           type: string
+          format: date-time
           description: Timestamp when the calendar was added
           example: 2024-01-01T10:00:00.000Z
         updatedAt:
           type: string
+          format: date-time
           description: Timestamp when the calendar was last updated
           example: 2024-01-01T15:30:00.000Z
       required:
@@ -691,10 +694,12 @@ components:
           example: Weekly team sync
         startAt:
           type: string
+          format: date-time
           description: Event start time
           example: 2024-01-15T10:00:00.000Z
         endAt:
           type: string
+          format: date-time
           description: Event end time
           example: 2024-01-15T11:00:00.000Z
         isAllDay:
@@ -708,10 +713,12 @@ components:
           example: Conference Room A
         createdAt:
           type: string
+          format: date-time
           description: Timestamp when the event was imported
           example: 2024-01-01T10:00:00.000Z
         updatedAt:
           type: string
+          format: date-time
           description: Timestamp when the event was last updated
           example: 2024-01-01T15:30:00.000Z
       required:
@@ -1735,6 +1742,7 @@ paths:
           in: query
         - schema:
             type: string
+            format: date-time
             description: Filter events starting from this date (inclusive)
             example: 2024-01-01T00:00:00.000Z
           required: false
@@ -1743,6 +1751,7 @@ paths:
           in: query
         - schema:
             type: string
+            format: date-time
             description: Filter events ending before this date (inclusive)
             example: 2024-01-31T23:59:59.000Z
           required: false

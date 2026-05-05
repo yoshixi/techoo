@@ -41,10 +41,7 @@ export function CalendarView() {
   const listRange = useMemo(() => {
     const start = startOfDay(selectedDate);
     const end = viewMode === 'day' ? addDays(start, 1) : addDays(start, 7);
-    return {
-      from: Math.floor(start.getTime() / 1000),
-      to: Math.floor(end.getTime() / 1000),
-    };
+    return { from: start, to: end };
   }, [selectedDate, viewMode]);
 
   const { todos, isLoading: todosLoading, createTodo, updateTodo } = useTodos({
@@ -135,20 +132,15 @@ export function CalendarView() {
     async (task: CalendarTimedItem, deltaMinutes: number) => {
       const currentStart = new Date(task.startAt);
       const newStart = new Date(currentStart.getTime() + deltaMinutes * 60 * 1000);
-      let newEndUnix: number | null = null;
-      if (task.endAt) {
-        const currentEnd = new Date(task.endAt);
-        newEndUnix = Math.floor(
-          (currentEnd.getTime() + deltaMinutes * 60 * 1000) / 1000
-        );
-      }
       try {
         await updateTodo(task.id, {
-          starts_at: Math.floor(newStart.getTime() / 1000),
-          ends_at: newEndUnix,
+          starts_at: newStart,
+          ends_at: task.endAt
+            ? new Date(new Date(task.endAt).getTime() + deltaMinutes * 60 * 1000)
+            : null,
         });
-      } catch (error) {
-        console.error('Failed to move todo:', error);
+      } catch {
+        /* failure reported in customInstance */
       }
     },
     [updateTodo]

@@ -80,7 +80,9 @@ export function useAutoSave<T>({
 
     timeoutRef.current = setTimeout(() => {
       setIsPending(false)
-      save()
+      void save().catch(() => {
+        /* Errors reported in customInstance; avoid unhandled rejection */
+      })
     }, delay)
 
     return cancel

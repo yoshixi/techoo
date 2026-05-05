@@ -44,9 +44,15 @@ export function formatTime(date: Date | string): string {
   })
 }
 
+/** UTC RFC3339 (`toISOString`) for API query/body datetime fields. */
+export function toRfc3339(instant: Date): string {
+  return instant.toISOString()
+}
+
 /** Todo list times — matches Electron `TodoView` (`hour`/`minute` 2-digit, locale default). */
-export function formatTodoClockTime(unixSeconds: number): string {
-  return new Date(unixSeconds * 1000).toLocaleTimeString(undefined, {
+export function formatTodoClockTime(isoOrDate: string | Date): string {
+  const d = typeof isoOrDate === 'string' ? new Date(isoOrDate) : isoOrDate
+  return d.toLocaleTimeString(undefined, {
     hour: '2-digit',
     minute: '2-digit'
   })
