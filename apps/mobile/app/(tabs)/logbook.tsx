@@ -9,20 +9,29 @@ const RANGE_DAYS = 14;
 
 export default function LogbookScreen() {
   const range = useMemo(() => {
-    const end = Math.floor(Date.now() / 1000);
-    const start = end - RANGE_DAYS * 86400;
+    const end = new Date();
+    const start = new Date(end.getTime() - RANGE_DAYS * 86400_000);
     return { from: start, to: end };
   }, []);
 
   const { posts, isLoading, deletePost, mutate } = usePosts(range);
   const [refreshing, setRefreshing] = useState(false);
 
-  const data = useMemo(() => [...posts].sort((a, b) => b.posted_at - a.posted_at), [posts]);
+  const data = useMemo(
+    () =>
+      [...posts].sort(
+        (a, b) => new Date(b.posted_at).getTime() - new Date(a.posted_at).getTime()
+      ),
+    [posts]
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await mutate();
-    setRefreshing(false);
+    try {
+      await mutate();
+    } finally {
+      setRefreshing(false);
+    }
   }, [mutate]);
 
   const renderItem = useCallback(

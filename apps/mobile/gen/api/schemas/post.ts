@@ -16,8 +16,8 @@ export interface Post {
    */
   id: number;
   body: string;
-  /** @minimum 0 */
-  posted_at: number;
+  /** RFC3339 timestamp */
+  posted_at: string;
   events: PostEventsItem[];
   todos: PostTodosItem[];
 }

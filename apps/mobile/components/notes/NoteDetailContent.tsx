@@ -31,7 +31,7 @@ export function NoteDetailContent({ noteId }: NoteDetailContentProps) {
   const handleSave = useCallback(
     async (value: string) => {
       if (!note) return;
-      handleUpdateNote(note.id, value);
+      await handleUpdateNote(note.id, value);
     },
     [note, handleUpdateNote]
   );
@@ -54,8 +54,12 @@ export function NoteDetailContent({ noteId }: NoteDetailContentProps) {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          await handleDeleteNote(noteId);
-          router.back();
+          try {
+            await handleDeleteNote(noteId);
+            router.back();
+          } catch {
+            /* failure reported in customInstance */
+          }
         },
       },
     ]);
@@ -110,7 +114,7 @@ export function NoteDetailContent({ noteId }: NoteDetailContentProps) {
 
       <View className="border-t border-border px-4 py-2">
         <Text className="text-center text-xs text-muted-foreground">
-          {formatDateTime(new Date(note.updated_at * 1000))}
+          {formatDateTime(note.updated_at)}
         </Text>
       </View>
     </View>

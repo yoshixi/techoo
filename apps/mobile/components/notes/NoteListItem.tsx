@@ -29,7 +29,7 @@ export function NoteListItem({ note, onPress, onDelete, onTogglePin }: NoteListI
         Animated.timing(fadeAnim, { toValue: 0, duration: FADE_OUT_DURATION, useNativeDriver: false }),
         Animated.timing(heightAnim, { toValue: 0, duration: FADE_OUT_DURATION, useNativeDriver: false }),
       ]).start(() => {
-        void action();
+        void Promise.resolve(action()).catch(() => {});
       });
     },
     [fadeAnim, heightAnim]
@@ -42,7 +42,7 @@ export function NoteListItem({ note, onPress, onDelete, onTogglePin }: NoteListI
   const handlePin = useCallback(() => {
     swipeableRef.current?.close();
     const next = note.pinned === 1 ? 0 : 1;
-    void onTogglePin(note.id, next);
+    void onTogglePin(note.id, next).catch(() => {});
   }, [note.id, note.pinned, onTogglePin]);
 
   const renderRightActions = (
@@ -110,7 +110,7 @@ export function NoteListItem({ note, onPress, onDelete, onTogglePin }: NoteListI
             </Text>
           ) : null}
           <Text className="mt-2 text-xs text-muted-foreground">
-            {getRelativeTime(new Date(note.updated_at * 1000))}
+            {getRelativeTime(note.updated_at)}
           </Text>
         </Pressable>
       </Swipeable>

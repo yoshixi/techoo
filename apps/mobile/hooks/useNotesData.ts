@@ -7,6 +7,7 @@ import {
   useGetApiV1Notes,
 } from '@/gen/api/endpoints/techooAPI.gen'
 import type { GetApiV1NotesParams, Note } from '@/gen/api/schemas'
+import { toRfc3339 } from '@/lib/time'
 
 const NOTES_PAGE: GetApiV1NotesParams = { limit: 500, offset: 0 }
 
@@ -27,8 +28,8 @@ export interface UseNotesDataReturn {
   notesLoading: boolean
   notesError: unknown
   mutateNotes: ReturnType<typeof useGetApiV1Notes>['mutate']
-  handleCreateNote: (text: string) => void
-  handleUpdateNote: (noteId: number, text: string) => void
+  handleCreateNote: (text: string) => Promise<void>
+  handleUpdateNote: (noteId: number, text: string) => Promise<void>
   handleDeleteNote: (noteId: number) => Promise<void>
   handleTogglePin: (noteId: number, pinned: number) => Promise<void>
   refreshNotes: () => Promise<void>
@@ -54,10 +55,10 @@ export function useNotesData(): UseNotesDataReturn {
   }, [globalMutate])
 
   const handleCreateNote = useCallback(
-    (text: string) => {
+    async (text: string): Promise<void> => {
       if (!text.trim()) return
       const { title, body } = splitNoteText(text)
-      const now = Math.floor(Date.now() / 1000)
+      const nowIso = toRfc3339(new Date())
       const tempId = -Math.abs(Date.now())
 
       const optimisticNote: Note = {
@@ -65,8 +66,8 @@ export function useNotesData(): UseNotesDataReturn {
         title,
         body,
         pinned: 0,
-        created_at: now,
-        updated_at: now,
+        created_at: nowIso,
+        updated_at: nowIso,
       }
 
       mutateNotes(
@@ -77,37 +78,41 @@ export function useNotesData(): UseNotesDataReturn {
         { revalidate: false }
       )
 
-      postApiV1Notes({ title, body: body ?? undefined })
-        .then(async () => {
-          await mutateNotes()
-        })
-        .catch(async () => {
-          await mutateNotes()
-        })
+      try {
+        await postApiV1Notes({ title, body: body ?? undefined })
+        await mutateNotes()
+      } catch (err) {
+        await mutateNotes()
+        throw err
+      }
     },
     [mutateNotes]
   )
 
   const handleUpdateNote = useCallback(
-    (noteId: number, text: string) => {
+    async (noteId: number, text: string): Promise<void> => {
       const { title, body } = splitNoteText(text)
-      const now = Math.floor(Date.now() / 1000)
+      const nowIso = toRfc3339(new Date())
 
       mutateNotes(
         (currentData) => {
           if (!currentData) return currentData
           return {
             data: currentData.data.map((n) =>
-              n.id === noteId ? { ...n, title, body, updated_at: now } : n
+              n.id === noteId ? { ...n, title, body, updated_at: nowIso } : n
             ),
           }
         },
         { revalidate: false }
       )
 
-      patchApiV1NotesId(noteId, { title, body })
-        .then(() => mutateNotes())
-        .catch(() => mutateNotes())
+      try {
+        await patchApiV1NotesId(noteId, { title, body })
+        await mutateNotes()
+      } catch (err) {
+        await mutateNotes()
+        throw err
+      }
     },
     [mutateNotes]
   )
@@ -123,8 +128,9 @@ export function useNotesData(): UseNotesDataReturn {
       )
       try {
         await deleteApiV1NotesId(noteId)
-      } catch {
+      } catch (err) {
         await mutateNotes()
+        throw err
       }
     },
     [mutateNotes]
@@ -132,8 +138,13 @@ export function useNotesData(): UseNotesDataReturn {
 
   const handleTogglePin = useCallback(
     async (noteId: number, pinned: number): Promise<void> => {
-      await patchApiV1NotesId(noteId, { pinned })
-      await mutateNotes()
+      try {
+        await patchApiV1NotesId(noteId, { pinned })
+        await mutateNotes()
+      } catch (err) {
+        await mutateNotes()
+        throw err
+      }
     },
     [mutateNotes]
   )

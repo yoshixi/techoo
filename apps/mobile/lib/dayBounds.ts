@@ -3,11 +3,14 @@ export function startOfLocalDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate())
 }
 
-/** Unix [from, to) for that local day. */
-export function dayBoundsUnix(d: Date): { from: number; to: number } {
-  const s = startOfLocalDay(d)
-  const from = Math.floor(s.getTime() / 1000)
-  return { from, to: from + 86400 }
+/**
+ * Local calendar day as [start, endExclusive) instants (half-open range for API `from` / `to`).
+ */
+export function dayBoundsLocal(d: Date): { start: Date; endExclusive: Date } {
+  const start = startOfLocalDay(d)
+  const endExclusive = new Date(start)
+  endExclusive.setDate(endExclusive.getDate() + 1)
+  return { start, endExclusive }
 }
 
 export function isSameLocalDay(a: Date, b: Date): boolean {

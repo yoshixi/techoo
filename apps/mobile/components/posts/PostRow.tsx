@@ -2,25 +2,23 @@ import { View, Pressable, Alert } from 'react-native';
 import type { Post } from '@/gen/api/schemas';
 import { Text } from '@/components/ui/text';
 import { Trash2 } from 'lucide-react-native';
-
-function formatTime(postedAt: number): string {
-  return new Date(postedAt * 1000).toLocaleTimeString(undefined, {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
+import { formatTime } from '@/lib/time';
 
 export function PostRow({
   post,
   onDelete,
 }: {
   post: Post;
-  onDelete: (id: number) => void;
+  onDelete: (id: number) => void | Promise<void>;
 }) {
   const confirmDelete = () => {
     Alert.alert('Delete post', 'Remove this log entry?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => void onDelete(post.id) },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => void Promise.resolve(onDelete(post.id)).catch(() => {}),
+      },
     ]);
   };
 

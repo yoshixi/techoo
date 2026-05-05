@@ -1,18 +1,9 @@
-import Constants from 'expo-constants'
 import { getJwt, clearAuthState } from '../auth'
+import { ApiRequestError } from './ApiRequestError'
+import { API_BASE_URL } from './baseUrl'
+import { reportApiFailure } from '../showApiError'
 
-// API Configuration - defaults to localhost for development
-const getApiBaseUrl = (): string => {
-  // Check for environment variable first
-  const envUrl = Constants.expoConfig?.extra?.apiUrl
-  if (envUrl) {
-    return envUrl
-  }
-  // Default to localhost for development
-  return 'http://localhost:8787'
-}
-
-export const API_BASE_URL = getApiBaseUrl()
+export { API_BASE_URL } from './baseUrl'
 
 export interface CustomRequestConfig {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
@@ -28,56 +19,64 @@ export interface CustomRequestConfig {
  * This function will be used by the generated API client
  */
 export const customInstance = async <T>(config: CustomRequestConfig): Promise<T> => {
-  const url = new URL(config.url, API_BASE_URL)
-  if (config.params) {
-    Object.entries(config.params).forEach(([key, value]) => {
-      if (value === undefined || value === null) return
-      if (Array.isArray(value)) {
-        value.forEach((entry) => {
-          url.searchParams.append(key, String(entry))
-        })
-        return
-      }
-      url.searchParams.set(key, String(value))
-    })
+  try {
+    const url = new URL(config.url, API_BASE_URL)
+    if (config.params) {
+      Object.entries(config.params).forEach(([key, value]) => {
+        if (value === undefined || value === null) return
+        if (Array.isArray(value)) {
+          value.forEach((entry) => {
+            url.searchParams.append(key, String(entry))
+          })
+          return
+        }
+        url.searchParams.set(key, String(value))
+      })
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    }
+
+    // Add JWT authorization header
+    const jwt = await getJwt()
+    if (jwt) {
+      headers['Authorization'] = `Bearer ${jwt}`
+    }
+
+    const requestConfig: RequestInit = {
+      method: config.method || 'GET',
+      headers,
+      body: config.data ? JSON.stringify(config.data) : undefined,
+    }
+
+    const response = await fetch(url.toString(), requestConfig)
+
+    // Handle 401 (JWT expired AND refresh also failed)
+    if (response.status === 401) {
+      await clearAuthState()
+      throw new Error('Unauthorized')
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new ApiRequestError(
+        response.status,
+        errorText?.trim() ? errorText : (response.statusText || null)
+      )
+    }
+
+    const contentType = response.headers.get('content-type')
+    if (contentType?.includes('application/json')) {
+      return response.json()
+    }
+
+    return (await response.text()) as unknown as T
+  } catch (err) {
+    reportApiFailure(err)
+    throw err
   }
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-  }
-
-  // Add JWT authorization header
-  const jwt = await getJwt()
-  if (jwt) {
-    headers['Authorization'] = `Bearer ${jwt}`
-  }
-
-  const requestConfig: RequestInit = {
-    method: config.method || 'GET',
-    headers,
-    body: config.data ? JSON.stringify(config.data) : undefined,
-  }
-
-  const response = await fetch(url.toString(), requestConfig)
-
-  // Handle 401 (JWT expired AND refresh also failed)
-  if (response.status === 401) {
-    await clearAuthState()
-    throw new Error('Unauthorized')
-  }
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`)
-  }
-
-  const contentType = response.headers.get('content-type')
-  if (contentType?.includes('application/json')) {
-    return response.json()
-  }
-
-  return (await response.text()) as unknown as T
 }
 
 export default customInstance

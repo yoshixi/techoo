@@ -69,10 +69,10 @@ export function TodoDetailContent({ todoId }: TodoDetailContentProps) {
     setTitle(resolvedTodo.title);
     setAllDay(resolvedTodo.is_all_day === 1);
     if (resolvedTodo.starts_at != null) {
-      const nextUnix = resolvedTodo.starts_at;
+      const nextMs = new Date(resolvedTodo.starts_at).getTime();
       setStartDate((prev) => {
-        if (prev != null && Math.floor(prev.getTime() / 1000) === nextUnix) return prev;
-        return new Date(nextUnix * 1000);
+        if (prev != null && prev.getTime() === nextMs) return prev;
+        return new Date(nextMs);
       });
     } else {
       setStartDate(null);
@@ -108,8 +108,12 @@ export function TodoDetailContent({ todoId }: TodoDetailContentProps) {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          await deleteTodo(todoId);
-          router.back();
+          try {
+            await deleteTodo(todoId);
+            router.back();
+          } catch {
+            /* failure reported in customInstance */
+          }
         },
       },
     ]);
@@ -131,14 +135,14 @@ export function TodoDetailContent({ todoId }: TodoDetailContentProps) {
           d.setHours(0, 0, 0, 0);
           await updateTodo(resolvedTodo.id, {
             is_all_day: 1,
-            starts_at: Math.floor(d.getTime() / 1000),
+            starts_at: d,
             ends_at: null,
           });
         } else if (next) {
           await updateTodo(resolvedTodo.id, {
             is_all_day: 0,
-            starts_at: Math.floor(next.getTime() / 1000),
-            ends_at: resolvedTodo.ends_at,
+            starts_at: next,
+            ends_at: resolvedTodo.ends_at != null ? new Date(resolvedTodo.ends_at) : null,
           });
         } else {
           await updateTodo(resolvedTodo.id, {
