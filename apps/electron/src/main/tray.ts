@@ -29,6 +29,7 @@ export class TrayManager {
 
   setAuthToken(token: string | null): void {
     this.authToken = token
+    void this.fetchNextTask()
   }
 
   private getAuthHeaders(): Record<string, string> {
@@ -66,6 +67,13 @@ export class TrayManager {
   }
 
   private async fetchNextTask(): Promise<void> {
+    if (!this.authToken) {
+      this.nextTask = null
+      this.updateDisplay()
+      this.updateContextMenu()
+      return
+    }
+
     try {
       const response = await fetch(
         `${API_URL}/api/tasks?completed=false&scheduled=true&sortBy=startAt&order=asc`,
