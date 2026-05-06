@@ -5,7 +5,7 @@ import { CharacterIllustration } from './CharacterIllustration'
 import App from '../App'
 
 export function AuthGate(): React.JSX.Element {
-  const { isAuthenticated, isLoading, refreshAuth } = useAuth()
+  const { isAuthenticated, isLoading, refreshAuth, sessionPrompt } = useAuth()
 
   if (isLoading) {
     return (
@@ -17,7 +17,7 @@ export function AuthGate(): React.JSX.Element {
   }
 
   if (!isAuthenticated) {
-    return <AuthScreen onAuthenticated={refreshAuth} />
+    return <AuthScreen onAuthenticated={refreshAuth} sessionPrompt={sessionPrompt} />
   }
 
   return <App />

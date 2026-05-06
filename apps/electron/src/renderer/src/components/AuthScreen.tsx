@@ -10,9 +10,14 @@ type AuthMode = 'signin' | 'signup'
 
 interface AuthScreenProps {
   onAuthenticated: () => void
+  /** Explains why the user must sign in again (session invalidated remotely). */
+  sessionPrompt?: string | null
 }
 
-export function AuthScreen({ onAuthenticated }: AuthScreenProps): React.JSX.Element {
+export function AuthScreen({
+  onAuthenticated,
+  sessionPrompt
+}: AuthScreenProps): React.JSX.Element {
   const [mode, setMode] = useState<AuthMode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -100,6 +105,11 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps): React.JSX.Elem
         </CardHeader>
 
         <CardContent>
+          {sessionPrompt ? (
+            <div className="mb-4 rounded-xl border border-border bg-muted/50 px-3 py-2 text-sm text-foreground">
+              {sessionPrompt}
+            </div>
+          ) : null}
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'signup' && (
               <div className="space-y-1.5">

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { authClient, clearAuthState, getJwt, getSessionToken } from '../lib/auth'
+import { authClient, clearAuthState, getJwt, getSessionToken, invalidateAuthSession } from '../lib/auth'
+import { onAuthSessionInvalidated } from '../lib/session-invalidation'
 
 interface AuthUser {
   id: string
@@ -11,13 +12,35 @@ interface UseAuthReturn {
   user: AuthUser | null
   isAuthenticated: boolean
   isLoading: boolean
+  /** Shown on AuthScreen after remote invalidation (401, token refresh failure, etc.) */
+  sessionPrompt: string | null
   signOut: () => Promise<void>
   refreshAuth: () => Promise<void>
+}
+
+function messageForInvalidSession(reason: string): string {
+  switch (reason) {
+    case 'api-unauthorized':
+      return 'Your session expired or is no longer valid. Please sign in again.'
+    case 'token-exchange-failed':
+      return 'Could not refresh your session. Please sign in again.'
+    default:
+      return 'Please sign in again.'
+  }
 }
 
 export function useAuth(): UseAuthReturn {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [sessionPrompt, setSessionPrompt] = useState<string | null>(null)
+
+  useEffect(() => {
+    return onAuthSessionInvalidated(({ reason }) => {
+      setUser(null)
+      setIsLoading(false)
+      setSessionPrompt(messageForInvalidSession(reason))
+    })
+  }, [])
 
   const checkAuth = useCallback(async () => {
     try {
@@ -31,7 +54,7 @@ export function useAuth(): UseAuthReturn {
       const sessionToken = await getSessionToken()
       if (!sessionToken) {
         setUser(null)
-        clearAuthState()
+        invalidateAuthSession('session-check-failed')
         return
       }
 
@@ -43,7 +66,7 @@ export function useAuth(): UseAuthReturn {
       )
       if (!res.ok) {
         setUser(null)
-        clearAuthState()
+        invalidateAuthSession('session-check-failed')
         return
       }
       const session = await res.json()
@@ -55,11 +78,11 @@ export function useAuth(): UseAuthReturn {
         })
       } else {
         setUser(null)
-        clearAuthState()
+        invalidateAuthSession('session-check-failed')
       }
     } catch {
       setUser(null)
-      clearAuthState()
+      invalidateAuthSession('session-check-failed')
     } finally {
       setIsLoading(false)
     }
@@ -76,14 +99,21 @@ export function useAuth(): UseAuthReturn {
       // Continue with local cleanup even if server sign-out fails
     }
     clearAuthState()
+    setSessionPrompt(null)
     setUser(null)
   }, [])
+
+  const refreshAuth = useCallback(async () => {
+    setSessionPrompt(null)
+    await checkAuth()
+  }, [checkAuth])
 
   return {
     user,
     isAuthenticated: user !== null,
     isLoading,
+    sessionPrompt,
     signOut,
-    refreshAuth: checkAuth
+    refreshAuth
   }
 }

@@ -1,5 +1,10 @@
 import { createAuthClient } from 'better-auth/client'
 
+import {
+  notifyAuthSessionInvalidated,
+  type SessionInvalidReason
+} from './session-invalidation'
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'
 const API_BASE_URL = `${BASE_URL}/api`
 let sessionTokenCache: string | null = null
@@ -61,7 +66,7 @@ export async function getJwt(): Promise<string | null> {
   } catch {
     // Session expired — clear all auth state so stale tokens don't
     // cause repeated 401s from tray/notification requests
-    clearAuthState()
+    invalidateAuthSession('token-exchange-failed')
     return null
   }
 }
@@ -72,4 +77,10 @@ export function clearAuthState(): void {
   jwtToken = null
   jwtExpiresAt = 0
   window.api.updateAuthToken(null)
+}
+
+/** Clears stored credentials and notifies the UI (sign-out uses {@link clearAuthState} only). */
+export function invalidateAuthSession(reason: SessionInvalidReason): void {
+  clearAuthState()
+  notifyAuthSessionInvalidated(reason)
 }
