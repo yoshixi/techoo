@@ -19,8 +19,6 @@ declare global {
       clearSessionToken: () => Promise<void>
       updateTimerStates: (timers: TimerState[]) => void
       onShowTaskDetail: (callback: (taskId: number) => void) => () => void
-      onNotificationTimerStarted: (callback: (taskId: number) => void) => () => void
-      onNotificationTimerStopped: (callback: (taskId: number) => void) => () => void
       getNotificationPermission: () => Promise<NotificationPermissionStatus>
       requestNotificationPermission: () => Promise<NotificationPermissionStatus>
       openNotificationSettings: () => Promise<void>

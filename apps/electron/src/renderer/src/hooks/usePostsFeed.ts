@@ -34,10 +34,17 @@ export function usePostsFeed(pageSize = DEFAULT_PAGE_SIZE): {
 
   const fetchInitial = useCallback(async () => {
     setError(undefined)
-    const res = await getApiV1Posts({ limit: pageSize, offset: 0 })
-    setPosts(res.data)
-    setNextOffset(res.data.length)
-    setHasMore(res.has_more ?? false)
+    try {
+      const res = await getApiV1Posts({ limit: pageSize, offset: 0 })
+      setPosts(res.data)
+      setNextOffset(res.data.length)
+      setHasMore(res.has_more ?? false)
+    } catch (e) {
+      // Stop pagination triggers (e.g. IntersectionObserver) while in error state — otherwise
+      // empty feed + hasMore stays true causes repeated load-more requests (401 loops).
+      setHasMore(false)
+      throw e
+    }
   }, [pageSize])
 
   const refetch = useCallback(async () => {
@@ -79,6 +86,7 @@ export function usePostsFeed(pageSize = DEFAULT_PAGE_SIZE): {
       setNextOffset((o) => o + res.data.length)
       setHasMore(res.has_more ?? false)
     } catch (e) {
+      setHasMore(false)
       setError(e as ErrorResponse)
     } finally {
       setLoadingMore(false)

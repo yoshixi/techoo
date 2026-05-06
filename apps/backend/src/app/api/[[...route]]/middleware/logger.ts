@@ -21,15 +21,20 @@ export function registerLoggerMiddleware(app: OpenAPIHono<AppBindings>) {
     const start = Date.now()
     logger.info('request started')
 
-    await next()
+    try {
+      await next()
+      const duration = Date.now() - start
+      const status = c.res?.status ?? 0
 
-    const duration = Date.now() - start
-    const status = c.res.status
-
-    if (status >= 500) {
-      logger.error({ status, duration }, 'request completed')
-    } else {
-      logger.info({ status, duration }, 'request completed')
+      if (status >= 500) {
+        logger.error({ status, duration }, 'request completed')
+      } else {
+        logger.info({ status, duration }, 'request completed')
+      }
+    } catch (error) {
+      const duration = Date.now() - start
+      logger.error({ err: error, duration }, 'request handler threw')
+      throw error
     }
   })
 }

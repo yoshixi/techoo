@@ -36,26 +36,6 @@ const api = {
       ipcRenderer.removeListener('tray:show-task-detail', handler)
     }
   },
-  // Listen for timer started from notification action
-  onNotificationTimerStarted: (callback: (taskId: number) => void): (() => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, taskId: number): void => {
-      callback(taskId)
-    }
-    ipcRenderer.on('notification:timer-started', handler)
-    return () => {
-      ipcRenderer.removeListener('notification:timer-started', handler)
-    }
-  },
-  // Listen for timer stopped from notification action
-  onNotificationTimerStopped: (callback: (taskId: number) => void): (() => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, taskId: number): void => {
-      callback(taskId)
-    }
-    ipcRenderer.on('notification:timer-stopped', handler)
-    return () => {
-      ipcRenderer.removeListener('notification:timer-stopped', handler)
-    }
-  },
   // Notification permission APIs
   getNotificationPermission: (): Promise<NotificationPermissionStatus> =>
     ipcRenderer.invoke('notification:get-permission'),

@@ -1,6 +1,6 @@
 import type { OpenAPIHono } from '@hono/zod-openapi'
 import type { AppBindings } from '../types'
-import { verifyJwt } from '../../../core/jwt'
+import { verifyJwt, type JwtPayload } from '../../../core/jwt'
 import { getTenantDbForUser } from '../../../core/common.db'
 import { createOAuthService } from '../../../core/oauth.service'
 
@@ -43,24 +43,25 @@ export function registerJwtAuthMiddleware(app: OpenAPIHono<AppBindings>) {
       return c.json({ error: 'Unauthorized' }, 401)
     }
 
+    let payload: JwtPayload
     try {
-      const payload = await verifyJwt(authHeader.slice(7))
-      const userId = Number(payload.sub)
-      c.set('user', {
-        id: userId,
-        email: payload.email,
-        name: payload.name,
-      })
-      c.set('db', getTenantDbForUser(userId))
-      c.set('oauth', createOAuthService(userId))
-      // Enrich logger with authenticated user context
-      const logger = c.get('logger')
-      if (logger) {
-        c.set('logger', logger.child({ userId }))
-      }
-      await next()
+      payload = await verifyJwt(authHeader.slice(7))
     } catch {
       return c.json({ error: 'Unauthorized' }, 401)
     }
+
+    const userId = Number(payload.sub)
+    c.set('user', {
+      id: userId,
+      email: payload.email,
+      name: payload.name,
+    })
+    c.set('db', getTenantDbForUser(userId))
+    c.set('oauth', createOAuthService(userId))
+    const logger = c.get('logger')
+    if (logger) {
+      c.set('logger', logger.child({ userId }))
+    }
+    await next()
   })
 }

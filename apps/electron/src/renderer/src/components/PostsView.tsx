@@ -52,7 +52,13 @@ export function PostsView(): React.JSX.Element {
     const obs = new IntersectionObserver(
       (entries) => {
         const first = entries[0]
-        if (first?.isIntersecting && hasMore && !loadingMore && !initialLoading) {
+        if (
+          first?.isIntersecting &&
+          hasMore &&
+          !loadingMore &&
+          !initialLoading &&
+          !error
+        ) {
           void loadMore()
         }
       },
@@ -60,7 +66,7 @@ export function PostsView(): React.JSX.Element {
     )
     obs.observe(sentinel)
     return () => obs.disconnect()
-  }, [hasMore, loadingMore, initialLoading, loadMore, posts.length])
+  }, [hasMore, loadingMore, initialLoading, loadMore, posts.length, error])
 
   return (
     <div className="flex flex-1 min-h-0 flex-col overflow-hidden p-8">

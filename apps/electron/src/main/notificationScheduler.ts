@@ -14,13 +14,6 @@ interface Task {
   completedAt: string | null
 }
 
-interface TaskTimer {
-  id: number
-  taskId: number
-  startTime: string
-  endTime: string | null
-}
-
 interface NotificationRecord {
   type: 'start' | 'end'
   taskId: number
@@ -31,14 +24,11 @@ interface SnoozeRecord {
   type: 'start' | 'end'
   taskId: number
   task: Task
-  timerId?: number
   nextTask?: Task
   notifyAt: number
 }
 
 type NotificationHandler = {
-  onStartTimer: (taskId: number) => void
-  onStopTimer: (taskId: number, timerId: number) => void
   onShowTask: (taskId: number) => void
 }
 
@@ -57,6 +47,9 @@ export class NotificationScheduler {
 
   setAuthToken(token: string | null): void {
     this.authToken = token
+    if (token) {
+      void this.checkSchedules()
+    }
   }
 
   private getAuthHeaders(): Record<string, string> {
@@ -191,6 +184,9 @@ export class NotificationScheduler {
   }
 
   private async fetchTasks(): Promise<Task[]> {
+    if (!this.authToken) {
+      return []
+    }
     try {
       const response = await fetch(`${API_URL}/api/tasks?completed=false`, {
         headers: this.getAuthHeaders()
@@ -201,54 +197,6 @@ export class NotificationScheduler {
     } catch (error) {
       console.error('Failed to fetch tasks for notifications:', error)
       return []
-    }
-  }
-
-  private async fetchActiveTimers(): Promise<TaskTimer[]> {
-    try {
-      const response = await fetch(`${API_URL}/api/timers`, {
-        headers: this.getAuthHeaders()
-      })
-      if (!response.ok) return []
-      const data = (await response.json()) as { timers: TaskTimer[] }
-      // Filter to only active timers (no endTime)
-      return (data.timers || []).filter((t) => !t.endTime)
-    } catch (error) {
-      console.error('Failed to fetch timers for notifications:', error)
-      return []
-    }
-  }
-
-  private async startTimer(taskId: number): Promise<void> {
-    try {
-      await fetch(`${API_URL}/api/timers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
-        body: JSON.stringify({
-          taskId,
-          startTime: new Date().toISOString()
-        })
-      })
-      // Notify renderer to refresh
-      this.handlers?.onStartTimer(taskId)
-    } catch (error) {
-      console.error('Failed to start timer from notification:', error)
-    }
-  }
-
-  private async stopTimer(taskId: number, timerId: number): Promise<void> {
-    try {
-      await fetch(`${API_URL}/api/timers/${timerId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
-        body: JSON.stringify({
-          endTime: new Date().toISOString()
-        })
-      })
-      // Notify renderer to refresh
-      this.handlers?.onStopTimer(taskId, timerId)
-    } catch (error) {
-      console.error('Failed to stop timer from notification:', error)
     }
   }
 
@@ -280,20 +228,13 @@ export class NotificationScheduler {
     }
   }
 
-  private scheduleSnooze(
-    type: 'start' | 'end',
-    task: Task,
-    delayMinutes: number,
-    timerId?: number,
-    nextTask?: Task
-  ): void {
+  private scheduleSnooze(type: 'start' | 'end', task: Task, delayMinutes: number, nextTask?: Task): void {
     const key = `snooze-${type}-${task.id}-${Date.now()}`
     const notifyAt = Date.now() + delayMinutes * 60 * 1000
     this.snoozedNotifications.set(key, {
       type,
       taskId: task.id,
       task,
-      timerId,
       nextTask,
       notifyAt
     })
@@ -306,10 +247,10 @@ export class NotificationScheduler {
         this.snoozedNotifications.delete(key)
         if (snooze.type === 'start') {
           this.showStartNotification(snooze.task)
-        } else if (snooze.nextTask && snooze.timerId) {
-          this.showEndWithNextNotification(snooze.task, snooze.nextTask, snooze.timerId)
-        } else if (snooze.timerId) {
-          this.showEndNotification(snooze.task, snooze.timerId)
+        } else if (snooze.nextTask) {
+          this.showEndWithNextNotification(snooze.task, snooze.nextTask)
+        } else {
+          this.showEndNotification(snooze.task)
         }
       }
     }
@@ -321,23 +262,21 @@ export class NotificationScheduler {
     // Check snoozed notifications first
     this.checkSnoozedNotifications()
 
+    if (!this.authToken) {
+      return
+    }
+
     const tasks = await this.fetchTasks()
-    const activeTimers = await this.fetchActiveTimers()
-    const activeTimerTaskIds = new Set(activeTimers.map((t) => t.taskId))
 
     for (const task of tasks) {
       // Skip completed tasks
       if (task.completedAt) continue
 
-      const hasActiveTimer = activeTimerTaskIds.has(task.id)
-      const activeTimer = activeTimers.find((t) => t.taskId === task.id)
-
-      // Case 1: Task about to start (no active timer)
-      if (task.startAt && !hasActiveTimer) {
+      // Task about to start
+      if (task.startAt) {
         const startTime = new Date(task.startAt).getTime()
         const timeUntilStart = startTime - now
 
-        // Notify if within 1 minute before start time
         if (timeUntilStart > 0 && timeUntilStart <= NOTIFY_BEFORE_MS) {
           if (!this.hasNotified('start', task.id)) {
             this.showStartNotification(task)
@@ -346,22 +285,18 @@ export class NotificationScheduler {
         }
       }
 
-      // Case 2 & 3: Task about to end (has active timer)
-      if (task.endAt && hasActiveTimer && activeTimer) {
+      // Task about to end (scheduled end time)
+      if (task.endAt) {
         const endTime = new Date(task.endAt).getTime()
         const timeUntilEnd = endTime - now
 
-        // Notify if within 1 minute before end time
         if (timeUntilEnd > 0 && timeUntilEnd <= NOTIFY_BEFORE_MS) {
           if (!this.hasNotified('end', task.id)) {
-            // Find next task within 30 minutes
             const nextTask = this.findNextTask(tasks, task, endTime)
             if (nextTask) {
-              // Case 3: Has next task
-              this.showEndWithNextNotification(task, nextTask, activeTimer.id)
+              this.showEndWithNextNotification(task, nextTask)
             } else {
-              // Case 2: No next task
-              this.showEndNotification(task, activeTimer.id)
+              this.showEndNotification(task)
             }
             this.markNotified('end', task.id)
           }
@@ -400,7 +335,6 @@ export class NotificationScheduler {
       silent: false,
       timeoutType: 'never',
       actions: [
-        { type: 'button', text: 'Start Timer' },
         { type: 'button', text: 'Snooze 5m' },
         { type: 'button', text: 'Snooze 15m' },
         { type: 'button', text: 'Snooze 30m' }
@@ -414,19 +348,12 @@ export class NotificationScheduler {
     notification.on('action', (_event, index) => {
       switch (index) {
         case 0:
-          // Start Timer
-          this.startTimer(task.id)
-          break
-        case 1:
-          // Snooze 5 minutes
           this.scheduleSnooze('start', task, 5)
           break
-        case 2:
-          // Snooze 15 minutes
+        case 1:
           this.scheduleSnooze('start', task, 15)
           break
-        case 3:
-          // Snooze 30 minutes
+        case 2:
           this.scheduleSnooze('start', task, 30)
           break
       }
@@ -435,14 +362,13 @@ export class NotificationScheduler {
     notification.show()
   }
 
-  private showEndNotification(task: Task, timerId: number): void {
+  private showEndNotification(task: Task): void {
     const notification = new Notification({
       title: 'Task Ending Soon',
       body: `"${task.title}" is about to end`,
       silent: false,
       timeoutType: 'never',
       actions: [
-        { type: 'button', text: 'Stop Timer' },
         { type: 'button', text: 'Snooze 5m' },
         { type: 'button', text: 'Snooze 15m' },
         { type: 'button', text: 'Snooze 30m' }
@@ -456,20 +382,13 @@ export class NotificationScheduler {
     notification.on('action', (_event, index) => {
       switch (index) {
         case 0:
-          // Stop Timer
-          this.stopTimer(task.id, timerId)
+          this.scheduleSnooze('end', task, 5)
           break
         case 1:
-          // Snooze 5 minutes
-          this.scheduleSnooze('end', task, 5, timerId)
+          this.scheduleSnooze('end', task, 15)
           break
         case 2:
-          // Snooze 15 minutes
-          this.scheduleSnooze('end', task, 15, timerId)
-          break
-        case 3:
-          // Snooze 30 minutes
-          this.scheduleSnooze('end', task, 30, timerId)
+          this.scheduleSnooze('end', task, 30)
           break
       }
     })
@@ -477,19 +396,13 @@ export class NotificationScheduler {
     notification.show()
   }
 
-  private showEndWithNextNotification(
-    currentTask: Task,
-    nextTask: Task,
-    currentTimerId: number
-  ): void {
+  private showEndWithNextNotification(currentTask: Task, nextTask: Task): void {
     const notification = new Notification({
       title: 'Task Ending Soon',
       body: `"${currentTask.title}" ending. Next: "${nextTask.title}"`,
       silent: false,
       timeoutType: 'never',
       actions: [
-        { type: 'button', text: 'Stop Only' },
-        { type: 'button', text: 'Stop & Start Next' },
         { type: 'button', text: 'Snooze 5m' },
         { type: 'button', text: 'Snooze 15m' },
         { type: 'button', text: 'Snooze 30m' }
@@ -500,28 +413,16 @@ export class NotificationScheduler {
       this.handlers?.onShowTask(currentTask.id)
     })
 
-    notification.on('action', async (_event, index) => {
+    notification.on('action', (_event, index) => {
       switch (index) {
         case 0:
-          // Stop current task only
-          await this.stopTimer(currentTask.id, currentTimerId)
+          this.scheduleSnooze('end', currentTask, 5, nextTask)
           break
         case 1:
-          // Stop current and start next
-          await this.stopTimer(currentTask.id, currentTimerId)
-          await this.startTimer(nextTask.id)
+          this.scheduleSnooze('end', currentTask, 15, nextTask)
           break
         case 2:
-          // Snooze 5 minutes
-          this.scheduleSnooze('end', currentTask, 5, currentTimerId, nextTask)
-          break
-        case 3:
-          // Snooze 15 minutes
-          this.scheduleSnooze('end', currentTask, 15, currentTimerId, nextTask)
-          break
-        case 4:
-          // Snooze 30 minutes
-          this.scheduleSnooze('end', currentTask, 30, currentTimerId, nextTask)
+          this.scheduleSnooze('end', currentTask, 30, nextTask)
           break
       }
     })

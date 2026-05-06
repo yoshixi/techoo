@@ -528,15 +528,6 @@ app.whenReady().then(() => {
   // Initialize notification scheduler for task reminders
   notificationScheduler = new NotificationScheduler()
   notificationScheduler.setHandlers({
-    onStartTimer: (taskId: number) => {
-      // Notify renderer to refresh timers
-      mainWindow?.webContents.send('notification:timer-started', taskId)
-    },
-    onStopTimer: (taskId: number, timerId: number) => {
-      void timerId
-      // Notify renderer to refresh timers
-      mainWindow?.webContents.send('notification:timer-stopped', taskId)
-    },
     onShowTask: (taskId: number) => {
       // Show the main window and open task detail
       mainWindow?.show()

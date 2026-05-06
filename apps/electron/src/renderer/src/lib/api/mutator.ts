@@ -1,4 +1,5 @@
-import { getJwt, clearAuthState } from '../auth'
+import { getJwt, invalidateAuthSession } from '../auth'
+import { SESSION_INVALID_REASON } from '../session-invalidation'
 
 // API Configuration
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'}/api`
@@ -50,9 +51,9 @@ export const customInstance = async <T>(config: CustomRequestConfig): Promise<T>
 
   const response = await fetch(url.toString(), requestConfig)
 
-  // Handle 401 (JWT expired AND refresh also failed)
+  // Central auth middleware: any API 401 clears credentials and drives AuthGate → AuthScreen
   if (response.status === 401) {
-    clearAuthState()
+    invalidateAuthSession(SESSION_INVALID_REASON.API_UNAUTHORIZED)
     throw new Error('Unauthorized')
   }
 
