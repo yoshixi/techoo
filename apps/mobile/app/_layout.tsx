@@ -7,8 +7,33 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import { SWRConfig } from 'swr';
+import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthContext, useAuthProvider } from '@/hooks/useAuth';
+import { isApiRequestError } from '@/lib/api/ApiRequestError';
+
+/**
+ * SWR sometimes leaves revalidation promises floating; we already surface these in
+ * `customInstance` via `reportApiFailure`. Mark matching rejections as handled so RN
+ * does not show a second red LogBox for the same failure.
+ */
+function SwallowTrackedApiRejections() {
+  useEffect(() => {
+    const g = globalThis as typeof globalThis & {
+      addEventListener?: (type: string, listener: (ev: { preventDefault?: () => void; reason?: unknown }) => void) => void
+      removeEventListener?: (type: string, listener: (ev: { preventDefault?: () => void; reason?: unknown }) => void) => void
+    };
+    const handler = (event: { preventDefault?: () => void; reason?: unknown }) => {
+      const r = event.reason;
+      if (isApiRequestError(r) || (r instanceof Error && r.message === 'Unauthorized')) {
+        event.preventDefault?.();
+      }
+    };
+    g.addEventListener?.('unhandledrejection', handler);
+    return () => g.removeEventListener?.('unhandledrejection', handler);
+  }, []);
+  return null;
+}
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -22,6 +47,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthContext.Provider value={auth}>
+        <SwallowTrackedApiRejections />
         <SWRConfig
           value={{
             revalidateOnFocus: true,
@@ -36,6 +62,20 @@ export default function RootLayout() {
               <Stack.Screen name="auth" options={{ headerShown: false }} />
               <Stack.Screen
                 name="todo/[id]"
+                options={{
+                  presentation: 'modal',
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="todo/new"
+                options={{
+                  presentation: 'modal',
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="post/new"
                 options={{
                   presentation: 'modal',
                   headerShown: false,

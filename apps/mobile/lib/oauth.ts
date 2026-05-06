@@ -1,6 +1,6 @@
 import * as WebBrowser from 'expo-web-browser'
 import * as Linking from 'expo-linking'
-import { API_BASE_URL } from './api/mutator'
+import { API_BASE_URL } from './api/baseUrl'
 import { createSessionCode, exchangeSessionCode, setSessionToken, getJwt, getSessionToken } from './auth'
 
 /**

@@ -6,13 +6,43 @@ import {
   patchApiV1TodosId,
   deleteApiV1TodosId,
 } from '@/gen/api/endpoints/techooAPI.gen'
-import type { ErrorResponse, GetApiV1TodosParams, Todo } from '@/gen/api/schemas'
+import type { ErrorResponse, GetApiV1TodosParams, Todo, UpdateTodo } from '@/gen/api/schemas'
+import { toRfc3339 } from '@/lib/time'
 
 const TODO_LIST_LIMIT = 500
 
+function updatesToPatch(
+  updates: {
+    title?: string
+    description?: string | null
+    starts_at?: Date | null
+    ends_at?: Date | null
+    is_all_day?: number
+    done?: number
+  }
+): UpdateTodo {
+  const patch: UpdateTodo = {}
+  if (updates.title !== undefined) patch.title = updates.title
+  if (updates.description !== undefined) patch.description = updates.description
+  if (updates.starts_at !== undefined) {
+    patch.starts_at = updates.starts_at == null ? null : toRfc3339(updates.starts_at)
+  }
+  if (updates.ends_at !== undefined) {
+    patch.ends_at = updates.ends_at == null ? null : toRfc3339(updates.ends_at)
+  }
+  if (updates.is_all_day !== undefined) patch.is_all_day = updates.is_all_day
+  if (updates.done !== undefined) patch.done = updates.done
+  return patch
+}
+
+function optimisticTodoMerge(t: Todo, updates: Parameters<typeof updatesToPatch>[0]): Todo {
+  const patch = updatesToPatch(updates)
+  return { ...t, ...patch }
+}
+
 export function useTodos(options?: {
-  from?: number
-  to?: number
+  from?: Date
+  to?: Date
   showAll?: boolean
   includeCompletedInRange?: boolean
   fetchAll?: boolean
@@ -20,13 +50,14 @@ export function useTodos(options?: {
   todos: Todo[]
   isLoading: boolean
   error: ErrorResponse | undefined
-  createTodo: (title: string, startsAt?: number, endsAt?: number, isAllDay?: number) => Promise<void>
+  createTodo: (title: string, startsAt?: Date, endsAt?: Date, isAllDay?: number) => Promise<void>
   updateTodo: (
     id: number,
     updates: {
       title?: string
-      starts_at?: number | null
-      ends_at?: number | null
+      description?: string | null
+      starts_at?: Date | null
+      ends_at?: Date | null
       is_all_day?: number
       done?: number
     }
@@ -39,12 +70,20 @@ export function useTodos(options?: {
     if (options?.fetchAll) return { limit: TODO_LIST_LIMIT }
     if (options?.showAll) return { done: 'false' as const, limit: TODO_LIST_LIMIT }
     if (options?.from != null && options?.to != null) {
+      const from = toRfc3339(options.from)
+      const to = toRfc3339(options.to)
       const includeCompleted = options.includeCompletedInRange !== false
-      if (includeCompleted) return { from: options.from, to: options.to, limit: TODO_LIST_LIMIT }
-      return { from: options.from, to: options.to, done: 'false' as const, limit: TODO_LIST_LIMIT }
+      if (includeCompleted) return { from, to, limit: TODO_LIST_LIMIT }
+      return { from, to, done: 'false' as const, limit: TODO_LIST_LIMIT }
     }
     return { done: 'false' as const, limit: TODO_LIST_LIMIT }
-  }, [options?.from, options?.to, options?.showAll, options?.fetchAll, options?.includeCompletedInRange])
+  }, [
+    options?.from?.getTime(),
+    options?.to?.getTime(),
+    options?.showAll,
+    options?.fetchAll,
+    options?.includeCompletedInRange,
+  ])
 
   /** Primitive tuple so SWR cache always tracks range/filters (avoids stale lists when the day changes). */
   const swrKey = useMemo<Key>(
@@ -67,20 +106,20 @@ export function useTodos(options?: {
   const listOpenOnly = params?.done === 'false'
 
   const createTodo = useCallback(
-    async (title: string, startsAt?: number, endsAt?: number, isAllDay?: number) => {
-      const now = Math.floor(Date.now() / 1000)
+    async (title: string, startsAt?: Date, endsAt?: Date, isAllDay?: number) => {
+      const nowIso = toRfc3339(new Date())
       const allDay = isAllDay ?? 0
       const tempId = -Math.abs(Date.now())
       const optimisticTodo: Todo = {
         id: tempId,
         title,
         description: null,
-        starts_at: startsAt ?? null,
-        ends_at: endsAt ?? null,
+        starts_at: startsAt != null ? toRfc3339(startsAt) : null,
+        ends_at: endsAt != null ? toRfc3339(endsAt) : null,
         is_all_day: allDay,
         done: 0,
         done_at: null,
-        created_at: now,
+        created_at: nowIso,
       }
       mutate(
         (current) => {
@@ -92,8 +131,8 @@ export function useTodos(options?: {
       try {
         const res = await postApiV1Todos({
           title,
-          starts_at: startsAt,
-          ends_at: endsAt,
+          starts_at: startsAt != null ? toRfc3339(startsAt) : undefined,
+          ends_at: endsAt != null ? toRfc3339(endsAt) : undefined,
           is_all_day: allDay,
         })
         mutate(
@@ -103,8 +142,9 @@ export function useTodos(options?: {
           },
           { revalidate: false }
         )
-      } catch {
+      } catch (err) {
         await mutate()
+        throw err
       }
     },
     [mutate]
@@ -113,7 +153,7 @@ export function useTodos(options?: {
   const toggleDone = useCallback(
     async (id: number, currentDone: number) => {
       const newDone = currentDone === 1 ? 0 : 1
-      const now = Math.floor(Date.now() / 1000)
+      const nowIso = toRfc3339(new Date())
       mutate(
         (current) => {
           if (!current) return current
@@ -122,7 +162,9 @@ export function useTodos(options?: {
           }
           return {
             data: current.data.map((t) =>
-              t.id === id ? { ...t, done: newDone, done_at: newDone === 1 ? now : null } : t
+              t.id === id
+                ? { ...t, done: newDone, done_at: newDone === 1 ? nowIso : null }
+                : t
             ),
           }
         },
@@ -141,8 +183,9 @@ export function useTodos(options?: {
             { revalidate: false }
           )
         }
-      } catch {
+      } catch (err) {
         await mutate()
+        throw err
       }
     },
     [mutate, listOpenOnly]
@@ -153,8 +196,9 @@ export function useTodos(options?: {
       id: number,
       updates: {
         title?: string
-        starts_at?: number | null
-        ends_at?: number | null
+        description?: string | null
+        starts_at?: Date | null
+        ends_at?: Date | null
         is_all_day?: number
         done?: number
       }
@@ -166,12 +210,16 @@ export function useTodos(options?: {
           if (completing) {
             return { data: current.data.filter((t) => t.id !== id) }
           }
-          return { data: current.data.map((t) => (t.id === id ? ({ ...t, ...updates } as Todo) : t)) }
+          return {
+            data: current.data.map((t) =>
+              t.id === id ? optimisticTodoMerge(t, updates) : t
+            ),
+          }
         },
         { revalidate: false }
       )
       try {
-        const res = await patchApiV1TodosId(id, updates)
+        const res = await patchApiV1TodosId(id, updatesToPatch(updates))
         mutate(
           (current) => {
             if (!current) return current
@@ -182,8 +230,9 @@ export function useTodos(options?: {
           },
           { revalidate: false }
         )
-      } catch {
+      } catch (err) {
         await mutate()
+        throw err
       }
     },
     [mutate, listOpenOnly]
@@ -200,8 +249,9 @@ export function useTodos(options?: {
       )
       try {
         await deleteApiV1TodosId(id)
-      } catch {
+      } catch (err) {
         await mutate()
+        throw err
       }
     },
     [mutate]

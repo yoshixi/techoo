@@ -2,25 +2,23 @@ import { View, Pressable, Alert } from 'react-native';
 import type { Post } from '@/gen/api/schemas';
 import { Text } from '@/components/ui/text';
 import { Trash2 } from 'lucide-react-native';
-
-function formatTime(postedAt: number): string {
-  return new Date(postedAt * 1000).toLocaleTimeString(undefined, {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
+import { formatTime } from '@/lib/time';
 
 export function PostRow({
   post,
   onDelete,
 }: {
   post: Post;
-  onDelete: (id: number) => void;
+  onDelete: (id: number) => void | Promise<void>;
 }) {
   const confirmDelete = () => {
     Alert.alert('Delete post', 'Remove this log entry?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => void onDelete(post.id) },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => void Promise.resolve(onDelete(post.id)).catch(() => {}),
+      },
     ]);
   };
 
@@ -28,7 +26,7 @@ export function PostRow({
     [...post.todos.map((t) => t.title), ...post.events.map((e) => e.title)].filter(Boolean);
 
   return (
-    <View className="mb-3 rounded-xl border border-border bg-card px-3 py-2.5">
+    <View className="mb-3 rounded-xl bg-card/60 px-3 py-3 active:opacity-85">
       <View className="mb-1 flex-row items-start justify-between gap-2">
         <Text className="text-xs text-muted-foreground">{formatTime(post.posted_at)}</Text>
         <Pressable onPress={confirmDelete} hitSlop={8}>

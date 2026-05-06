@@ -9,15 +9,13 @@ import type { GetApiV1TodosDone } from './getApiV1TodosDone';
 
 export type GetApiV1TodosParams = {
   /**
-   * Range start (UTC Unix timestamp)
-   * @nullable
+   * Range start (RFC3339)
    */
-  from?: number | null;
+  from?: string;
   /**
-   * Range end (UTC Unix timestamp)
-   * @nullable
+   * Range end (RFC3339)
    */
-  to?: number | null;
+  to?: string;
   /**
    * Filter by completion status
    */

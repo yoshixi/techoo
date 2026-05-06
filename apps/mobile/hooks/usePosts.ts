@@ -5,18 +5,17 @@ import {
   deleteApiV1PostsId,
 } from '@/gen/api/endpoints/techooAPI.gen'
 import type { ErrorResponse, GetApiV1PostsParams, Post } from '@/gen/api/schemas'
+import { toRfc3339 } from '@/lib/time'
 
-function todayBoundaries(): { from: number; to: number } {
+function todayBoundaries(): { from: Date; to: Date } {
   const now = new Date()
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
-  return {
-    from: Math.floor(startOfDay.getTime() / 1000),
-    to: Math.floor(endOfDay.getTime() / 1000),
-  }
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const endExclusive = new Date(start)
+  endExclusive.setDate(endExclusive.getDate() + 1)
+  return { from: start, to: endExclusive }
 }
 
-export function usePosts(options?: { from: number; to: number; limit?: number }): {
+export function usePosts(options?: { from: Date; to: Date; limit?: number }): {
   posts: Post[]
   isLoading: boolean
   error: ErrorResponse | undefined
@@ -27,21 +26,21 @@ export function usePosts(options?: { from: number; to: number; limit?: number })
   const params = useMemo((): GetApiV1PostsParams => {
     const base = options ?? todayBoundaries()
     return {
-      from: base.from,
-      to: base.to,
+      from: toRfc3339(base.from),
+      to: toRfc3339(base.to),
       ...(options?.limit !== undefined ? { limit: options.limit } : {})
     }
-  }, [options])
+  }, [options?.from?.getTime(), options?.to?.getTime(), options?.limit])
   const { data, error, isLoading, mutate } = useGetApiV1Posts(params)
   const posts: Post[] = data?.data ?? []
 
   const createPost = useCallback(
     async (body: string, eventIds: number[], todoIds: number[]) => {
-      const now = Math.floor(Date.now() / 1000)
+      const nowIso = toRfc3339(new Date())
       const optimistic: Post = {
         id: -Math.abs(Date.now()),
         body,
-        posted_at: now,
+        posted_at: nowIso,
         events: [],
         todos: [],
       }
@@ -54,8 +53,9 @@ export function usePosts(options?: { from: number; to: number; limit?: number })
       try {
         await postApiV1Posts({ body, event_ids: eventIds, todo_ids: todoIds })
         await mutate()
-      } catch {
+      } catch (err) {
         await mutate()
+        throw err
       }
     },
     [mutate]
@@ -63,8 +63,13 @@ export function usePosts(options?: { from: number; to: number; limit?: number })
 
   const deletePost = useCallback(
     async (id: number) => {
-      await deleteApiV1PostsId(id)
-      await mutate()
+      try {
+        await deleteApiV1PostsId(id)
+        await mutate()
+      } catch (err) {
+        await mutate()
+        throw err
+      }
     },
     [mutate]
   )

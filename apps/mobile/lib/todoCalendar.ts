@@ -13,7 +13,11 @@ export type CalendarTimedItem = {
 export function todoToCalendarTimedItem(todo: Todo): CalendarTimedItem | null {
   if (todo.is_all_day === 1) return null
   if (todo.starts_at == null) return null
-  const startAt = new Date(todo.starts_at * 1000).toISOString()
-  const endAt = todo.ends_at != null ? new Date(todo.ends_at * 1000).toISOString() : null
-  return { id: todo.id, title: todo.title, startAt, endAt, done: todo.done }
+  return {
+    id: todo.id,
+    title: todo.title,
+    startAt: todo.starts_at,
+    endAt: todo.ends_at,
+    done: todo.done,
+  }
 }
