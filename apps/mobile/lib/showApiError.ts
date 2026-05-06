@@ -1,5 +1,7 @@
 import { Alert } from 'react-native'
+import * as Clipboard from 'expo-clipboard'
 import { isApiRequestError } from '@/lib/api/ApiRequestError'
+import { isApiDebugEnabled } from '@/lib/apiDebug'
 
 /** Dedupes parallel requests / SWR paths that surface the same failure more than once. */
 let lastReportKey = ''
@@ -24,6 +26,30 @@ export function reportApiFailure(err: unknown, title = 'Couldn’t complete requ
   lastReportKey = key
   lastReportAt = now
   showApiError(err, title)
+}
+
+const DEBUG_BODY_MAX = 6000
+
+function withDebugDetail(err: unknown, userMessage: string): string {
+  if (!isApiDebugEnabled()) return userMessage
+  const lines = [userMessage, '', '--- Debug ---']
+  if (isApiRequestError(err)) {
+    lines.push(`HTTP ${err.status}`)
+    const b = err.body
+    lines.push(b && b.length > 0 ? b.slice(0, DEBUG_BODY_MAX) : '(empty body)')
+  } else if (err instanceof Error) {
+    lines.push(`${err.name}: ${err.message}`)
+    if (err.stack) {
+      lines.push(err.stack.slice(0, DEBUG_BODY_MAX))
+    }
+  } else {
+    try {
+      lines.push(JSON.stringify(err, null, 2).slice(0, DEBUG_BODY_MAX))
+    } catch {
+      lines.push(String(err))
+    }
+  }
+  return lines.join('\n')
 }
 
 function messageForHttpStatus(status: number): string {
@@ -76,23 +102,33 @@ function messageFromUnknown(err: unknown): string {
   return 'Something went wrong. Please try again.'
 }
 
+function showErrorAlert(alertTitle: string, body: string): void {
+  Alert.alert(alertTitle, body, [
+    {
+      text: 'Copy',
+      onPress: () => {
+        void Clipboard.setStringAsync(body)
+      },
+    },
+    { text: 'OK', style: 'cancel' },
+  ])
+}
+
 /**
  * Shows a native alert for API failures from `customInstance` / generated clients.
  * Call after rolling back optimistic updates; may rethrow so callers can fix local UI state.
  */
 export function showApiError(err: unknown, title = 'Couldn’t complete request'): void {
   if (err instanceof Error && err.message === 'Unauthorized') {
-    Alert.alert(
-      'Session expired',
-      'Your session is no longer valid. Please sign in again.'
-    )
+    const sessionMsg = 'Your session is no longer valid. Please sign in again.'
+    showErrorAlert('Session expired', withDebugDetail(err, sessionMsg))
     return
   }
   if (isApiRequestError(err)) {
-    Alert.alert(title, messageForHttpStatus(err.status))
+    showErrorAlert(title, withDebugDetail(err, messageForHttpStatus(err.status)))
     return
   }
   const message =
     err instanceof Error ? messageFromUnknown(err) : 'Something went wrong. Please try again.'
-  Alert.alert(title, message)
+  showErrorAlert(title, withDebugDetail(err, message))
 }

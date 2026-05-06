@@ -14,6 +14,7 @@ const TODO_LIST_LIMIT = 500
 function updatesToPatch(
   updates: {
     title?: string
+    description?: string | null
     starts_at?: Date | null
     ends_at?: Date | null
     is_all_day?: number
@@ -22,6 +23,7 @@ function updatesToPatch(
 ): UpdateTodo {
   const patch: UpdateTodo = {}
   if (updates.title !== undefined) patch.title = updates.title
+  if (updates.description !== undefined) patch.description = updates.description
   if (updates.starts_at !== undefined) {
     patch.starts_at = updates.starts_at == null ? null : toRfc3339(updates.starts_at)
   }
@@ -53,6 +55,7 @@ export function useTodos(options?: {
     id: number,
     updates: {
       title?: string
+      description?: string | null
       starts_at?: Date | null
       ends_at?: Date | null
       is_all_day?: number
@@ -193,6 +196,7 @@ export function useTodos(options?: {
       id: number,
       updates: {
         title?: string
+        description?: string | null
         starts_at?: Date | null
         ends_at?: Date | null
         is_all_day?: number
