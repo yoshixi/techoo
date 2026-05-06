@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { authClient, clearAuthState, getJwt, getSessionToken, invalidateAuthSession } from '../lib/auth'
-import { onAuthSessionInvalidated } from '../lib/session-invalidation'
+import {
+  onAuthSessionInvalidated,
+  SESSION_INVALID_REASON,
+  type SessionInvalidReason
+} from '../lib/session-invalidation'
 
 interface AuthUser {
   id: string
@@ -18,11 +22,11 @@ interface UseAuthReturn {
   refreshAuth: () => Promise<void>
 }
 
-function messageForInvalidSession(reason: string): string {
+function messageForInvalidSession(reason: SessionInvalidReason): string {
   switch (reason) {
-    case 'api-unauthorized':
+    case SESSION_INVALID_REASON.API_UNAUTHORIZED:
       return 'Your session expired or is no longer valid. Please sign in again.'
-    case 'token-exchange-failed':
+    case SESSION_INVALID_REASON.TOKEN_EXCHANGE_FAILED:
       return 'Could not refresh your session. Please sign in again.'
     default:
       return 'Please sign in again.'
@@ -54,7 +58,7 @@ export function useAuth(): UseAuthReturn {
       const sessionToken = await getSessionToken()
       if (!sessionToken) {
         setUser(null)
-        invalidateAuthSession('session-check-failed')
+        invalidateAuthSession(SESSION_INVALID_REASON.SESSION_CHECK_FAILED)
         return
       }
 
@@ -66,7 +70,7 @@ export function useAuth(): UseAuthReturn {
       )
       if (!res.ok) {
         setUser(null)
-        invalidateAuthSession('session-check-failed')
+        invalidateAuthSession(SESSION_INVALID_REASON.SESSION_CHECK_FAILED)
         return
       }
       const session = await res.json()
@@ -78,11 +82,11 @@ export function useAuth(): UseAuthReturn {
         })
       } else {
         setUser(null)
-        invalidateAuthSession('session-check-failed')
+        invalidateAuthSession(SESSION_INVALID_REASON.SESSION_CHECK_FAILED)
       }
     } catch {
       setUser(null)
-      invalidateAuthSession('session-check-failed')
+      invalidateAuthSession(SESSION_INVALID_REASON.SESSION_CHECK_FAILED)
     } finally {
       setIsLoading(false)
     }

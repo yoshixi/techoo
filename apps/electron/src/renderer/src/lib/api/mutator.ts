@@ -1,4 +1,5 @@
 import { getJwt, invalidateAuthSession } from '../auth'
+import { SESSION_INVALID_REASON } from '../session-invalidation'
 
 // API Configuration
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'}/api`
@@ -52,7 +53,7 @@ export const customInstance = async <T>(config: CustomRequestConfig): Promise<T>
 
   // Central auth middleware: any API 401 clears credentials and drives AuthGate → AuthScreen
   if (response.status === 401) {
-    invalidateAuthSession('api-unauthorized')
+    invalidateAuthSession(SESSION_INVALID_REASON.API_UNAUTHORIZED)
     throw new Error('Unauthorized')
   }
 

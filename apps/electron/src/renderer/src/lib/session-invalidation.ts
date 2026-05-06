@@ -3,10 +3,14 @@
  * API transport (`customInstance`) and auth/token helpers emit here; hooks subscribe to
  * sync React auth UI without scattering listeners across generated API clients.
  */
+export const SESSION_INVALID_REASON = {
+  API_UNAUTHORIZED: 'api-unauthorized',
+  TOKEN_EXCHANGE_FAILED: 'token-exchange-failed',
+  SESSION_CHECK_FAILED: 'session-check-failed'
+} as const
+
 export type SessionInvalidReason =
-  | 'api-unauthorized'
-  | 'token-exchange-failed'
-  | 'session-check-failed'
+  (typeof SESSION_INVALID_REASON)[keyof typeof SESSION_INVALID_REASON]
 
 export interface SessionInvalidatedDetail {
   reason: SessionInvalidReason

@@ -2,6 +2,7 @@ import { createAuthClient } from 'better-auth/client'
 
 import {
   notifyAuthSessionInvalidated,
+  SESSION_INVALID_REASON,
   type SessionInvalidReason
 } from './session-invalidation'
 
@@ -66,7 +67,7 @@ export async function getJwt(): Promise<string | null> {
   } catch {
     // Session expired — clear all auth state so stale tokens don't
     // cause repeated 401s from tray/notification requests
-    invalidateAuthSession('token-exchange-failed')
+    invalidateAuthSession(SESSION_INVALID_REASON.TOKEN_EXCHANGE_FAILED)
     return null
   }
 }
