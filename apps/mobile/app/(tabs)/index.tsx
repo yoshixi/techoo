@@ -126,7 +126,7 @@ export default function TodayScreen() {
         ) : null}
 
         {!todosLoading && allDayTodos.length > 0 ? (
-          <View className="mb-5">
+          <View className="mb-5 rounded-2xl bg-muted/20 px-3 py-3">
             <Text className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               All day
             </Text>
@@ -134,7 +134,7 @@ export default function TodayScreen() {
               {allDayTodos.map((t) => (
                 <View
                   key={t.id}
-                  className="flex-row items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5"
+                  className="flex-row items-center gap-3 rounded-xl bg-card/60 px-3 py-3 active:opacity-80"
                 >
                   <Pressable
                     onPress={() =>
@@ -142,7 +142,7 @@ export default function TodayScreen() {
                         /* failure surfaced in customInstance */
                       })
                     }
-                    className="h-9 w-9 items-center justify-center rounded-full border border-border"
+                    className="h-9 w-9 items-center justify-center rounded-full bg-muted/70"
                   >
                     {t.done === 1 ? <Check size={18} className="text-green-600" /> : null}
                   </Pressable>
@@ -173,7 +173,7 @@ export default function TodayScreen() {
                     {entries.map((t) => (
                       <View
                         key={t.id}
-                        className="mb-2 flex-row items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2"
+                        className="mb-2 flex-row items-center gap-2 rounded-xl bg-card/60 px-3 py-3 active:opacity-80"
                       >
                         <Pressable
                           onPress={() =>
@@ -181,7 +181,7 @@ export default function TodayScreen() {
                               /* failure surfaced in customInstance */
                             })
                           }
-                          className="h-8 w-8 items-center justify-center rounded-full border border-border"
+                          className="h-8 w-8 items-center justify-center rounded-full bg-muted/70"
                         >
                           {t.done === 1 ? <Check size={16} className="text-green-600" /> : null}
                         </Pressable>
@@ -204,7 +204,7 @@ export default function TodayScreen() {
         ) : null}
 
         {!todosLoading && viewingToday && laterTodos.length > 0 ? (
-          <View>
+          <View className="rounded-2xl bg-muted/20 px-3 py-3">
             <Text className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Later ({laterTodos.length})
             </Text>
@@ -212,7 +212,7 @@ export default function TodayScreen() {
               {laterTodos.map((t) => (
                 <View
                   key={t.id}
-                  className="flex-row items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5"
+                  className="flex-row items-center gap-3 rounded-xl bg-card/60 px-3 py-3 active:opacity-80"
                 >
                   <Pressable
                     onPress={() =>
@@ -220,7 +220,7 @@ export default function TodayScreen() {
                         /* failure surfaced in customInstance */
                       })
                     }
-                    className="h-9 w-9 items-center justify-center rounded-full border border-border"
+                    className="h-9 w-9 items-center justify-center rounded-full bg-muted/70"
                   >
                     {t.done === 1 ? <Check size={18} className="text-green-600" /> : null}
                   </Pressable>

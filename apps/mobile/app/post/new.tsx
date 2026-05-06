@@ -78,7 +78,7 @@ export default function NewPostScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
-      <View className="flex-row items-center justify-between border-b border-border px-4 py-3">
+      <View className="flex-row items-center justify-between border-b border-border/35 px-4 py-3">
         <Pressable onPress={() => router.back()}>
           <Text className="text-base text-muted-foreground">Cancel</Text>
         </Pressable>
@@ -98,7 +98,7 @@ export default function NewPostScreen() {
         <Text className="mb-1 text-xs text-muted-foreground">Date</Text>
         <Pressable
           onPress={() => setPickerTarget('date')}
-          className="mb-3 rounded-xl border border-border bg-card px-3 py-3"
+          className="mb-3 rounded-xl border border-border/40 bg-card/70 px-3 py-3"
         >
           <Text className="text-sm text-foreground">{date.toLocaleDateString()}</Text>
         </Pressable>
@@ -106,7 +106,7 @@ export default function NewPostScreen() {
         <Text className="mb-1 text-xs text-muted-foreground">Time</Text>
         <Pressable
           onPress={() => setPickerTarget('time')}
-          className="mb-3 rounded-xl border border-border bg-card px-3 py-3"
+          className="mb-3 rounded-xl border border-border/40 bg-card/70 px-3 py-3"
         >
           <Text className="text-sm text-foreground">{formatTime(mergeDateAndTime(date, time))}</Text>
         </Pressable>
@@ -118,14 +118,14 @@ export default function NewPostScreen() {
           placeholder="What's happening?"
           placeholderTextColor="#9ca3af"
           multiline
-          className="mb-3 min-h-[130px] rounded-xl border border-border bg-card px-3 py-3 text-sm text-foreground"
+          className="mb-3 min-h-[130px] rounded-xl border border-border/40 bg-card/70 px-3 py-3 text-sm text-foreground"
           textAlignVertical="top"
         />
 
         <Text className="mb-1 text-xs text-muted-foreground">Link ToDo (optional)</Text>
         <Pressable
           onPress={() => setTodoPickerOpen(true)}
-          className="rounded-xl border border-border bg-card px-3 py-3"
+          className="rounded-xl border border-border/40 bg-card/70 px-3 py-3"
         >
           <Text className="text-sm text-foreground">
             {selectedTodo ? selectedTodo.title : 'Select to-do'}
@@ -176,14 +176,14 @@ export default function NewPostScreen() {
       >
         <View className="flex-1 justify-end bg-black/35">
           <Pressable className="flex-1" onPress={() => setTodoPickerOpen(false)} />
-          <View className="max-h-[70%] rounded-t-2xl border-t border-border bg-background px-4 pb-5 pt-3">
+          <View className="max-h-[70%] rounded-t-2xl border-t border-border/35 bg-background px-4 pb-5 pt-3">
             <Text className="mb-2 text-center text-sm font-semibold text-foreground">Select to-do</Text>
             <TextInput
               value={todoQuery}
               onChangeText={setTodoQuery}
               placeholder="Search..."
               placeholderTextColor="#9ca3af"
-              className="mb-2 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground"
+              className="mb-2 rounded-xl border border-border/40 bg-card/70 px-3 py-2 text-sm text-foreground"
             />
             <FlatList
               keyboardShouldPersistTaps="handled"
@@ -199,7 +199,7 @@ export default function NewPostScreen() {
                     setTodoPickerOpen(false);
                     setTodoQuery('');
                   }}
-                  className="border-b border-border py-3 active:bg-muted"
+                  className="border-b border-border/25 py-3 active:bg-muted/50"
                 >
                   <Text className="text-sm text-foreground">{item.title}</Text>
                 </Pressable>

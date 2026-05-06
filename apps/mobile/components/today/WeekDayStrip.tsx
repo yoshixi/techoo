@@ -27,7 +27,7 @@ export function WeekDayStrip({
               key={i}
               onPress={() => onSelectDay(startOfLocalDay(d))}
               className={`min-w-[44px] items-center rounded-xl border px-2 py-2 ${
-                sel ? 'border-primary bg-primary/10' : 'border-border bg-card'
+                sel ? 'border-primary/35 bg-primary/10' : 'border-transparent bg-card/65'
               }`}
             >
               <Text className={`text-[10px] font-medium uppercase ${sel ? 'text-primary' : 'text-muted-foreground'}`}>

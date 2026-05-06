@@ -87,7 +87,7 @@ export default function NewTodoScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
-      <View className="flex-row items-center justify-between border-b border-border px-4 py-3">
+      <View className="flex-row items-center justify-between border-b border-border/35 px-4 py-3">
         <Pressable onPress={() => router.back()}>
           <Text className="text-base text-muted-foreground">Cancel</Text>
         </Pressable>
@@ -106,7 +106,7 @@ export default function NewTodoScreen() {
           onChangeText={setTitle}
           placeholder="Write title here"
           placeholderTextColor="#9ca3af"
-          className="mb-4 rounded-xl border border-border bg-card px-3 py-3 text-base text-foreground"
+          className="mb-4 rounded-xl border border-border/40 bg-card/70 px-3 py-3 text-base text-foreground"
         />
 
         <Text className="mb-2 text-xs text-muted-foreground">Schedule</Text>
@@ -120,7 +120,7 @@ export default function NewTodoScreen() {
               key={value}
               onPress={() => setMode(value)}
               className={`rounded-full border px-3 py-2 ${
-                mode === value ? 'border-primary bg-primary/15' : 'border-border bg-card'
+                mode === value ? 'border-primary/35 bg-primary/15' : 'border-border/35 bg-card/70'
               }`}
             >
               <Text className={`text-xs font-semibold ${mode === value ? 'text-primary' : 'text-foreground'}`}>
@@ -141,7 +141,7 @@ export default function NewTodoScreen() {
             <Text className="mb-1 text-xs text-muted-foreground">Date</Text>
             <Pressable
               onPress={() => setPickerTarget('date')}
-              className="mb-2 rounded-xl border border-border bg-card px-3 py-3"
+              className="mb-2 rounded-xl border border-border/40 bg-card/70 px-3 py-3"
             >
               <Text className="text-sm text-foreground">{date.toLocaleDateString()}</Text>
             </Pressable>
@@ -156,7 +156,7 @@ export default function NewTodoScreen() {
             <Text className="mb-1 text-xs text-muted-foreground">Start time</Text>
             <Pressable
               onPress={() => setPickerTarget('time')}
-              className="mb-3 rounded-xl border border-border bg-card px-3 py-3"
+              className="mb-3 rounded-xl border border-border/40 bg-card/70 px-3 py-3"
             >
               <Text className="text-sm text-foreground">{formatTime(startAt)}</Text>
             </Pressable>
@@ -173,7 +173,7 @@ export default function NewTodoScreen() {
                   key={value}
                   onPress={() => setDurationPreset(value)}
                   className={`rounded-full border px-3 py-2 ${
-                    durationPreset === value ? 'border-primary bg-primary/15' : 'border-border bg-card'
+                    durationPreset === value ? 'border-primary/35 bg-primary/15' : 'border-border/35 bg-card/70'
                   }`}
                 >
                   <Text
@@ -194,7 +194,7 @@ export default function NewTodoScreen() {
                 keyboardType={Platform.OS === 'ios' ? 'number-pad' : 'numeric'}
                 placeholder="Minutes"
                 placeholderTextColor="#9ca3af"
-                className="mb-2 rounded-xl border border-border bg-card px-3 py-3 text-sm text-foreground"
+                className="mb-2 rounded-xl border border-border/40 bg-card/70 px-3 py-3 text-sm text-foreground"
               />
             ) : null}
             <Text className="text-sm text-muted-foreground">
@@ -210,7 +210,7 @@ export default function NewTodoScreen() {
           placeholder=""
           placeholderTextColor="#9ca3af"
           multiline
-          className="min-h-[90px] rounded-xl border border-border bg-card px-3 py-3 text-sm text-foreground"
+          className="min-h-[90px] rounded-xl border border-border/40 bg-card/70 px-3 py-3 text-sm text-foreground"
           textAlignVertical="top"
         />
       </View>

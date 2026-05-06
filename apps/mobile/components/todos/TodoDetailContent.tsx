@@ -257,7 +257,7 @@ export function TodoDetailContent({ todoId }: TodoDetailContentProps) {
 
   return (
     <View className="flex-1">
-      <View className="flex-row items-center justify-between border-b border-border px-4 py-3">
+      <View className="flex-row items-center justify-between border-b border-border/35 px-4 py-3">
         <Pressable onPress={handleClose} hitSlop={10}>
           <X size={24} className="text-muted-foreground" />
         </Pressable>
@@ -291,10 +291,10 @@ export function TodoDetailContent({ todoId }: TodoDetailContentProps) {
           placeholderTextColor="#9ca3af"
           multiline
           textAlignVertical="top"
-          className="mb-4 min-h-[120px] rounded-xl border border-input bg-background px-3 py-2 text-base text-foreground"
+          className="mb-4 min-h-[120px] rounded-xl border border-input/45 bg-card/60 px-3 py-2 text-base text-foreground"
         />
 
-        <View className="mb-4 flex-row items-center justify-between rounded-lg border border-border px-3 py-2">
+        <View className="mb-4 flex-row items-center justify-between rounded-lg border border-border/40 bg-card/55 px-3 py-2">
           <Text className="text-sm">All day</Text>
           <Switch checked={allDay} onCheckedChange={(v) => void onAllDayChange(v)} />
         </View>
@@ -328,7 +328,7 @@ export function TodoDetailContent({ todoId }: TodoDetailContentProps) {
               {relatedPosts.map((post: Post) => (
                 <View
                   key={post.id}
-                  className="rounded-lg border border-border bg-card px-3 py-2.5"
+                  className="rounded-lg border border-border/35 bg-card/60 px-3 py-2.5"
                 >
                   <Text className="text-sm text-foreground">{post.body}</Text>
                   <Text className="mt-1 text-[11px] text-muted-foreground">
@@ -347,7 +347,7 @@ export function TodoDetailContent({ todoId }: TodoDetailContentProps) {
               placeholderTextColor="#9ca3af"
               multiline
               textAlignVertical="top"
-              className="min-h-[76px] rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground"
+              className="min-h-[76px] rounded-xl border border-input/45 bg-card/60 px-3 py-2 text-sm text-foreground"
             />
             <Button
               className="mt-2 self-start"
