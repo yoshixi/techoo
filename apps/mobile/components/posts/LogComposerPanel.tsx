@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import type { RefObject } from 'react';
 import {
   View,
   TextInput,
@@ -68,6 +69,7 @@ export function LogComposerPanel({
   showStatusLine,
   todosForStatus,
   bottomInset,
+  logInputRef,
 }: {
   draft: string;
   onDraftChange: (text: string) => void;
@@ -79,6 +81,8 @@ export function LogComposerPanel({
   showStatusLine?: boolean;
   todosForStatus?: Todo[];
   bottomInset: number;
+  /** Optional ref to blur after submit (iOS keyboard UX). */
+  logInputRef?: RefObject<TextInput | null>;
 }) {
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -179,6 +183,7 @@ export function LogComposerPanel({
       </View>
 
       <TextInput
+        ref={logInputRef}
         value={draft}
         onChangeText={handleDraftChange}
         onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
