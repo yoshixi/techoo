@@ -9,6 +9,8 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
+  InteractionManager,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -80,6 +82,8 @@ export default function TodayScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [logComposerContext, setLogComposerContext] = useState<PostComposerContext>(null);
   const prevModeRef = useRef(mode);
+  const logComposerInputRef = useRef<TextInput>(null);
+  const planComposerInputRef = useRef<TextInput>(null);
   const [todoDraft, setTodoDraft] = useState('');
   const [todoSubmitting, setTodoSubmitting] = useState(false);
   const [planAllDay, setPlanAllDay] = useState(false);
@@ -206,6 +210,10 @@ export default function TodayScreen() {
     try {
       await createPost(body, eventIds, todoIds);
       setDraft('');
+      logComposerInputRef.current?.blur();
+      InteractionManager.runAfterInteractions(() => {
+        Keyboard.dismiss();
+      });
     } finally {
       setSubmitting(false);
     }
@@ -227,6 +235,10 @@ export default function TodayScreen() {
         await createTodo(title, planStartAt, endAt);
       }
       setTodoDraft('');
+      planComposerInputRef.current?.blur();
+      InteractionManager.runAfterInteractions(() => {
+        Keyboard.dismiss();
+      });
     } finally {
       setTodoSubmitting(false);
     }
@@ -388,6 +400,7 @@ export default function TodayScreen() {
             >
               <View className="flex-row items-center gap-2.5">
                 <TextInput
+                  ref={planComposerInputRef}
                   value={todoDraft}
                   onChangeText={setTodoDraft}
                   placeholder={
@@ -464,6 +477,7 @@ export default function TodayScreen() {
                 showStatusLine={viewingToday}
                 todosForStatus={todos}
                 bottomInset={insets.bottom}
+                logInputRef={logComposerInputRef}
               />
             </View>
           </View>
