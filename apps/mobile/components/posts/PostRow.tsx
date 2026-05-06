@@ -26,7 +26,7 @@ export function PostRow({
     [...post.todos.map((t) => t.title), ...post.events.map((e) => e.title)].filter(Boolean);
 
   return (
-    <View className="mb-3 rounded-xl border border-border bg-card px-3 py-2.5">
+    <View className="mb-3 rounded-xl bg-card/60 px-3 py-3 active:opacity-85">
       <View className="mb-1 flex-row items-start justify-between gap-2">
         <Text className="text-xs text-muted-foreground">{formatTime(post.posted_at)}</Text>
         <Pressable onPress={confirmDelete} hitSlop={8}>
