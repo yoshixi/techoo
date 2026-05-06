@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
 import { useCalendarSettings } from '@/hooks/useCalendarSettings';
+import { useDailyHourWindow } from '@/hooks/useDailyHourWindow';
 import { linkGoogleAccount } from '@/lib/oauth';
 import { showApiError } from '@/lib/showApiError';
 
@@ -75,6 +76,25 @@ export function SettingsContent() {
   const { user, signOut } = useAuth();
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
   const isDarkMode = colorScheme === 'dark';
+  const { wakeHour, bedHour, setWakeHour, setBedHour } = useDailyHourWindow();
+
+  const incrementWakeHour = useCallback(() => {
+    setWakeHour(Math.min(wakeHour + 1, bedHour - 1));
+  }, [wakeHour, bedHour, setWakeHour]);
+
+  const decrementWakeHour = useCallback(() => {
+    setWakeHour(Math.max(wakeHour - 1, 0));
+  }, [wakeHour, setWakeHour]);
+
+  const incrementBedHour = useCallback(() => {
+    setBedHour(Math.min(bedHour + 1, 23));
+  }, [bedHour, setBedHour]);
+
+  const decrementBedHour = useCallback(() => {
+    setBedHour(Math.max(bedHour - 1, wakeHour + 1));
+  }, [bedHour, wakeHour, setBedHour]);
+
+  const hourLabel = useCallback((h: number) => `${h.toString().padStart(2, '0')}:00`, []);
 
   // Google Accounts & Calendar state
   const [selectedAccountId, setSelectedAccountId] = useState<string | undefined>();
@@ -244,6 +264,54 @@ export function SettingsContent() {
             </View>
           </View>
           <Switch checked={isDarkMode} onCheckedChange={toggleColorScheme} />
+        </View>
+      </View>
+
+      {/* Daily timeline hours */}
+      <View className="border border-border rounded-lg px-5 py-4">
+        <View className="mb-3">
+          <Text className="text-sm font-medium">Daily timeline hours</Text>
+          <Text className="text-xs text-muted-foreground">
+            Controls which hours appear on the ToDos timeline.
+          </Text>
+        </View>
+
+        <View className="mb-3 flex-row items-center justify-between">
+          <Text className="text-sm text-muted-foreground">Wake-up hour</Text>
+          <View className="flex-row items-center gap-2">
+            <Pressable
+              onPress={decrementWakeHour}
+              className="h-8 w-8 items-center justify-center rounded-full border border-border"
+            >
+              <Text className="text-base">-</Text>
+            </Pressable>
+            <Text className="w-16 text-center text-sm font-medium">{hourLabel(wakeHour)}</Text>
+            <Pressable
+              onPress={incrementWakeHour}
+              className="h-8 w-8 items-center justify-center rounded-full border border-border"
+            >
+              <Text className="text-base">+</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View className="flex-row items-center justify-between">
+          <Text className="text-sm text-muted-foreground">Bedtime hour</Text>
+          <View className="flex-row items-center gap-2">
+            <Pressable
+              onPress={decrementBedHour}
+              className="h-8 w-8 items-center justify-center rounded-full border border-border"
+            >
+              <Text className="text-base">-</Text>
+            </Pressable>
+            <Text className="w-16 text-center text-sm font-medium">{hourLabel(bedHour)}</Text>
+            <Pressable
+              onPress={incrementBedHour}
+              className="h-8 w-8 items-center justify-center rounded-full border border-border"
+            >
+              <Text className="text-base">+</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
 
