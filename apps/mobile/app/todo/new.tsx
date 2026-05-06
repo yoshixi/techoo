@@ -109,14 +109,6 @@ export default function NewTodoScreen() {
           className="mb-4 rounded-xl border border-border bg-card px-3 py-3 text-base text-foreground"
         />
 
-        <Text className="mb-1 text-xs text-muted-foreground">Date</Text>
-        <Pressable
-          onPress={() => setPickerTarget('date')}
-          className="mb-4 rounded-xl border border-border bg-card px-3 py-3"
-        >
-          <Text className="text-sm text-foreground">{date.toLocaleDateString()}</Text>
-        </Pressable>
-
         <Text className="mb-2 text-xs text-muted-foreground">Schedule</Text>
         <View className="mb-4 flex-row gap-2">
           {([
@@ -145,9 +137,18 @@ export default function NewTodoScreen() {
         ) : null}
 
         {mode === 'allDay' ? (
-          <Text className="mb-4 text-sm text-muted-foreground">
-            Runs all day on the selected date.
-          </Text>
+          <View className="mb-4">
+            <Text className="mb-1 text-xs text-muted-foreground">Date</Text>
+            <Pressable
+              onPress={() => setPickerTarget('date')}
+              className="mb-2 rounded-xl border border-border bg-card px-3 py-3"
+            >
+              <Text className="text-sm text-foreground">{date.toLocaleDateString()}</Text>
+            </Pressable>
+            <Text className="text-sm text-muted-foreground">
+              Runs all day on the selected date.
+            </Text>
+          </View>
         ) : null}
 
         {mode === 'timed' ? (

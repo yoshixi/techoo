@@ -10,6 +10,7 @@ import { dayBoundsLocal, isSameLocalDay, startOfLocalDay } from '@/lib/dayBounds
 import { formatTodoClockTime } from '@/lib/time';
 import { WeeklyTabHeader } from '@/components/navigation/WeeklyTabHeader';
 import { FloatingCreateButton } from '@/components/navigation/FloatingCreateButton';
+import { useDailyHourWindow } from '@/hooks/useDailyHourWindow';
 
 /** Clock row label — same rules as Electron `TodoView` (start – end, or “No time”). */
 function todoScheduleClockLabel(t: Todo): string {
@@ -33,6 +34,7 @@ export default function TodayScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [selectedDay, setSelectedDay] = useState(() => startOfLocalDay(new Date()));
+  const { wakeHour, bedHour } = useDailyHourWindow();
   const bounds = useMemo(() => dayBoundsLocal(selectedDay), [selectedDay]);
   const viewingToday = isSameLocalDay(selectedDay, new Date());
 
@@ -79,7 +81,10 @@ export default function TodayScreen() {
     }
     return map;
   }, [timedTodos]);
-  const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
+  const hours = useMemo(
+    () => Array.from({ length: bedHour - wakeHour + 1 }, (_, i) => wakeHour + i),
+    [wakeHour, bedHour]
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -152,19 +157,23 @@ export default function TodayScreen() {
 
         {!todosLoading ? (
           <View className="mb-5">
-            {hours.map((hour) => {
+            {hours.map((hour, idx) => {
               const entries = timedByHour.get(hour) ?? [];
+              const isLast = idx === hours.length - 1;
               return (
-                <View key={hour} className="mb-2 flex-row">
-                  <Text className="w-10 pt-0.5 text-xs tabular-nums text-muted-foreground">
-                    {hour.toString().padStart(2, '0')}
+                <View key={hour} className="min-h-11 flex-row">
+                  <Text className="w-12 pt-0.5 text-xs tabular-nums text-muted-foreground">
+                    {hour.toString().padStart(2, '0')}:00
                   </Text>
-                  <View className="flex-1">
-                    <View className="h-px bg-border" />
+                  <View className="mr-2 w-5 items-center">
+                    <View className="mt-1 h-2 w-2 rounded-full bg-muted-foreground/70" />
+                    {!isLast ? <View className="h-9 w-px bg-border" /> : <View className="h-3" />}
+                  </View>
+                  <View className="flex-1 pb-2">
                     {entries.map((t) => (
                       <View
                         key={t.id}
-                        className="mt-2 flex-row items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2"
+                        className="mb-2 flex-row items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2"
                       >
                         <Pressable
                           onPress={() =>
