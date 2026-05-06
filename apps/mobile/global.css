@@ -30,11 +30,29 @@
     --chart-5: 30 4% 54%;
   }
 
-  /* .dark:root commented out — light-only for now */
-  /*
   .dark:root {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
+    --background: 32 12% 12%;
+    --foreground: 32 18% 92%;
+    --card: 30 10% 16%;
+    --card-foreground: 32 18% 92%;
+    --popover: 30 10% 16%;
+    --popover-foreground: 32 18% 92%;
+    --primary: 27 78% 58%;
+    --primary-foreground: 24 18% 12%;
+    --secondary: 29 9% 22%;
+    --secondary-foreground: 32 18% 92%;
+    --muted: 28 8% 24%;
+    --muted-foreground: 31 10% 72%;
+    --accent: 30 10% 24%;
+    --accent-foreground: 32 18% 92%;
+    --destructive: 5 65% 56%;
+    --border: 30 7% 28%;
+    --input: 30 7% 28%;
+    --ring: 27 78% 58%;
+    --chart-1: 27 78% 58%;
+    --chart-2: 30 20% 62%;
+    --chart-3: 45 80% 60%;
+    --chart-4: 8 72% 60%;
+    --chart-5: 30 10% 72%;
   }
-  */
 }
