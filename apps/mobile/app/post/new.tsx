@@ -71,6 +71,8 @@ export default function NewPostScreen() {
         todo_ids: selectedTodo ? [selectedTodo.id] : [],
       });
       router.back();
+    } catch {
+      // API error is surfaced in customInstance; avoid unhandled promise rejection in UI event.
     } finally {
       setSubmitting(false);
     }

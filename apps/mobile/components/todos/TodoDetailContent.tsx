@@ -119,12 +119,20 @@ export function TodoDetailContent({ todoId }: TodoDetailContentProps) {
     enabled: !!resolvedTodo && description !== (resolvedTodo.description ?? ''),
   });
   const detailRange = useMemo(
-    () => ({
-      from: new Date(0),
-      to: new Date(Date.now() + 86400_000 * 365 * 10),
-      limit: 10_000,
-    }),
-    []
+    () => {
+      const end = new Date();
+      end.setDate(end.getDate() + 1);
+      const start =
+        resolvedTodo?.created_at != null
+          ? new Date(new Date(resolvedTodo.created_at).getTime() - 86400_000 * 30)
+          : new Date(end.getTime() - 86400_000 * 180);
+      return {
+        from: start,
+        to: end,
+        limit: 2000,
+      };
+    },
+    [resolvedTodo?.created_at]
   );
   const { posts, isLoading: postsLoading, createPost } = usePosts(detailRange);
   const relatedPosts = useMemo(
@@ -143,6 +151,8 @@ export function TodoDetailContent({ todoId }: TodoDetailContentProps) {
     try {
       await createPost(body, [], [todoId]);
       setThreadDraft('');
+    } catch {
+      // API error is surfaced in customInstance; avoid unhandled promise rejection in UI event.
     } finally {
       setPostingThread(false);
     }

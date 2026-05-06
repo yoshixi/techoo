@@ -80,6 +80,8 @@ export default function NewTodoScreen() {
       }
       void notes; // reserved for future API support
       router.back();
+    } catch {
+      // API error is surfaced in customInstance; avoid unhandled promise rejection in UI event.
     } finally {
       setSubmitting(false);
     }
