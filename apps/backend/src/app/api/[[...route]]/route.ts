@@ -3,6 +3,7 @@ import { cors } from 'hono/cors'
 import { createAuth } from '../../core/auth'
 import { getEnv, validateEnv } from '../../core/env'
 import { rootLogger } from '../../lib/logger'
+import { installOutboundFetchDeadlineOnce } from '../../lib/outbound-fetch-timeout'
 import type { AppBindings, Auth } from './types'
 
 // Import route definitions from local routes directory
@@ -139,6 +140,17 @@ function getAllowedCorsOrigins(): Set<string> {
   return allowed
 }
 
+/** Cloudflare Workers pass bindings via `env`; much of our stack reads `process.env`. */
+function applyWorkerBindingsToProcessEnv(env: Record<string, unknown> | undefined): void {
+  if (typeof process === 'undefined' || !env) return
+  const target = process.env as Record<string, string | undefined>
+  for (const [key, value] of Object.entries(env)) {
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      target[key] = String(value)
+    }
+  }
+}
+
 export function createApp(deps?: AppDeps) {
   if (!deps?.skipEnvValidation) {
     validateEnv()
@@ -146,6 +158,20 @@ export function createApp(deps?: AppDeps) {
 
   const auth = deps?.auth ?? createAuth()
   const app = new OpenAPIHono<AppBindings>().basePath('/api')
+
+  app.onError((err, c) => {
+    rootLogger.error(
+      {
+        err:
+          err instanceof Error
+            ? { name: err.name, message: err.message, stack: err.stack }
+            : String(err),
+        path: c.req.path,
+      },
+      'unhandled error'
+    )
+    return c.json({ error: 'Internal server error' }, 500)
+  })
 
   // Logger middleware — must be first to capture all requests
   registerLoggerMiddleware(app)
@@ -276,6 +302,8 @@ function getDefaultApp() {
 // a Proxy doesn't pass the runtime's static handler check.
 export default {
   fetch(request: Request, env?: Record<string, unknown>, ctx?: unknown) {
+    applyWorkerBindingsToProcessEnv(env)
+    installOutboundFetchDeadlineOnce()
     return getDefaultApp().app.fetch(request, env, ctx as ExecutionContext)
   },
 }

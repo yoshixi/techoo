@@ -5,8 +5,10 @@ import { unixToIso } from './common.core'
 import type { Todo, CreateTodo, UpdateTodo } from './todos.core'
 
 function convertDbTodoToApi(row: SelectTodo): Todo {
+  const idNum = typeof row.id === 'bigint' ? Number(row.id) : row.id
+
   return {
-    id: row.id,
+    id: idNum,
     title: row.title,
     description: row.description ?? null,
     starts_at: row.startsAt != null ? unixToIso(row.startsAt) : null,

@@ -11,8 +11,15 @@ export const IdSchema = z.coerce.number().int().positive().openapi({
 })
 
 /** Convert a Unix timestamp (seconds) to an RFC3339 string. */
-export function unixToIso(unix: number): string {
-  return new Date(unix * 1000).toISOString()
+export function unixToIso(unix: number | bigint): string {
+  const sec = typeof unix === 'bigint' ? Number(unix) : unix
+  const ms = Number(sec) * 1000
+  const date = new Date(ms)
+  if (Number.isNaN(date.getTime())) {
+    rootLogger.warn({ unix }, 'invalid unix timestamp; falling back to epoch')
+    return new Date(0).toISOString()
+  }
+  return date.toISOString()
 }
 
 function isoToUnix(s: string): number {
