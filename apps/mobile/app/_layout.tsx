@@ -68,6 +68,20 @@ export default function RootLayout() {
                 }}
               />
               <Stack.Screen
+                name="todo/new"
+                options={{
+                  presentation: 'modal',
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="post/new"
+                options={{
+                  presentation: 'modal',
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
                 name="note/[id]"
                 options={{
                   presentation: 'modal',
