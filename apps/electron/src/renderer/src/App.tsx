@@ -1,23 +1,17 @@
 import React, { useEffect, useState } from 'react'
-import { Home, CalendarDays, MessageSquare, ListTodo, StickyNote, User } from 'lucide-react'
+import { ListTodo, ScrollText, User } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
-import { NotesView } from './components/NotesView'
-import { TodoView } from './components/TodoView'
-import { PostsView } from './components/PostsView'
-import { TodayView } from './components/TodayView'
-import { CalendarView } from './components/CalendarView'
+import { TodoTabView } from './components/TodoTabView'
+import { TimelineView } from './components/TimelineView'
 import { AccountView } from './components/AccountView'
 
-type View = 'today' | 'calendar' | 'posts' | 'todo' | 'notes' | 'account'
+type View = 'todo' | 'timeline' | 'account'
 
 const tabs: { id: View; label: string; icon: LucideIcon }[] = [
-  { id: 'today', label: 'Today', icon: Home },
-  { id: 'calendar', label: 'Calendar', icon: CalendarDays },
-  { id: 'posts', label: 'Posts', icon: MessageSquare },
-  { id: 'todo', label: 'ToDo', icon: ListTodo },
-  { id: 'notes', label: 'Notes', icon: StickyNote },
-  { id: 'account', label: 'Account', icon: User }
+  { id: 'todo', label: 'Todo', icon: ListTodo },
+  { id: 'timeline', label: 'Timeline', icon: ScrollText },
+  { id: 'account', label: 'Settings', icon: User }
 ]
 
 function formatDate(date: Date): string {
@@ -30,7 +24,7 @@ function formatDate(date: Date): string {
 }
 
 function App(): React.JSX.Element {
-  const [currentView, setCurrentView] = useState<View>('today')
+  const [currentView, setCurrentView] = useState<View>('todo')
   const [todayStr, setTodayStr] = useState(() => formatDate(new Date()))
   useEffect(() => {
     const tick = (): void => setTodayStr(formatDate(new Date()))
@@ -76,6 +70,7 @@ function App(): React.JSX.Element {
           return (
             <button
               key={tab.id}
+              type="button"
               onClick={() => setCurrentView(tab.id)}
               className="flex items-center gap-1.5 px-3 pb-2 text-xs transition-colors"
               style={{
@@ -93,11 +88,8 @@ function App(): React.JSX.Element {
 
       {/* Screen content */}
       <main className="flex flex-col flex-1 min-h-0">
-        {currentView === 'today' && <TodayView />}
-        {currentView === 'calendar' && <CalendarView />}
-        {currentView === 'posts' && <PostsView />}
-        {currentView === 'todo' && <TodoView />}
-        {currentView === 'notes' && <NotesView />}
+        {currentView === 'todo' && <TodoTabView />}
+        {currentView === 'timeline' && <TimelineView />}
         {currentView === 'account' && <AccountView />}
       </main>
     </div>

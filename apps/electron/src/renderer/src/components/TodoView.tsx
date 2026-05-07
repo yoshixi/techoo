@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Plus, Check, Trash2, Clock, Search, ChevronDown, ChevronRight } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -10,13 +10,14 @@ import { Separator } from './ui/separator'
 import { Textarea } from './ui/textarea'
 import { useTodos } from '../hooks/useTodos'
 import { usePosts } from '../hooks/usePosts'
-import { useLocalDayBounds } from '../hooks/useLocalDayBounds'
 import type { Todo } from '../gen/api/schemas'
 
 const DEFAULT_BLOCK_SEC = 30 * 60
 
-/** Primary list scope — avoids mixing “today” with custom dates or “all open” with range. */
-type ListScope = 'today' | 'range' | 'all'
+function todayDateInputValue(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 function formatTime(ts: string): string {
   return new Date(ts).toLocaleTimeString(undefined, {
@@ -66,202 +67,40 @@ function useNowSec(intervalMs = 30_000): number {
 }
 
 /* ------------------------------------------------------------------ */
-/*  List scope — Today | custom Range | All open                        */
+/*  List filter — time range (default today) | all open                  */
 /* ------------------------------------------------------------------ */
 
-function ScopeToggle({
-  scope,
-  onScopeChange
+function FilterModeToggle({
+  allOpenMode,
+  onAllOpenModeChange
 }: {
-  scope: ListScope
-  onScopeChange: (s: ListScope) => void
+  allOpenMode: boolean
+  onAllOpenModeChange: (allOpen: boolean) => void
 }): React.JSX.Element {
-  const pill = (s: ListScope, label: string): React.JSX.Element => {
-    const active = scope === s
-    return (
-      <button
-        type="button"
-        className="px-2.5 py-1 rounded-full text-xs font-medium transition-colors sm:px-3"
-        style={{
-          background: active ? 'var(--text-dark)' : 'transparent',
-          color: active ? '#fff' : 'var(--text-muted-custom)'
-        }}
-        onClick={() => onScopeChange(s)}
-      >
-        {active ? '● ' : ''}
-        {label}
-      </button>
-    )
-  }
+  const pill = (active: boolean, label: string, onClick: () => void): React.JSX.Element => (
+    <button
+      type="button"
+      className="px-2.5 py-1 rounded-full text-xs font-medium transition-colors sm:px-3"
+      style={{
+        background: active ? 'var(--text-dark)' : 'transparent',
+        color: active ? '#fff' : 'var(--text-muted-custom)'
+      }}
+      onClick={onClick}
+    >
+      {active ? '● ' : ''}
+      {label}
+    </button>
+  )
   return (
     <div
       className="inline-flex flex-wrap items-center gap-1 rounded-full p-0.5"
       style={{ background: 'var(--panel)' }}
       role="tablist"
-      aria-label="Todo list scope"
+      aria-label="Todo list filter"
     >
-      {pill('today', 'Today')}
-      {pill('range', 'Range')}
-      {pill('all', 'All open')}
+      {pill(!allOpenMode, 'Time range', () => onAllOpenModeChange(false))}
+      {pill(allOpenMode, 'All open', () => onAllOpenModeChange(true))}
     </div>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-/*  Quick-add composer                                                 */
-/* ------------------------------------------------------------------ */
-
-function TodoComposer({
-  onCreateTodo
-}: {
-  onCreateTodo: (title: string, startsAt?: number, endsAt?: number) => void
-}): React.JSX.Element {
-  const [title, setTitle] = useState('')
-  const [showTime, setShowTime] = useState(false)
-  const [selectedDate, setSelectedDate] = useState<string>(() => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  })
-  const [showDatePicker, setShowDatePicker] = useState(false)
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
-
-  const dateLabel = useMemo(() => {
-    const today = new Date()
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    if (selectedDate === todayStr) return 'Today'
-    return new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric'
-    })
-  }, [selectedDate])
-
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault()
-      const trimmed = title.trim()
-      if (!trimmed) return
-
-      if (!showTime) {
-        onCreateTodo(trimmed)
-        setTitle('')
-        setStartTime('')
-        setEndTime('')
-        setShowDatePicker(false)
-        inputRef.current?.focus()
-        return
-      }
-
-      const baseDate = new Date(selectedDate + 'T00:00:00')
-      let startsAt: number
-
-      if (startTime) {
-        const [h, m] = startTime.split(':').map(Number)
-        baseDate.setHours(h, m, 0, 0)
-        startsAt = Math.floor(baseDate.getTime() / 1000)
-      } else {
-        baseDate.setHours(9, 0, 0, 0)
-        startsAt = Math.floor(baseDate.getTime() / 1000)
-      }
-
-      let endsAt: number | undefined
-      if (endTime) {
-        const [eh, em] = endTime.split(':').map(Number)
-        const ed = new Date(selectedDate + 'T00:00:00')
-        ed.setHours(eh, em, 0, 0)
-        endsAt = Math.floor(ed.getTime() / 1000)
-      }
-
-      onCreateTodo(trimmed, startsAt, endsAt)
-      setTitle('')
-      setStartTime('')
-      setEndTime('')
-      setShowDatePicker(false)
-      inputRef.current?.focus()
-    },
-    [title, showTime, startTime, endTime, selectedDate, onCreateTodo]
-  )
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-2">
-      <div className="flex items-center gap-2 flex-wrap">
-        <Input
-          ref={inputRef}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Add a todo..."
-          className="flex-1 min-w-[160px] h-9"
-        />
-        <div className="relative shrink-0">
-          <Badge
-            variant="outline"
-            className="cursor-pointer hover:bg-accent px-3 py-1.5 text-xs rounded-full"
-            onClick={() => setShowDatePicker(!showDatePicker)}
-          >
-            {dateLabel} ▾
-          </Badge>
-          {showDatePicker && (
-            <div
-              className="absolute top-full right-0 mt-1 z-10 bg-white border rounded-lg shadow-md p-2"
-              style={{ borderColor: 'var(--border-l)' }}
-            >
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => {
-                  setSelectedDate(e.target.value)
-                  setShowDatePicker(false)
-                }}
-                className="text-xs border rounded px-2 py-1"
-                style={{ borderColor: 'var(--border-l)' }}
-              />
-            </div>
-          )}
-        </div>
-        <Badge
-          variant="outline"
-          className={`cursor-pointer hover:bg-accent px-3 py-1.5 text-xs rounded-full shrink-0 ${
-            showTime ? 'bg-amber-50 border-amber-300' : ''
-          }`}
-          onClick={() => setShowTime(!showTime)}
-        >
-          <Clock className="w-3 h-3 mr-1" />
-          Time
-        </Badge>
-        <Button
-          type="submit"
-          size="sm"
-          disabled={!title.trim()}
-          className="rounded-full w-8 h-8 p-0"
-          style={{ background: title.trim() ? 'var(--amber)' : undefined }}
-        >
-          <Plus className="w-4 h-4" />
-        </Button>
-      </div>
-      {showTime && (
-        <div className="flex items-center gap-2 pl-1 text-xs text-muted-foreground flex-wrap">
-          <span className="w-8">From</span>
-          <Input
-            type="time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            className="w-28 h-7 text-xs"
-          />
-          <span className="w-4">To</span>
-          <Input
-            type="time"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-            className="w-28 h-7 text-xs"
-          />
-        </div>
-      )}
-    </form>
   )
 }
 
@@ -269,7 +108,7 @@ function TodoComposer({
 /*  Todo row (open detail for edit)                                    */
 /* ------------------------------------------------------------------ */
 
-function TodoItem({
+export function TodoItem({
   todo,
   onToggleDone,
   onDeleteTodo,
@@ -388,7 +227,7 @@ function TodoItem({
 /*  Todo detail dialog — view, related posts, edit                    */
 /* ------------------------------------------------------------------ */
 
-function TodoDetailDialog({
+export function TodoDetailDialog({
   todo,
   onClose,
   onUpdateTodo,
@@ -533,7 +372,7 @@ function TodoDetailDialog({
   }, [todo.id, onDeleteTodo, onClose])
 
   return (
-    <DialogContent className="max-h-[90vh] max-w-md gap-0 overflow-y-auto p-5 sm:max-w-lg sm:p-6">
+    <DialogContent className="max-h-[90vh] w-full max-w-[min(100vw-2rem,36rem)] gap-0 overflow-y-auto p-5 sm:max-w-[min(100vw-3rem,52rem)] sm:p-6">
       <DialogHeader className="space-y-0 pb-4 text-left">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0">
@@ -585,7 +424,7 @@ function TodoDetailDialog({
           />
         </div>
 
-        <div className="max-w-sm space-y-3 rounded-xl border border-border bg-muted/25 px-3 py-3">
+        <div className="w-full max-w-full space-y-3 rounded-xl border border-border bg-muted/25 px-3 py-3 sm:max-w-none">
           <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Schedule</p>
           <div className="flex items-center justify-between gap-3">
             <Label htmlFor="todo-all-day" className="cursor-pointer text-sm font-normal">
@@ -743,39 +582,64 @@ function sortTodos(todos: Todo[], pinIncompleteFirst: boolean): Todo[] {
 /*  TodoView                                                           */
 /* ------------------------------------------------------------------ */
 
-export function TodoView(): React.JSX.Element {
-  const [listScope, setListScope] = useState<ListScope>('today')
-  const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
+export type TodoViewProps = {
+  /** Narrow layout for split Todo tab (calendar + list). */
+  variant?: 'page' | 'column'
+  className?: string
+  /** Controlled selection for split layout (calendar + list share detail). */
+  selectedTodo?: Todo | null
+  onSelectedTodoChange?: (todo: Todo | null) => void
+}
+
+export function TodoView({
+  variant = 'page',
+  className,
+  selectedTodo: controlledSelected,
+  onSelectedTodoChange
+}: TodoViewProps = {}): React.JSX.Element {
+  const [internalSelected, setInternalSelected] = useState<Todo | null>(null)
+  const controlled =
+    controlledSelected !== undefined && onSelectedTodoChange !== undefined
+  const selectedTodo = controlled ? controlledSelected! : internalSelected
+  const setSelectedTodo = useCallback(
+    (t: Todo | null) => {
+      if (controlled) onSelectedTodoChange!(t)
+      else setInternalSelected(t)
+    },
+    [controlled, onSelectedTodoChange]
+  )
+
+  const [allOpenMode, setAllOpenMode] = useState(false)
+  const [rangeFrom, setRangeFrom] = useState(todayDateInputValue)
+  const [rangeTo, setRangeTo] = useState(todayDateInputValue)
+  const [createDraft, setCreateDraft] = useState<{
+    title: string
+    startTime: string
+    endTime: string
+    useSchedule: boolean
+  } | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
+
   const [showCompletedInRange, setShowCompletedInRange] = useState(false)
   const [showCompletedInAllMode, setShowCompletedInAllMode] = useState(false)
   const [overdueOnly, setOverdueOnly] = useState(false)
   const [titleSearch, setTitleSearch] = useState('')
-  const [customFrom, setCustomFrom] = useState<string | null>(null)
-  const [customTo, setCustomTo] = useState<string | null>(null)
   const [advancedOpen, setAdvancedOpen] = useState(false)
 
-  const showAll = listScope === 'all'
-
-  const defaultBounds = useLocalDayBounds()
   const nowSec = useNowSec()
 
   const listRange = useMemo(() => {
-    if (listScope === 'range' && customFrom && customTo) {
-      const a = startOfDayUnixFromDateInput(customFrom)
-      const b = startOfDayUnixFromDateInput(customTo) + 86400
-      return { from: Math.min(a, b), to: Math.max(a, b) }
-    }
-    return defaultBounds
-  }, [listScope, customFrom, customTo, defaultBounds])
+    const a = startOfDayUnixFromDateInput(rangeFrom)
+    const b = startOfDayUnixFromDateInput(rangeTo) + 86400
+    return { from: Math.min(a, b), to: Math.max(a, b) }
+  }, [rangeFrom, rangeTo])
 
-  const rangeDatesReady = Boolean(customFrom && customTo)
-
-  const useFetchAll = showAll && showCompletedInAllMode
+  const useFetchAll = allOpenMode && showCompletedInAllMode
 
   const { todos: rawTodos, isLoading, createTodo, updateTodo, toggleDone, deleteTodo } = useTodos(
     useFetchAll
       ? { fetchAll: true }
-      : showAll
+      : allOpenMode
         ? { showAll: true }
         : {
             from: listRange.from,
@@ -785,12 +649,10 @@ export function TodoView(): React.JSX.Element {
   )
 
   useEffect(() => {
-    setSelectedTodo((prev) => {
-      if (!prev) return prev
-      const next = rawTodos.find((t) => t.id === prev.id)
-      return next ?? null
-    })
-  }, [rawTodos])
+    if (!selectedTodo) return
+    const next = rawTodos.find((t) => t.id === selectedTodo.id)
+    if (!next) setSelectedTodo(null)
+  }, [rawTodos, selectedTodo?.id, setSelectedTodo])
 
   const filteredTodos = useMemo(() => {
     let t = rawTodos
@@ -800,89 +662,167 @@ export function TodoView(): React.JSX.Element {
     if (useFetchAll && !showCompletedInAllMode) {
       t = t.filter((x) => x.done === 0)
     }
-    if (!showAll && !showCompletedInRange) {
+    if (!allOpenMode && !showCompletedInRange) {
       t = t.filter((x) => x.done === 0)
     }
-    const pinIncomplete = !showAll || showCompletedInRange || useFetchAll
+    const pinIncomplete = !allOpenMode || showCompletedInRange || useFetchAll
     return sortTodos(t, pinIncomplete)
   }, [
     rawTodos,
     titleSearch,
     overdueOnly,
     nowSec,
-    showAll,
+    allOpenMode,
     showCompletedInRange,
     useFetchAll,
     showCompletedInAllMode
   ])
 
-  const clearCustomRange = useCallback(() => {
-    setCustomFrom(null)
-    setCustomTo(null)
-  }, [])
-
-  const handleScopeChange = useCallback((s: ListScope) => {
-    if (s === 'today' || s === 'all') {
-      setCustomFrom(null)
-      setCustomTo(null)
-    }
-    if (s === 'all') {
+  const handleAllOpenModeChange = useCallback((open: boolean) => {
+    setAllOpenMode(open)
+    if (open) {
       setShowCompletedInRange(false)
     } else {
       setShowCompletedInAllMode(false)
     }
-    if (s === 'range') {
-      setAdvancedOpen(true)
-    }
-    setListScope(s)
   }, [])
 
   const advancedActiveCount = useMemo(() => {
     let n = 0
-    if (listScope === 'all') {
+    if (allOpenMode) {
       if (showCompletedInAllMode) n++
     } else if (showCompletedInRange) {
       n++
     }
     if (overdueOnly) n++
     if (titleSearch.trim()) n++
-    if (listScope === 'range' && (customFrom != null || customTo != null)) n++
     return n
-  }, [
-    listScope,
-    showCompletedInRange,
-    showCompletedInAllMode,
-    overdueOnly,
-    titleSearch,
-    customFrom,
-    customTo
-  ])
+  }, [allOpenMode, showCompletedInRange, showCompletedInAllMode, overdueOnly, titleSearch])
 
   const clearAdvancedFilters = useCallback(() => {
     setShowCompletedInRange(false)
     setShowCompletedInAllMode(false)
     setOverdueOnly(false)
     setTitleSearch('')
-    clearCustomRange()
-    if (listScope === 'range') {
-      setListScope('today')
+  }, [])
+
+  const openCreateDialog = useCallback(() => {
+    const now = new Date()
+    const end = new Date(now.getTime() + 60 * 60 * 1000)
+    const fmt = (d: Date): string =>
+      `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    setCreateDraft({ title: '', startTime: fmt(now), endTime: fmt(end), useSchedule: false })
+  }, [])
+
+  const handleCreateSubmit = useCallback(async () => {
+    if (!createDraft || !createDraft.title.trim()) return
+    setIsCreating(true)
+    try {
+      if (!createDraft.useSchedule) {
+        await createTodo(createDraft.title.trim())
+      } else {
+        const today = new Date()
+        const [sh, sm] = createDraft.startTime.split(':').map(Number)
+        const [eh, em] = createDraft.endTime.split(':').map(Number)
+        const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), sh, sm)
+        const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), eh, em)
+        await createTodo(
+          createDraft.title.trim(),
+          Math.floor(startDate.getTime() / 1000),
+          Math.floor(endDate.getTime() / 1000)
+        )
+      }
+      setCreateDraft(null)
+    } finally {
+      setIsCreating(false)
     }
-  }, [clearCustomRange, listScope])
+  }, [createDraft, createTodo])
+
+  const padding = variant === 'column' ? 'px-4 py-3' : 'p-6'
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col overflow-hidden p-6">
-      <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <div>
-          <h2 className="font-title text-lg" style={{ color: 'var(--text-dark)' }}>
-            ToDo
-          </h2>
+    <div
+      className={`flex flex-1 min-h-0 flex-col overflow-hidden ${padding} ${className ?? ''}`}
+      style={
+        variant === 'column'
+          ? {
+              background: 'var(--panel)',
+              borderColor: 'var(--border-l)'
+            }
+          : undefined
+      }
+    >
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-2 shrink-0">
+          <div>
+            <h2 className="font-title text-lg" style={{ color: 'var(--text-dark)' }}>
+              ToDo
+            </h2>
+            {variant === 'column' && (
+              <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                Filter and manage tasks; calendar on the left.
+              </p>
+            )}
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="shrink-0 gap-1 rounded-full h-8 text-xs"
+            style={{ background: 'var(--amber)' }}
+            onClick={openCreateDialog}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Create todo
+          </Button>
         </div>
 
-        {/* Scope + advanced — left-aligned (matches More filters pl-1) */}
         <div className="flex shrink-0 flex-col gap-2">
           <div className="pl-1">
-            <ScopeToggle scope={listScope} onScopeChange={handleScopeChange} />
+            <FilterModeToggle allOpenMode={allOpenMode} onAllOpenModeChange={handleAllOpenModeChange} />
           </div>
+
+          {!allOpenMode && (
+            <div className="flex flex-wrap items-end gap-3 pl-1">
+              <div className="flex min-w-[8.5rem] flex-1 flex-col gap-1 sm:max-w-[11rem]">
+                <Label htmlFor="todo-range-from" className="text-[11px] text-muted-foreground">
+                  From
+                </Label>
+                <Input
+                  id="todo-range-from"
+                  type="date"
+                  value={rangeFrom}
+                  onChange={(e) => setRangeFrom(e.target.value)}
+                  className="h-8 w-full min-w-0 text-xs"
+                />
+              </div>
+              <div className="flex min-w-[8.5rem] flex-1 flex-col gap-1 sm:max-w-[11rem]">
+                <Label htmlFor="todo-range-to" className="text-[11px] text-muted-foreground">
+                  To
+                </Label>
+                <Input
+                  id="todo-range-to"
+                  type="date"
+                  value={rangeTo}
+                  onChange={(e) => setRangeTo(e.target.value)}
+                  className="h-8 w-full min-w-0 text-xs"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 shrink-0 rounded-full px-2.5 text-[11px] text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  const t = todayDateInputValue()
+                  setRangeFrom(t)
+                  setRangeTo(t)
+                }}
+              >
+                Reset to today
+              </Button>
+            </div>
+          )}
+
           <button
             type="button"
             className="flex w-full items-center gap-2 rounded-xl py-2 pl-1 pr-2 text-left text-xs transition-colors hover:bg-accent/50"
@@ -906,10 +846,10 @@ export function TodoView(): React.JSX.Element {
           </button>
 
           {advancedOpen && (
-            <div className="mt-2 rounded-2xl border border-border bg-card px-3 py-3">
+            <div className="mt-1 rounded-2xl border border-border bg-card px-3 py-3">
               <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
                 <div className="flex min-w-[5.5rem] flex-col gap-1">
-                  {listScope === 'all' ? (
+                  {allOpenMode ? (
                     <>
                       <Label htmlFor="adv-completed-all" className="text-[11px] text-muted-foreground">
                         Completed
@@ -940,49 +880,7 @@ export function TodoView(): React.JSX.Element {
                   </Label>
                   <Switch id="adv-overdue" checked={overdueOnly} onCheckedChange={setOverdueOnly} />
                 </div>
-
-                {listScope === 'range' && (
-                  <>
-                    <div className="flex min-w-[8.5rem] flex-1 flex-col gap-1 sm:max-w-[11rem]">
-                      <Label htmlFor="adv-date-from" className="text-[11px] text-muted-foreground">
-                        From
-                      </Label>
-                      <Input
-                        id="adv-date-from"
-                        type="date"
-                        value={customFrom ?? ''}
-                        onChange={(e) => setCustomFrom(e.target.value || null)}
-                        className="h-8 w-full min-w-0 text-xs"
-                      />
-                    </div>
-                    <div className="flex min-w-[8.5rem] flex-1 flex-col gap-1 sm:max-w-[11rem]">
-                      <Label htmlFor="adv-date-to" className="text-[11px] text-muted-foreground">
-                        To
-                      </Label>
-                      <Input
-                        id="adv-date-to"
-                        type="date"
-                        value={customTo ?? ''}
-                        onChange={(e) => setCustomTo(e.target.value || null)}
-                        className="h-8 w-full min-w-0 text-xs"
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 shrink-0 rounded-full px-2.5 text-[11px] text-muted-foreground hover:text-foreground"
-                      onClick={() => handleScopeChange('today')}
-                    >
-                      Use today
-                    </Button>
-                  </>
-                )}
               </div>
-
-              {listScope === 'range' && !rangeDatesReady && (
-                <p className="mt-2 text-[11px] text-muted-foreground">Set From and To to load that span.</p>
-              )}
 
               <Separator className="my-3" />
 
@@ -1018,14 +916,12 @@ export function TodoView(): React.JSX.Element {
           )}
         </div>
 
-        <TodoComposer onCreateTodo={createTodo} />
-
         <div className="flex-1 min-h-0 overflow-y-auto">
           {isLoading ? (
             <p className="text-sm text-muted-foreground text-center py-8">Loading...</p>
           ) : filteredTodos.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
-              {showAll && !showCompletedInAllMode
+              {allOpenMode && !showCompletedInAllMode
                 ? 'No open todos.'
                 : 'No todos match these filters.'}
             </p>
@@ -1036,12 +932,86 @@ export function TodoView(): React.JSX.Element {
                 todo={todo}
                 onToggleDone={toggleDone}
                 onDeleteTodo={deleteTodo}
-                onSelect={setSelectedTodo}
+                onSelect={(t) => setSelectedTodo(t)}
               />
             ))
           )}
         </div>
       </div>
+
+      <Dialog
+        open={Boolean(createDraft)}
+        onOpenChange={(open) => {
+          if (!open && !isCreating) setCreateDraft(null)
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <div className="space-y-4">
+            <DialogHeader className="space-y-1 text-left p-0">
+              <DialogTitle className="font-title text-lg">New todo</DialogTitle>
+            </DialogHeader>
+            <Input
+              value={createDraft?.title ?? ''}
+              onChange={(e) => setCreateDraft((d) => (d ? { ...d, title: e.target.value } : d))}
+              placeholder="Title…"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  void handleCreateSubmit()
+                }
+              }}
+            />
+            <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm">
+              <div className="space-y-0.5 pr-2">
+                <Label htmlFor="todo-create-schedule" className="text-sm font-normal cursor-pointer">
+                  Schedule on calendar
+                </Label>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Turn off to add a todo without a time block.
+                </p>
+              </div>
+              <Switch
+                id="todo-create-schedule"
+                checked={createDraft?.useSchedule ?? false}
+                onCheckedChange={(v) => setCreateDraft((d) => (d ? { ...d, useSchedule: v } : d))}
+              />
+            </div>
+            {createDraft?.useSchedule && (
+              <div className="flex items-center gap-3 text-sm flex-wrap">
+                <label className="text-muted-foreground w-12 shrink-0">From</label>
+                <Input
+                  type="time"
+                  value={createDraft?.startTime ?? ''}
+                  onChange={(e) =>
+                    setCreateDraft((d) => (d ? { ...d, startTime: e.target.value } : d))
+                  }
+                  className="w-32 h-8"
+                />
+                <label className="text-muted-foreground w-8 shrink-0">To</label>
+                <Input
+                  type="time"
+                  value={createDraft?.endTime ?? ''}
+                  onChange={(e) => setCreateDraft((d) => (d ? { ...d, endTime: e.target.value } : d))}
+                  className="w-32 h-8"
+                />
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setCreateDraft(null)} disabled={isCreating}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => void handleCreateSubmit()}
+                disabled={isCreating || !createDraft?.title.trim()}
+                style={{ background: 'var(--amber)' }}
+              >
+                {isCreating ? 'Creating…' : 'Create'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={Boolean(selectedTodo)}

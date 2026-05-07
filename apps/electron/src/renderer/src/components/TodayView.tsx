@@ -1,9 +1,12 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
-import { Plus, Check, Calendar, PenLine } from 'lucide-react'
+import { Plus, Check, Calendar, PenLine, Clock } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Dialog, DialogContent } from './ui/dialog'
 import { Badge } from './ui/badge'
+import { Label } from './ui/label'
+import { Switch } from './ui/switch'
+import { TodoDetailDialog } from './TodoView'
 import { CalendarViewInner, apiTodoToCalendar } from './CalendarView'
 import { PostComposer, type PostComposerContext } from './PostComposer'
 import { PostRow } from './PostRow'
@@ -175,12 +178,14 @@ function WorkSidePanel({
   todos,
   createTodo,
   toggleDone,
-  onOpenPlan
+  onOpenPlan,
+  onSelectTodo
 }: {
   todos: Todo[]
   createTodo: (title: string, startsAt?: number, endsAt?: number) => Promise<void>
   toggleDone: (id: number, currentDone: number) => Promise<void>
   onOpenPlan: () => void
+  onSelectTodo: (todo: Todo) => void
 }): React.JSX.Element {
   const nowSec = usePeriodicNow()
   const scheduled = useMemo(() => {
@@ -211,9 +216,11 @@ function WorkSidePanel({
               ).toISOString()
             const isRunning = pickRunningTodo([todo], nowSec)?.id === todo.id
             return (
-              <div
+              <button
                 key={todo.id}
-                className="rounded-md border px-2 py-1.5 text-xs"
+                type="button"
+                onClick={() => onSelectTodo(todo)}
+                className="rounded-md border px-2 py-1.5 text-xs w-full text-left transition-colors hover:bg-accent/40"
                 style={{
                   borderColor: isRunning ? 'var(--amber)' : 'var(--border-l)',
                   background: isRunning ? 'var(--amber-light)' : 'transparent'
@@ -223,7 +230,7 @@ function WorkSidePanel({
                 <div className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">
                   {formatTime(todo.starts_at!)} – {formatTime(endTs)}
                 </div>
-              </div>
+              </button>
             )
           })
         )}
@@ -247,6 +254,7 @@ function WorkSidePanel({
           todos={todos}
           createTodo={createTodo}
           toggleDone={toggleDone}
+          onSelectTodo={onSelectTodo}
           omitHeading
           dense
         />
@@ -263,12 +271,14 @@ function TodayTodoPanel({
   todos,
   createTodo,
   toggleDone,
+  onSelectTodo,
   omitHeading,
   dense
 }: {
   todos: Todo[]
   createTodo: (title: string, startsAt?: number, endsAt?: number) => Promise<void>
   toggleDone: (id: number, currentDone: number) => Promise<void>
+  onSelectTodo?: (todo: Todo) => void
   omitHeading?: boolean
   dense?: boolean
 }): React.JSX.Element {
@@ -344,12 +354,25 @@ function TodayTodoPanel({
             return (
               <div
                 key={todo.id}
-                className="flex items-start gap-2 py-1.5"
+                role={onSelectTodo ? 'button' : undefined}
+                tabIndex={onSelectTodo ? 0 : undefined}
+                className={`flex items-start gap-2 py-1.5 ${onSelectTodo ? 'cursor-pointer rounded-md px-1 -mx-1 hover:bg-accent/30' : ''}`}
                 style={{ borderBottom: '0.5px solid var(--border-l)' }}
+                onClick={() => onSelectTodo?.(todo)}
+                onKeyDown={(e) => {
+                  if (!onSelectTodo) return
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onSelectTodo(todo)
+                  }
+                }}
               >
                 <button
                   type="button"
-                  onClick={() => toggleDone(todo.id, todo.done)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void toggleDone(todo.id, todo.done)
+                  }}
                   className="flex items-center justify-center shrink-0 mt-0.5 rounded"
                   style={{
                     width: 14,
@@ -361,16 +384,27 @@ function TodayTodoPanel({
                 >
                   {isDone && <Check size={8} color="#fff" strokeWidth={3} />}
                 </button>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
                   <span
                     className={`text-xs leading-snug ${isDone ? 'line-through text-muted-foreground' : ''}`}
                   >
                     {todo.title}
                   </span>
-                  {todo.starts_at != null && (
-                    <Badge variant="outline" className="ml-1.5 text-[9px] px-1 py-0 h-3.5 rounded">
+                  {todo.starts_at != null ? (
+                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 rounded gap-0.5 shrink-0 pointer-events-none">
+                      <Clock className="w-2.5 h-2.5" />
                       {formatTime(todo.starts_at!)}
                     </Badge>
+                  ) : (
+                    onSelectTodo && (
+                      <Badge
+                        variant="outline"
+                        className="text-[9px] px-1 py-0 h-3.5 rounded gap-0.5 shrink-0 pointer-events-none text-muted-foreground"
+                      >
+                        <Clock className="w-2.5 h-2.5" />
+                        No time
+                      </Badge>
+                    )
                   )}
                 </div>
               </div>
@@ -530,6 +564,7 @@ export function TodayView(): React.JSX.Element {
 
   const [railTab, setRailTab] = useState<'todo' | 'log'>('todo')
   const [logComposerContext, setLogComposerContext] = useState<PostComposerContext>(null)
+  const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
   const prevRailTab = useRef(railTab)
   const prevFocusMode = useRef(focusMode)
 
@@ -570,10 +605,30 @@ export function TodayView(): React.JSX.Element {
     return () => window.removeEventListener('keydown', onKey)
   }, [toggleFocusMode])
 
+  useEffect(() => {
+    setSelectedTodo((prev) => {
+      if (!prev) return prev
+      return todos.find((t) => t.id === prev.id) ?? null
+    })
+  }, [todos])
+
+  const openTodoDetail = useCallback((todo: Todo) => {
+    setSelectedTodo(todo)
+  }, [])
+
+  const handleCalendarTodoSelect = useCallback(
+    (calTodo: { id: number }) => {
+      const match = todos.find((t) => t.id === calTodo.id)
+      if (match) setSelectedTodo(match)
+    },
+    [todos]
+  )
+
   const [createDraft, setCreateDraft] = useState<{
     title: string
     startTime: string
     endTime: string
+    useSchedule: boolean
   } | null>(null)
   const [isCreating, setIsCreating] = useState(false)
 
@@ -582,7 +637,7 @@ export function TodayView(): React.JSX.Element {
     const end = new Date(range.ends_at * 1000)
     const fmt = (d: Date): string =>
       `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-    setCreateDraft({ title: '', startTime: fmt(start), endTime: fmt(end) })
+    setCreateDraft({ title: '', startTime: fmt(start), endTime: fmt(end), useSchedule: true })
   }, [])
 
   const handleTodoMove = useCallback(
@@ -603,16 +658,20 @@ export function TodayView(): React.JSX.Element {
     if (!createDraft || !createDraft.title.trim()) return
     setIsCreating(true)
     try {
-      const today = new Date()
-      const [sh, sm] = createDraft.startTime.split(':').map(Number)
-      const [eh, em] = createDraft.endTime.split(':').map(Number)
-      const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), sh, sm)
-      const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), eh, em)
-      await createTodo(
-        createDraft.title.trim(),
-        Math.floor(startDate.getTime() / 1000),
-        Math.floor(endDate.getTime() / 1000)
-      )
+      if (!createDraft.useSchedule) {
+        await createTodo(createDraft.title.trim())
+      } else {
+        const today = new Date()
+        const [sh, sm] = createDraft.startTime.split(':').map(Number)
+        const [eh, em] = createDraft.endTime.split(':').map(Number)
+        const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), sh, sm)
+        const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), eh, em)
+        await createTodo(
+          createDraft.title.trim(),
+          Math.floor(startDate.getTime() / 1000),
+          Math.floor(endDate.getTime() / 1000)
+        )
+      }
       setCreateDraft(null)
     } finally {
       setIsCreating(false)
@@ -636,6 +695,7 @@ export function TodayView(): React.JSX.Element {
                 viewMode="day"
                 hideHeader
                 onCreateRange={handleCreateRange}
+                onTodoSelect={handleCalendarTodoSelect}
                 onTodoMove={handleTodoMove}
                 onTodoDelete={handleTodoDelete}
               />
@@ -660,6 +720,7 @@ export function TodayView(): React.JSX.Element {
                     todos={todos}
                     createTodo={createTodo}
                     toggleDone={toggleDone}
+                    onSelectTodo={openTodoDetail}
                   />
                 ) : (
                   <TodayLogPanel
@@ -685,6 +746,7 @@ export function TodayView(): React.JSX.Element {
               createTodo={createTodo}
               toggleDone={toggleDone}
               onOpenPlan={() => setFocusMode('plan')}
+              onSelectTodo={openTodoDetail}
             />
             <main
               className="flex flex-col flex-1 min-h-0 py-4 px-5 overflow-hidden"
@@ -730,24 +792,41 @@ export function TodayView(): React.JSX.Element {
                 }
               }}
             />
-            <div className="flex items-center gap-3 text-sm">
-              <label className="text-muted-foreground w-12">From</label>
-              <Input
-                type="time"
-                value={createDraft?.startTime ?? ''}
-                onChange={(e) =>
-                  setCreateDraft((d) => (d ? { ...d, startTime: e.target.value } : d))
-                }
-                className="w-32 h-8"
-              />
-              <label className="text-muted-foreground w-8">To</label>
-              <Input
-                type="time"
-                value={createDraft?.endTime ?? ''}
-                onChange={(e) => setCreateDraft((d) => (d ? { ...d, endTime: e.target.value } : d))}
-                className="w-32 h-8"
+            <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm">
+              <div className="space-y-0.5 pr-2">
+                <Label htmlFor="today-create-schedule" className="text-sm font-normal cursor-pointer">
+                  Schedule on calendar
+                </Label>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Turn off to create a todo without a time.
+                </p>
+              </div>
+              <Switch
+                id="today-create-schedule"
+                checked={createDraft?.useSchedule ?? false}
+                onCheckedChange={(v) => setCreateDraft((d) => (d ? { ...d, useSchedule: v } : d))}
               />
             </div>
+            {createDraft?.useSchedule && (
+              <div className="flex items-center gap-3 text-sm flex-wrap">
+                <label className="text-muted-foreground w-12 shrink-0">From</label>
+                <Input
+                  type="time"
+                  value={createDraft?.startTime ?? ''}
+                  onChange={(e) =>
+                    setCreateDraft((d) => (d ? { ...d, startTime: e.target.value } : d))
+                  }
+                  className="w-32 h-8"
+                />
+                <label className="text-muted-foreground w-8 shrink-0">To</label>
+                <Input
+                  type="time"
+                  value={createDraft?.endTime ?? ''}
+                  onChange={(e) => setCreateDraft((d) => (d ? { ...d, endTime: e.target.value } : d))}
+                  className="w-32 h-8"
+                />
+              </div>
+            )}
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setCreateDraft(null)} disabled={isCreating}>
                 Cancel
@@ -762,6 +841,23 @@ export function TodayView(): React.JSX.Element {
             </div>
           </div>
         </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(selectedTodo)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedTodo(null)
+        }}
+      >
+        {selectedTodo && (
+          <TodoDetailDialog
+            todo={selectedTodo}
+            onClose={() => setSelectedTodo(null)}
+            onUpdateTodo={updateTodo}
+            onDeleteTodo={deleteTodo}
+            onToggleDone={toggleDone}
+          />
+        )}
       </Dialog>
     </div>
   )

@@ -1,5 +1,5 @@
 import React from 'react'
-import { CalendarDays, CircleUser, Home, ListTodo, MessageSquare, StickyNote } from 'lucide-react'
+import { CircleUser, ListTodo, ScrollText } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -13,7 +13,7 @@ import {
   SidebarTrigger
 } from './ui/sidebar'
 
-export type View = 'today' | 'calendar' | 'posts' | 'todo' | 'notes' | 'account'
+export type View = 'todo' | 'timeline' | 'account'
 
 interface AppSidebarProps {
   currentView: View
@@ -21,12 +21,9 @@ interface AppSidebarProps {
 }
 
 const menuItems = [
-  { id: 'today' as const, label: 'Today', icon: Home },
-  { id: 'calendar' as const, label: 'Calendar', icon: CalendarDays },
-  { id: 'posts' as const, label: 'Posts', icon: MessageSquare },
-  { id: 'todo' as const, label: 'ToDo', icon: ListTodo },
-  { id: 'notes' as const, label: 'Notes', icon: StickyNote },
-  { id: 'account' as const, label: 'Account', icon: CircleUser }
+  { id: 'todo' as const, label: 'Todo', icon: ListTodo },
+  { id: 'timeline' as const, label: 'Timeline', icon: ScrollText },
+  { id: 'account' as const, label: 'Settings', icon: CircleUser }
 ]
 
 export function AppSidebar({ currentView, onViewChange }: AppSidebarProps): React.JSX.Element {

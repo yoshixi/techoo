@@ -17,6 +17,8 @@ import React, { useMemo, useState, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, Minus, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { Switch } from './ui/switch'
 import { Dialog, DialogContent } from './ui/dialog'
 import { cn } from '../lib/utils'
 import { useTodos } from '../hooks/useTodos'
@@ -1030,70 +1032,80 @@ export function apiTodoToCalendar(t: ApiTodo): Todo {
   }
 }
 
-export function CalendarView(): React.JSX.Element {
+/** Calendar + todo scheduling workspace (todo drag/create/move/delete). */
+export function CalendarTodoWorkspace({
+  className,
+  onTodoSelect,
+  showHeaderNew = true
+}: {
+  className?: string
+  onTodoSelect?: (todo: Todo) => void
+  /** When false, omit header “New”; drag-to-create still opens the dialog (e.g. Todo tab uses list-side create). */
+  showHeaderNew?: boolean
+}): React.JSX.Element {
   const { todos: apiTodos, createTodo, updateTodo, deleteTodo } = useTodos({ showAll: true })
   const todos = apiTodos.map(apiTodoToCalendar)
   const [visibleDate, setVisibleDate] = useState<Date>(() => startOfDay(new Date()))
 
-  // Create dialog state
   const [createDraft, setCreateDraft] = useState<{
     title: string
     startTime: string
     endTime: string
+    useSchedule: boolean
   } | null>(null)
   const [isCreating, setIsCreating] = useState(false)
 
-  // Handle drag-to-create on the calendar grid
   const handleCreateRange = useCallback((range: { starts_at: number; ends_at: number }) => {
     const start = new Date(range.starts_at * 1000)
     const end = new Date(range.ends_at * 1000)
     const fmt = (d: Date): string =>
       `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-    setCreateDraft({ title: '', startTime: fmt(start), endTime: fmt(end) })
+    setCreateDraft({ title: '', startTime: fmt(start), endTime: fmt(end), useSchedule: true })
   }, [])
 
-  // Handle the "+ New" button (defaults to current hour, 1h duration)
   const handleNewButton = useCallback(() => {
     const now = new Date()
     const end = new Date(now.getTime() + 60 * 60 * 1000)
     const fmt = (d: Date): string =>
       `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-    setCreateDraft({ title: '', startTime: fmt(now), endTime: fmt(end) })
+    setCreateDraft({ title: '', startTime: fmt(now), endTime: fmt(end), useSchedule: true })
   }, [])
 
-  // Submit the create dialog
   const handleCreateSubmit = useCallback(async () => {
     if (!createDraft || !createDraft.title.trim()) return
     setIsCreating(true)
     try {
-      const [sh, sm] = createDraft.startTime.split(':').map(Number)
-      const [eh, em] = createDraft.endTime.split(':').map(Number)
-      const startDate = new Date(
-        visibleDate.getFullYear(),
-        visibleDate.getMonth(),
-        visibleDate.getDate(),
-        sh,
-        sm
-      )
-      const endDate = new Date(
-        visibleDate.getFullYear(),
-        visibleDate.getMonth(),
-        visibleDate.getDate(),
-        eh,
-        em
-      )
-      await createTodo(
-        createDraft.title.trim(),
-        Math.floor(startDate.getTime() / 1000),
-        Math.floor(endDate.getTime() / 1000)
-      )
+      if (!createDraft.useSchedule) {
+        await createTodo(createDraft.title.trim())
+      } else {
+        const [sh, sm] = createDraft.startTime.split(':').map(Number)
+        const [eh, em] = createDraft.endTime.split(':').map(Number)
+        const startDate = new Date(
+          visibleDate.getFullYear(),
+          visibleDate.getMonth(),
+          visibleDate.getDate(),
+          sh,
+          sm
+        )
+        const endDate = new Date(
+          visibleDate.getFullYear(),
+          visibleDate.getMonth(),
+          visibleDate.getDate(),
+          eh,
+          em
+        )
+        await createTodo(
+          createDraft.title.trim(),
+          Math.floor(startDate.getTime() / 1000),
+          Math.floor(endDate.getTime() / 1000)
+        )
+      }
       setCreateDraft(null)
     } finally {
       setIsCreating(false)
     }
   }, [createDraft, createTodo, visibleDate])
 
-  // Handle drag-to-move
   const handleTodoMove = useCallback(
     async (todo: Todo, range: { starts_at: number; ends_at: number }) => {
       await updateTodo(todo.id, { starts_at: range.starts_at, ends_at: range.ends_at })
@@ -1101,7 +1113,6 @@ export function CalendarView(): React.JSX.Element {
     [updateTodo]
   )
 
-  // Handle delete
   const handleTodoDelete = useCallback(
     async (todo: Todo) => {
       await deleteTodo(todo.id)
@@ -1110,23 +1121,26 @@ export function CalendarView(): React.JSX.Element {
   )
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className={cn('flex flex-col flex-1 min-h-0', className)}>
       <CalendarViewInner
         todos={todos}
         onCreateRange={handleCreateRange}
         onAnchorDateChange={setVisibleDate}
         onTodoMove={handleTodoMove}
         onTodoDelete={handleTodoDelete}
+        onTodoSelect={onTodoSelect}
         headerTrailing={
-          <Button
-            size="sm"
-            className="shrink-0 gap-1 rounded-full"
-            style={{ background: 'var(--amber)' }}
-            onClick={handleNewButton}
-          >
-            <Plus className="w-4 h-4" />
-            New
-          </Button>
+          showHeaderNew ? (
+            <Button
+              size="sm"
+              className="shrink-0 gap-1 rounded-full"
+              style={{ background: 'var(--amber)' }}
+              onClick={handleNewButton}
+            >
+              <Plus className="w-4 h-4" />
+              New
+            </Button>
+          ) : undefined
         }
       />
 
@@ -1152,24 +1166,41 @@ export function CalendarView(): React.JSX.Element {
                 }
               }}
             />
-            <div className="flex items-center gap-3 text-sm">
-              <label className="text-muted-foreground w-12">From</label>
-              <Input
-                type="time"
-                value={createDraft?.startTime ?? ''}
-                onChange={(e) =>
-                  setCreateDraft((d) => (d ? { ...d, startTime: e.target.value } : d))
-                }
-                className="w-32 h-8"
-              />
-              <label className="text-muted-foreground w-8">To</label>
-              <Input
-                type="time"
-                value={createDraft?.endTime ?? ''}
-                onChange={(e) => setCreateDraft((d) => (d ? { ...d, endTime: e.target.value } : d))}
-                className="w-32 h-8"
+            <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm">
+              <div className="space-y-0.5 pr-2">
+                <Label htmlFor="calendar-create-schedule" className="text-sm font-normal cursor-pointer">
+                  Schedule on calendar
+                </Label>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Turn off to create a todo without a time.
+                </p>
+              </div>
+              <Switch
+                id="calendar-create-schedule"
+                checked={createDraft?.useSchedule ?? false}
+                onCheckedChange={(v) => setCreateDraft((d) => (d ? { ...d, useSchedule: v } : d))}
               />
             </div>
+            {createDraft?.useSchedule && (
+              <div className="flex items-center gap-3 text-sm flex-wrap">
+                <label className="text-muted-foreground w-12 shrink-0">From</label>
+                <Input
+                  type="time"
+                  value={createDraft?.startTime ?? ''}
+                  onChange={(e) =>
+                    setCreateDraft((d) => (d ? { ...d, startTime: e.target.value } : d))
+                  }
+                  className="w-32 h-8"
+                />
+                <label className="text-muted-foreground w-8 shrink-0">To</label>
+                <Input
+                  type="time"
+                  value={createDraft?.endTime ?? ''}
+                  onChange={(e) => setCreateDraft((d) => (d ? { ...d, endTime: e.target.value } : d))}
+                  className="w-32 h-8"
+                />
+              </div>
+            )}
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setCreateDraft(null)} disabled={isCreating}>
                 Cancel
@@ -1187,4 +1218,9 @@ export function CalendarView(): React.JSX.Element {
       </Dialog>
     </div>
   )
+}
+
+/** Standalone calendar screen (full-width). Prefer {@link CalendarTodoWorkspace} for composition. */
+export function CalendarView(): React.JSX.Element {
+  return <CalendarTodoWorkspace />
 }
