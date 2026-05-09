@@ -43,7 +43,10 @@ function App(): React.JSX.Element {
           background: 'color-mix(in srgb, var(--panel) 70%, #ffffff 30%)'
         }}
       >
-        <span className="font-title text-lg tracking-wide" style={{ color: 'var(--text-dark)' }}>
+        <span
+          className="font-sans text-lg font-semibold tracking-tight"
+          style={{ color: 'color-mix(in srgb, var(--text-dark) 72%, var(--text-muted-custom) 28%)' }}
+        >
           Techo
         </span>
         <span

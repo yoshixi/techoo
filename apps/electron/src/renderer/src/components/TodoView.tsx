@@ -462,7 +462,7 @@ export function TodoDetailDialog({
       <DialogHeader className="space-y-0 pb-1.5 text-left">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0">
-            <DialogTitle className="font-title text-lg leading-tight">Edit todo</DialogTitle>
+            <DialogTitle className="sr-only">Edit todo</DialogTitle>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2 sm:pt-0.5">
             <Button
@@ -986,7 +986,10 @@ export function TodoView({
       <div className="flex min-h-0 flex-1 flex-col gap-3">
         <div className="flex flex-wrap items-start justify-between gap-2 shrink-0">
           <div>
-            <h2 className="font-title text-lg" style={{ color: 'var(--text-dark)' }}>
+            <h2
+              className="font-sans text-lg font-semibold tracking-tight"
+              style={{ color: 'color-mix(in srgb, var(--text-dark) 72%, var(--text-muted-custom) 28%)' }}
+            >
               ToDo
             </h2>
             {variant === 'column' && (
@@ -1180,7 +1183,7 @@ export function TodoView({
         <DialogContent className="max-w-md">
           <div className="space-y-4">
             <DialogHeader className="space-y-1 text-left p-0">
-              <DialogTitle className="font-title text-lg">New todo</DialogTitle>
+              <DialogTitle className="font-sans text-lg font-semibold tracking-tight">New todo</DialogTitle>
             </DialogHeader>
             <Input
               value={createDraft?.title ?? ''}
@@ -1266,7 +1269,7 @@ export function TodoView({
         <DialogContent className="max-w-sm">
           <div className="space-y-4">
             <DialogHeader className="space-y-1 text-left p-0">
-              <DialogTitle className="font-title text-lg">Quick time adjust</DialogTitle>
+              <DialogTitle className="font-sans text-lg font-semibold tracking-tight">Quick time adjust</DialogTitle>
             </DialogHeader>
             <div className="space-y-1">
               <Label htmlFor="quick-time-date" className="text-xs text-muted-foreground">

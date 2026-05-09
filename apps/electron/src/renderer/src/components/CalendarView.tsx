@@ -1168,7 +1168,7 @@ export function CalendarTodoWorkspace({
       >
         <DialogContent className="max-w-md">
           <div className="space-y-4">
-            <h3 className="font-title text-lg">New ToDo</h3>
+            <h3 className="font-sans text-lg font-semibold tracking-tight">New ToDo</h3>
             <Input
               value={createDraft?.title ?? ''}
               onChange={(e) => setCreateDraft((d) => (d ? { ...d, title: e.target.value } : d))}

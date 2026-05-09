@@ -235,7 +235,7 @@ export function TimelineView(): React.JSX.Element {
       >
         <div className="flex flex-col gap-4 flex-1 min-h-0">
           <div className="shrink-0">
-            <h2 className="font-title text-lg" style={{ color: 'var(--text-dark)' }}>
+            <h2 className="font-sans text-lg font-semibold tracking-tight" style={{ color: 'var(--text-dark)' }}>
               Timeline
             </h2>
           </div>
@@ -289,7 +289,7 @@ export function TimelineView(): React.JSX.Element {
                       <div className="pl-5">
                         <h3
                           id={`timeline-day-${group.dayKey}`}
-                          className="font-title mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                          className="font-sans mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
                         >
                           {group.label}
                         </h3>
