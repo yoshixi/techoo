@@ -34,14 +34,13 @@ function App(): React.JSX.Element {
   }, [])
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden bg-background">
       {/* Topbar */}
       <header
         className="flex items-center justify-between px-5 shrink-0"
         style={{
-          height: 44,
-          background: 'var(--panel)',
-          borderBottom: '0.5px solid var(--border-l)'
+          height: 48,
+          background: 'color-mix(in srgb, var(--panel) 70%, #ffffff 30%)'
         }}
       >
         <span className="font-title text-lg tracking-wide" style={{ color: 'var(--text-dark)' }}>
@@ -57,11 +56,10 @@ function App(): React.JSX.Element {
 
       {/* Tab row */}
       <nav
-        className="flex items-end px-5 gap-1 shrink-0"
+        className="flex items-center px-5 gap-1.5 shrink-0"
         style={{
-          height: 36,
-          background: 'var(--panel)',
-          borderBottom: '0.5px solid var(--border-l)'
+          height: 44,
+          background: 'color-mix(in srgb, var(--panel) 42%, transparent)'
         }}
       >
         {tabs.map((tab) => {
@@ -72,11 +70,11 @@ function App(): React.JSX.Element {
               key={tab.id}
               type="button"
               onClick={() => setCurrentView(tab.id)}
-              className="flex items-center gap-1.5 px-3 pb-2 text-xs transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-colors"
               style={{
                 fontWeight: isActive ? 500 : 400,
                 color: isActive ? 'var(--text-dark)' : 'var(--text-muted-custom)',
-                borderBottom: isActive ? '2px solid var(--amber)' : '2px solid transparent'
+                background: isActive ? 'color-mix(in srgb, var(--card) 86%, #fff 14%)' : 'transparent'
               }}
             >
               <Icon className="w-3.5 h-3.5" />

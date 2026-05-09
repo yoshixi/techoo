@@ -20,15 +20,15 @@ export function TodoTabView(): React.JSX.Element {
   )
 
   return (
-    <div className="flex flex-1 min-h-0">
+    <div className="flex flex-1 min-h-0 gap-3 px-3 pb-3">
       <CalendarTodoWorkspace
-        className="flex-1 min-w-0 border-r border-border"
+        className="flex-1 min-w-0 rounded-2xl bg-card/70"
         showHeaderNew={false}
         onTodoSelect={handleCalendarTodoSelect}
       />
       <TodoView
         variant="column"
-        className="w-[min(440px,42vw)] shrink-0 min-h-0 border-l border-border"
+        className="w-[min(440px,42vw)] shrink-0 min-h-0 rounded-2xl bg-card/70"
         selectedTodo={selectedTodo}
         onSelectedTodoChange={setSelectedTodo}
       />

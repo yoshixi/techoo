@@ -76,10 +76,9 @@ function LogFocusStatusLine({ todos, nowSec }: { todos: Todo[]; nowSec: number }
 
   return (
     <div
-      className="rounded-md border px-3 py-2 text-xs leading-snug shrink-0"
+      className="rounded-xl px-3 py-2 text-xs leading-snug shrink-0"
       style={{
-        borderColor: 'var(--border-l)',
-        background: 'var(--amber-light)',
+        background: 'color-mix(in srgb, var(--amber-light) 72%, white 28%)',
         color: 'var(--amber-dark)'
       }}
     >
@@ -114,10 +113,9 @@ function TimelineSidePanel({
 
   return (
     <aside
-      className="flex flex-col shrink-0 min-h-0 w-[272px] border-r py-3 px-3"
+      className="flex flex-col shrink-0 min-h-0 w-[272px] py-3 px-3 rounded-2xl"
       style={{
-        background: 'var(--panel)',
-        borderColor: 'var(--border-l)'
+        background: 'color-mix(in srgb, var(--card) 70%, var(--panel) 30%)'
       }}
     >
       <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-2">
@@ -135,10 +133,11 @@ function TimelineSidePanel({
             return (
               <div
                 key={todo.id}
-                className="rounded-md border px-2 py-1.5 text-xs"
+                className="rounded-xl px-2.5 py-2 text-xs"
                 style={{
-                  borderColor: isRunning ? 'var(--amber)' : 'var(--border-l)',
-                  background: isRunning ? 'var(--amber-light)' : 'transparent'
+                  background: isRunning
+                    ? 'color-mix(in srgb, var(--amber-light) 70%, white 30%)'
+                    : 'color-mix(in srgb, var(--background) 65%, var(--card) 35%)'
                 }}
               >
                 <div className="font-medium leading-tight truncate">{todo.title}</div>
@@ -164,7 +163,6 @@ function TimelineSidePanel({
               <div
                 key={todo.id}
                 className="flex items-start gap-2 py-1.5"
-                style={{ borderBottom: '0.5px solid var(--border-l)' }}
               >
                 <button
                   type="button"
@@ -272,11 +270,11 @@ export function TimelineView(): React.JSX.Element {
   }, [hasMore, loadingMore, initialLoading, loadMore, posts.length, error])
 
   return (
-    <div className="flex flex-1 min-h-0">
+    <div className="flex flex-1 min-h-0 gap-3 px-3 pb-3">
       <TimelineSidePanel todos={todayTodos} toggleDone={toggleDone} />
       <main
-        className="flex flex-col flex-1 min-h-0 py-4 px-5 overflow-hidden"
-        style={{ background: 'var(--background)' }}
+        className="flex flex-col flex-1 min-h-0 py-4 px-5 overflow-hidden rounded-2xl"
+        style={{ background: 'color-mix(in srgb, var(--card) 78%, white 22%)' }}
       >
         <div className="flex flex-col gap-4 flex-1 min-h-0">
           <div className="shrink-0">

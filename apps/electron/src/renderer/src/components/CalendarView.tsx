@@ -699,32 +699,45 @@ export function CalendarViewInner({
       : Array.from({ length: 7 }, (_, index) => formatDayLabel(addDays(weekStart, index)))
 
   const totalHeight = slotCount * slotHeight
+  const isTodayAlreadyInView = useMemo(() => {
+    const today = startOfDay(new Date()).getTime()
+    if (viewMode === 'day') {
+      return dayStart.getTime() === today
+    }
+    const weekStartTime = weekStart.getTime()
+    return today >= weekStartTime && today < weekStartTime + DAY_MS * 7
+  }, [viewMode, dayStart, weekStart])
 
   // ==========================================================================
   // Render
   // ==========================================================================
   return (
-    <div className={cn('flex flex-1 min-h-0 flex-col gap-4 p-6', className)}>
+    <div className={cn('flex flex-1 min-h-0 flex-col gap-3 p-4', className)}>
       {!hideHeader && (
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-card/80 px-3 py-2">
           <div className="flex items-center gap-2">
             <Button
               size="sm"
-              variant="outline"
+              variant="ghost"
               onClick={() => setAnchorDate((prev) => addDays(prev, viewMode === 'day' ? -1 : -7))}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button
               size="sm"
-              variant="outline"
+              variant="ghost"
+              style={
+                isTodayAlreadyInView
+                  ? undefined
+                  : { background: '#C65A11', color: '#fff' }
+              }
               onClick={() => setAnchorDate(startOfDay(new Date()))}
             >
               Today
             </Button>
             <Button
               size="sm"
-              variant="outline"
+              variant="ghost"
               onClick={() => setAnchorDate((prev) => addDays(prev, viewMode === 'day' ? 1 : 7))}
             >
               <ChevronRight className="h-4 w-4" />
@@ -738,7 +751,7 @@ export function CalendarViewInner({
             <div className="flex items-center gap-1 mr-2 shrink-0">
               <Button
                 size="sm"
-                variant="outline"
+                variant="ghost"
                 onClick={handleZoomOut}
                 disabled={zoomLevel <= MIN_ZOOM}
                 title="Zoom out (Cmd/Ctrl + Scroll)"
@@ -750,7 +763,7 @@ export function CalendarViewInner({
               </span>
               <Button
                 size="sm"
-                variant="outline"
+                variant="ghost"
                 onClick={handleZoomIn}
                 disabled={zoomLevel >= MAX_ZOOM}
                 title="Zoom in (Cmd/Ctrl + Scroll)"
@@ -760,14 +773,16 @@ export function CalendarViewInner({
             </div>
             <Button
               size="sm"
-              variant={viewMode === 'day' ? 'default' : 'outline'}
+              variant="ghost"
+              style={viewMode === 'day' ? { background: '#C65A11', color: '#fff' } : undefined}
               onClick={() => handleViewModeChange('day')}
             >
               Day
             </Button>
             <Button
               size="sm"
-              variant={viewMode === 'week' ? 'default' : 'outline'}
+              variant="ghost"
+              style={viewMode === 'week' ? { background: '#C65A11', color: '#fff' } : undefined}
               onClick={() => handleViewModeChange('week')}
             >
               Week
@@ -776,12 +791,12 @@ export function CalendarViewInner({
         </div>
       )}
 
-      <div className="flex min-h-0 flex-1 flex-col rounded-md border bg-muted/5">
-        <div className="flex border-b bg-muted/10 text-xs">
+      <div className="flex min-h-0 flex-1 flex-col rounded-2xl bg-card/80">
+        <div className="flex text-xs">
           <div className="w-12 flex-shrink-0 px-2 py-2 text-muted-foreground">Time</div>
           <div className={cn('grid flex-1', viewMode === 'day' ? 'grid-cols-1' : 'grid-cols-7')}>
             {dayLabels.map((label) => (
-              <div key={label} className="px-2 py-2 text-muted-foreground">
+              <div key={label} className="px-2 py-2 text-muted-foreground font-medium">
                 {label}
               </div>
             ))}
@@ -829,37 +844,37 @@ export function CalendarViewInner({
               return (
                 <div
                   key={`day-${dayIndex}`}
-                  className="relative border-l first:border-l-0"
+                  className="relative"
                   data-day-index={dayIndex}
                   onMouseDown={(event) => handleColumnMouseDown(event, dayIndex)}
                 >
                   {Array.from({ length: 24 }, (_, hour) => (
                     <div
                       key={`hour-${dayIndex}-${hour}`}
-                      className="absolute left-0 right-0 border-t border-muted-foreground/20"
+                      className="absolute left-0 right-0 border-t border-muted-foreground/10"
                       style={{ top: hour * slotsPerHour * slotHeight }}
                     />
                   ))}
                   {selection && (
                     <div
-                      className="absolute left-1 right-1 rounded-md bg-primary/10 outline outline-1 outline-primary/30"
+                      className="absolute left-1 right-1 rounded-xl bg-primary/12"
                       style={{ top: selectionTop, height: selectionHeight }}
                     />
                   )}
                   {isToday && (
                     <div
-                      className="absolute left-0 right-0 h-px bg-primary/70"
+                      className="absolute left-0 right-0 h-px bg-primary/45"
                       style={{ top: nowTop }}
                     >
-                      <div className="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-primary" />
-                      <div className="absolute -left-14 top-1/2 -translate-y-1/2 text-[10px] font-medium text-primary">
+                      <div className="absolute -left-1 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-primary/70" />
+                      <div className="absolute -left-14 top-1/2 -translate-y-1/2 text-[10px] text-primary/80">
                         {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                   )}
                   {dragTask && dragTask.dayIndex === dayIndex && (
                     <div
-                      className="absolute left-1 right-1 rounded-md bg-primary/20 outline outline-1 outline-primary/40"
+                      className="absolute left-1 right-1 rounded-xl bg-primary/18"
                       style={{
                         top: dragTask.startSlot * slotHeight,
                         height: dragTask.durationSlots * slotHeight
@@ -868,7 +883,7 @@ export function CalendarViewInner({
                   )}
                   {dragResize && dragResize.dayIndex === dayIndex && (
                     <div
-                      className="absolute left-1 right-1 rounded-md bg-primary/20 outline outline-1 outline-primary/40"
+                      className="absolute left-1 right-1 rounded-xl bg-primary/18"
                       style={{
                         top: dragResize.startSlot * slotHeight,
                         height: (dragResize.endSlot - dragResize.startSlot) * slotHeight
@@ -902,10 +917,10 @@ export function CalendarViewInner({
                         onMouseDown={(event) => handleTaskMouseDown(event, item)}
                         data-task-block="true"
                         className={cn(
-                          'absolute rounded-md bg-primary/15 px-2 py-1 text-left text-xs outline outline-1 outline-primary/30 hover:bg-primary/20',
+                          'absolute rounded-xl bg-primary/14 px-2.5 py-1.5 text-left text-xs hover:bg-primary/18',
                           (isDragging || isResizing) && 'opacity-40',
                           isCompleted &&
-                            'bg-muted/60 text-slate-500 outline-muted-foreground/30 hover:bg-muted/70'
+                            'bg-muted/65 text-slate-500 hover:bg-muted/75'
                         )}
                         style={{
                           top,
@@ -917,13 +932,13 @@ export function CalendarViewInner({
                         {/* Top resize handle */}
                         <div
                           data-task-action="true"
-                          className="absolute left-0 right-0 top-0 h-2 cursor-ns-resize hover:bg-primary/30 rounded-t-md"
+                          className="absolute left-0 right-0 top-0 h-2 cursor-ns-resize hover:bg-primary/20 rounded-t-xl"
                           onMouseDown={(event) => handleResizeMouseDown(event, item, 'top')}
                         />
                         {/* Bottom resize handle */}
                         <div
                           data-task-action="true"
-                          className="absolute left-0 right-0 bottom-0 h-2 cursor-ns-resize hover:bg-primary/30 rounded-b-md"
+                          className="absolute left-0 right-0 bottom-0 h-2 cursor-ns-resize hover:bg-primary/20 rounded-b-xl"
                           onMouseDown={(event) => handleResizeMouseDown(event, item, 'bottom')}
                         />
                         <div className="flex items-start justify-between gap-2">
@@ -985,7 +1000,7 @@ export function CalendarViewInner({
                     return (
                       <div
                         key={evt.id}
-                        className="absolute rounded-md px-2 py-1 text-left text-xs bg-slate-200/60 dark:bg-slate-700/50 border-l-[3px] border-slate-400 dark:border-slate-500 pointer-events-none"
+                        className="absolute rounded-xl px-2.5 py-1.5 text-left text-xs bg-slate-200/55 dark:bg-slate-700/45 pointer-events-none"
                         style={{
                           top,
                           height,

@@ -157,8 +157,7 @@ export function TodoItem({
 
   return (
     <div
-      className={`group py-2.5 cursor-pointer hover:bg-accent/30 px-2 -mx-2 rounded transition-all duration-300 ${fading ? 'opacity-30 max-h-0 py-0 overflow-hidden' : 'opacity-100'}`}
-      style={{ borderBottom: '0.5px solid var(--border-l)' }}
+      className={`group py-2.5 cursor-pointer hover:bg-accent/35 px-2 rounded-xl transition-all duration-300 ${fading ? 'opacity-30 max-h-0 py-0 overflow-hidden' : 'opacity-100'}`}
       onClick={() => onSelect(todo)}
       role="button"
       tabIndex={0}
@@ -460,7 +459,7 @@ export function TodoDetailDialog({
 
   return (
     <DialogContent className="max-h-[90vh] w-full max-w-[min(100vw-2rem,36rem)] gap-0 overflow-y-auto p-5 sm:max-w-[min(100vw-3rem,52rem)] sm:p-6">
-      <DialogHeader className="space-y-0 pb-4 text-left">
+      <DialogHeader className="space-y-0 pb-3 text-left">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0">
             <DialogTitle className="font-title text-lg leading-tight">Edit todo</DialogTitle>
@@ -468,9 +467,10 @@ export function TodoDetailDialog({
           <div className="flex shrink-0 flex-wrap items-center gap-2 sm:pt-0.5">
             <Button
               type="button"
-              variant="outline"
+              variant="default"
               size="sm"
               className="h-8 text-xs"
+              style={{ background: 'var(--amber)' }}
               onClick={() => onToggleDone(todo.id, todo.done)}
             >
               {todo.done === 1 ? 'Mark incomplete' : 'Mark done'}
@@ -484,8 +484,8 @@ export function TodoDetailDialog({
         </div>
       </DialogHeader>
 
-      <div className="flex flex-col gap-5">
-        <div className="space-y-1.5">
+      <div className="flex flex-col gap-4">
+        <div className="space-y-1.5 rounded-2xl bg-card/85 px-3 py-3">
           <Label htmlFor="todo-detail-title" className="text-xs text-muted-foreground">
             Title
           </Label>
@@ -497,7 +497,7 @@ export function TodoDetailDialog({
           />
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 rounded-2xl bg-card/85 px-3 py-3">
           <Label htmlFor="todo-detail-description" className="text-xs text-muted-foreground">
             Description
           </Label>
@@ -511,12 +511,12 @@ export function TodoDetailDialog({
           />
         </div>
 
-        <div className="w-full max-w-full space-y-3 rounded-xl border border-border bg-muted/25 px-3 py-3 sm:max-w-none">
+        <div className="w-full max-w-full space-y-3 rounded-2xl bg-card/85 px-3 py-3 sm:max-w-none">
           <div className="space-y-1">
             <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Schedule</p>
             <div
               className="inline-flex flex-wrap items-center gap-1 rounded-full p-0.5"
-              style={{ background: 'var(--background)' }}
+              style={{ background: 'color-mix(in srgb, var(--background) 78%, white 22%)' }}
               role="tablist"
               aria-label="Schedule mode"
             >
@@ -626,7 +626,7 @@ export function TodoDetailDialog({
 
         <p className="text-xs text-muted-foreground">Created {formatDate(todo.created_at)}</p>
 
-        <div className="space-y-2">
+        <div className="space-y-2 rounded-2xl bg-card/85 px-3 py-3">
           <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Post thread
           </h4>
@@ -642,11 +642,9 @@ export function TodoDetailDialog({
               {relatedPosts.map((post) => (
                 <div
                   key={post.id}
-                  className="rounded-lg border px-2.5 py-2 text-sm"
+                  className="rounded-xl px-2.5 py-2 text-sm"
                   style={{
-                    borderColor: 'var(--border-l)',
-                    borderLeftWidth: 3,
-                    borderLeftColor: 'var(--amber)'
+                    background: 'color-mix(in srgb, var(--background) 72%, white 28%)'
                   }}
                 >
                   <p className="whitespace-pre-wrap text-[13px] leading-snug">{post.body}</p>
@@ -678,8 +676,9 @@ export function TodoDetailDialog({
             <Button
               type="button"
               size="sm"
-              variant="secondary"
+              variant="default"
               className="h-8 text-xs"
+              style={{ background: 'var(--amber)' }}
               disabled={postingThread || !threadReply.trim()}
               onClick={() => void handleAddThreadPost()}
             >
@@ -688,7 +687,7 @@ export function TodoDetailDialog({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
           <Button type="button" variant="destructive" size="sm" className="h-8 text-xs" onClick={() => void handleDelete()}>
             Delete
           </Button>
@@ -992,14 +991,7 @@ export function TodoView({
   return (
     <div
       className={`flex flex-1 min-h-0 flex-col overflow-hidden ${padding} ${className ?? ''}`}
-      style={
-        variant === 'column'
-          ? {
-              background: 'var(--panel)',
-              borderColor: 'var(--border-l)'
-            }
-          : undefined
-      }
+      style={variant === 'column' ? { background: 'transparent' } : undefined}
     >
       <div className="flex min-h-0 flex-1 flex-col gap-3">
         <div className="flex flex-wrap items-start justify-between gap-2 shrink-0">
@@ -1095,7 +1087,7 @@ export function TodoView({
           </button>
 
           {advancedOpen && (
-            <div className="mt-1 rounded-2xl border border-border bg-card px-3 py-3">
+            <div className="mt-1 rounded-2xl bg-card/80 px-3 py-3">
               <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
                 <div className="flex min-w-[5.5rem] flex-col gap-1">
                   {allOpenMode ? (
