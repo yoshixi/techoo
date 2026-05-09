@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Check, Clock } from 'lucide-react'
+import { Check, Clock, SquarePen } from 'lucide-react'
 import { PostComposer, type PostComposerContext } from './PostComposer'
 import { PostRow } from './PostRow'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { usePostsFeed } from '../hooks/usePostsFeed'
 import { useTodos } from '../hooks/useTodos'
 import { useLocalDayBounds } from '../hooks/useLocalDayBounds'
@@ -54,6 +55,7 @@ function TimelineSidePanel({
   toggleDone: (id: number, currentDone: number) => Promise<void>
 }): React.JSX.Element {
   const nowSec = usePeriodicNow()
+  const runningTodo = useMemo(() => pickRunningTodo(todos, nowSec), [todos, nowSec])
   const scheduled = useMemo(() => {
     const open = todos.filter((t) => t.done === 0 && t.starts_at != null)
     return [...open].sort((a, b) => tsToSec(a.starts_at) - tsToSec(b.starts_at))
@@ -68,14 +70,42 @@ function TimelineSidePanel({
       return tsToSec(a.created_at) - tsToSec(b.created_at)
     })
   }, [todos])
+  const nextTodo = scheduled.find((t) => tsToSec(t.starts_at) > nowSec) ?? null
 
   return (
     <aside
       className="flex flex-col shrink-0 min-h-0 w-[272px] py-3 px-3 rounded-2xl"
       style={{
-        background: 'color-mix(in srgb, var(--card) 70%, var(--panel) 30%)'
+        background: 'color-mix(in srgb, var(--card) 76%, var(--panel) 24%)'
       }}
     >
+      <div
+        className="rounded-xl px-2.5 py-2.5 mb-3"
+        style={{ background: 'color-mix(in srgb, var(--background) 66%, var(--card) 34%)' }}
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Today</p>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="rounded-lg px-2 py-1.5" style={{ background: 'color-mix(in srgb, var(--card) 80%, white 20%)' }}>
+            <div className="text-[10px] text-muted-foreground">Open</div>
+            <div className="text-sm font-semibold" style={{ color: 'var(--text-dark)' }}>{openList.length}</div>
+          </div>
+          <div className="rounded-lg px-2 py-1.5" style={{ background: 'color-mix(in srgb, var(--card) 80%, white 20%)' }}>
+            <div className="text-[10px] text-muted-foreground">Scheduled</div>
+            <div className="text-sm font-semibold" style={{ color: 'var(--text-dark)' }}>{scheduled.length}</div>
+          </div>
+        </div>
+        {runningTodo && (
+          <p className="mt-2 truncate text-[11px]" style={{ color: 'var(--text-mid)' }}>
+            Now: <span className="font-medium">{runningTodo.title}</span>
+          </p>
+        )}
+        {!runningTodo && nextTodo && (
+          <p className="mt-2 truncate text-[11px]" style={{ color: 'var(--text-mid)' }}>
+            Next: <span className="font-medium">{nextTodo.title}</span>
+          </p>
+        )}
+      </div>
+
       <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-2">
         Today · Schedule
       </p>
@@ -118,10 +148,7 @@ function TimelineSidePanel({
           openList.map((todo) => {
             const isDone = todo.done === 1
             return (
-              <div
-                key={todo.id}
-                className="flex items-start gap-2 py-1.5"
-              >
+              <div key={todo.id} className="group flex items-start gap-2 py-1.5">
                 <button
                   type="button"
                   onClick={() => void toggleDone(todo.id, todo.done)}
@@ -141,14 +168,19 @@ function TimelineSidePanel({
                     {todo.title}
                   </span>
                   {todo.starts_at != null ? (
-                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 rounded gap-0.5 shrink-0">
+                    <Badge
+                      variant="outline"
+                      className="text-[9px] px-1 py-0 h-3.5 rounded gap-0.5 shrink-0 border-transparent"
+                      style={{ background: 'color-mix(in srgb, var(--background) 55%, var(--card) 45%)' }}
+                    >
                       <Clock className="w-2.5 h-2.5" />
                       {formatTime(todo.starts_at)}
                     </Badge>
                   ) : (
                     <Badge
                       variant="outline"
-                      className="text-[9px] px-1 py-0 h-3.5 rounded gap-0.5 shrink-0 text-muted-foreground"
+                      className="text-[9px] px-1 py-0 h-3.5 rounded gap-0.5 shrink-0 text-muted-foreground border-transparent"
+                      style={{ background: 'color-mix(in srgb, var(--background) 55%, var(--card) 45%)' }}
                     >
                       <Clock className="w-2.5 h-2.5" />
                       No time
@@ -191,6 +223,7 @@ export function TimelineView(): React.JSX.Element {
 
   const dayGroups = useMemo(() => groupPostsByLocalDay(posts), [posts])
   const [currentContext, setCurrentContext] = useState<PostComposerContext>(null)
+  const [isCreatePostDialogOpen, setIsCreatePostDialogOpen] = useState(false)
 
   const handleClearContext = useCallback(() => {
     setCurrentContext(null)
@@ -201,6 +234,8 @@ export function TimelineView(): React.JSX.Element {
       const eventIds: number[] = currentContext?.type === 'event' ? [currentContext.id] : []
       const todoIds: number[] = currentContext?.type === 'todo' ? [currentContext.id] : []
       void createPost(body, eventIds, todoIds)
+      setIsCreatePostDialogOpen(false)
+      setCurrentContext(null)
     },
     [currentContext, createPost]
   )
@@ -231,24 +266,27 @@ export function TimelineView(): React.JSX.Element {
       <TimelineSidePanel todos={todayTodos} toggleDone={toggleDone} />
       <main
         className="flex flex-col flex-1 min-h-0 py-4 px-5 overflow-hidden rounded-2xl"
-        style={{ background: 'color-mix(in srgb, var(--card) 78%, white 22%)' }}
+        style={{ background: 'color-mix(in srgb, var(--card) 84%, white 16%)' }}
       >
         <div className="flex flex-col gap-4 flex-1 min-h-0">
-          <div className="shrink-0">
-            <h2 className="font-sans text-lg font-semibold tracking-tight" style={{ color: 'var(--text-dark)' }}>
-              Timeline
-            </h2>
+          <div className="shrink-0 flex items-start justify-between gap-3">
+            <div>
+              <h2 className="font-sans text-xl font-semibold tracking-tight" style={{ color: 'var(--text-dark)' }}>
+                Timeline
+              </h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">Simple stream of notes and progress updates</p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 gap-1.5 rounded-full text-xs shrink-0"
+              style={{ background: 'var(--amber)' }}
+              onClick={() => setIsCreatePostDialogOpen(true)}
+            >
+              <SquarePen className="h-3.5 w-3.5" />
+              Create post
+            </Button>
           </div>
-
-          <PostComposer
-            compact={false}
-            draftStorageKey={postDraftStorageKey}
-            currentContext={currentContext}
-            onClearContext={handleClearContext}
-            onSubmit={handleSubmit}
-            onSelectContext={setCurrentContext}
-            todosForSuggestion={todayTodos.filter((t) => t.done === 0)}
-          />
 
           {error && (
             <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm shrink-0">
@@ -270,9 +308,10 @@ export function TimelineView(): React.JSX.Element {
               </div>
             ) : (
               <>
-                <div className="relative shrink-0 pl-9">
+                <div className="relative shrink-0 pl-8">
                   <div
-                    className="pointer-events-none absolute left-3 top-2.5 bottom-2.5 w-px bg-border"
+                    className="pointer-events-none absolute left-2.5 top-2.5 bottom-2.5 w-px"
+                    style={{ background: 'color-mix(in srgb, var(--border) 62%, transparent)' }}
                     aria-hidden
                   />
                   {dayGroups.map((group) => (
@@ -282,8 +321,8 @@ export function TimelineView(): React.JSX.Element {
                       aria-labelledby={`timeline-day-${group.dayKey}`}
                     >
                       <div
-                        className="absolute left-3 top-1.5 z-10 h-2.5 w-2.5 -translate-x-1/2 rounded-full border-2 border-background bg-background shadow-sm"
-                        style={{ borderColor: 'var(--amber)' }}
+                        className="absolute left-2.5 top-1.5 z-10 h-2 w-2 -translate-x-1/2 rounded-full border border-background bg-background"
+                        style={{ borderColor: 'color-mix(in srgb, var(--amber) 80%, white 20%)' }}
                         aria-hidden
                       />
                       <div className="pl-5">
@@ -319,6 +358,29 @@ export function TimelineView(): React.JSX.Element {
           </div>
         </div>
       </main>
+
+      <Dialog
+        open={isCreatePostDialogOpen}
+        onOpenChange={(open) => {
+          setIsCreatePostDialogOpen(open)
+          if (!open) setCurrentContext(null)
+        }}
+      >
+        <DialogContent className="max-w-[min(100vw-2rem,42rem)]">
+          <DialogHeader className="space-y-1 text-left">
+            <DialogTitle className="font-sans text-lg font-semibold tracking-tight">Create post</DialogTitle>
+          </DialogHeader>
+          <PostComposer
+            compact={false}
+            draftStorageKey={postDraftStorageKey}
+            currentContext={currentContext}
+            onClearContext={handleClearContext}
+            onSubmit={handleSubmit}
+            onSelectContext={setCurrentContext}
+            todosForSuggestion={todayTodos.filter((t) => t.done === 0)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

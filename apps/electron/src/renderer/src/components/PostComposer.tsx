@@ -23,9 +23,12 @@ function ContextBar({
   if (!context) return null
 
   return (
-    <div className="flex items-center gap-2 rounded-md border border-input bg-muted/40 px-3 py-1.5 text-sm">
-      <span className="text-muted-foreground">Context:</span>
-      <Badge variant="default" className="gap-1">
+    <div
+      className="flex items-center gap-2 rounded-full px-3 py-1.5 text-xs"
+      style={{ background: 'color-mix(in srgb, var(--background) 72%, var(--card) 28%)' }}
+    >
+      <span className="text-muted-foreground">Context</span>
+      <Badge variant="outline" className="gap-1 border-transparent bg-background/70 text-[11px]">
         {context.title}
         <button
           type="button"
@@ -208,7 +211,7 @@ export function PostComposer({
   )
 
   return (
-    <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
+    <div className={compact ? 'space-y-1.5' : 'space-y-2.5'}>
       <ContextBar context={currentContext} onClear={onClearContext} />
 
       <div className="relative">
@@ -219,21 +222,24 @@ export function PostComposer({
           onKeyDown={handleKeyDown}
           placeholder="Write something... (type # to tag a todo)"
           rows={compact ? 2 : 2}
-          className={`resize-none pr-12 ${compact ? 'min-h-[52px] text-xs' : ''}`}
+          className={`resize-none pr-12 border-transparent bg-background/55 shadow-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
+            compact ? 'min-h-[52px] text-xs' : 'min-h-[148px] text-sm leading-relaxed'
+          }`}
         />
         <Button
           size="sm"
-          variant="ghost"
-          className="absolute bottom-2 right-2 h-7 w-7 p-0"
+          variant="default"
+          className="absolute bottom-2 right-2 h-7 w-7 p-0 rounded-full"
+          style={{ background: 'var(--amber)' }}
           disabled={!value.trim()}
           onClick={handleSubmit}
           title="Send"
         >
-          <Send className="h-4 w-4" />
+          <Send className="h-3.5 w-3.5" />
         </Button>
 
         {showHashPanel && (
-          <Card className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto">
+          <Card className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto border-border/60 bg-card/95">
             {filteredTodos.length === 0 ? (
               <div className="flex gap-2 p-3 text-sm text-muted-foreground">
                 <Hash className="h-4 w-4 shrink-0" />
@@ -263,7 +269,7 @@ export function PostComposer({
         )}
       </div>
 
-      <span className="text-xs text-muted-foreground">
+      <span className="text-[11px] text-muted-foreground">
         Press {isMacPlatform ? '⌘' : 'Ctrl'}+Enter to post
       </span>
     </div>
