@@ -36,13 +36,6 @@ function pickRunningTodo(todos: Todo[], nowSec: number): Todo | null {
   return null
 }
 
-function pickNextTimedTodo(todos: Todo[], nowSec: number): Todo | null {
-  const open = todos.filter((t) => t.done === 0 && t.is_all_day !== 1 && t.starts_at != null)
-  const future = open.filter((t) => tsToSec(t.starts_at) > nowSec)
-  if (future.length === 0) return null
-  return future.reduce((a, b) => (tsToSec(a.starts_at!) <= tsToSec(b.starts_at!) ? a : b))
-}
-
 function usePeriodicNow(intervalMs = 30_000): number {
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000))
   useEffect(() => {
@@ -50,41 +43,6 @@ function usePeriodicNow(intervalMs = 30_000): number {
     return () => clearInterval(id)
   }, [intervalMs])
   return nowSec
-}
-
-function LogFocusStatusLine({ todos, nowSec }: { todos: Todo[]; nowSec: number }): React.JSX.Element {
-  const running = pickRunningTodo(todos, nowSec)
-  const next = pickNextTimedTodo(todos, nowSec)
-
-  let main: string
-  if (running) {
-    if (running.is_all_day === 1) {
-      main = `Now · ${running.title} · All day`
-    } else if (running.starts_at != null) {
-      const endTs =
-        running.ends_at ??
-        new Date(tsToSec(running.starts_at) * 1000 + DEFAULT_TODO_DURATION_SEC * 1000).toISOString()
-      main = `Now · ${running.title} · until ${formatTime(endTs)}`
-    } else {
-      main = `Now · ${running.title}`
-    }
-  } else if (next && next.starts_at != null) {
-    main = `Next · ${next.title} · ${formatTime(next.starts_at)}`
-  } else {
-    main = 'No upcoming timed blocks today'
-  }
-
-  return (
-    <div
-      className="rounded-xl px-3 py-2 text-xs leading-snug shrink-0"
-      style={{
-        background: 'color-mix(in srgb, var(--amber-light) 72%, white 28%)',
-        color: 'var(--amber-dark)'
-      }}
-    >
-      {main}
-    </div>
-  )
 }
 
 /** Slim sidebar: today’s timed blocks + open todos (no inline create). */
@@ -233,7 +191,6 @@ export function TimelineView(): React.JSX.Element {
 
   const dayGroups = useMemo(() => groupPostsByLocalDay(posts), [posts])
   const [currentContext, setCurrentContext] = useState<PostComposerContext>(null)
-  const nowSec = usePeriodicNow()
 
   const handleClearContext = useCallback(() => {
     setCurrentContext(null)
@@ -281,12 +238,7 @@ export function TimelineView(): React.JSX.Element {
             <h2 className="font-title text-lg" style={{ color: 'var(--text-dark)' }}>
               Timeline
             </h2>
-            <p className="text-xs text-muted-foreground mt-1 leading-snug">
-              Full log, newest first. Today&apos;s todos stay visible on the left for quick context.
-            </p>
           </div>
-
-          <LogFocusStatusLine todos={todayTodos} nowSec={nowSec} />
 
           <PostComposer
             compact={false}

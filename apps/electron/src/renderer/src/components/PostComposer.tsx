@@ -62,6 +62,7 @@ export function PostComposer({
   const [value, setValue] = useState('')
   const [showHashPanel, setShowHashPanel] = useState(false)
   const [hashQuery, setHashQuery] = useState('')
+  const [activeHashIndex, setActiveHashIndex] = useState(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   /** Avoid clobbering storage before the first read from localStorage completes */
   const draftHydratedRef = useRef(false)
@@ -124,9 +125,11 @@ export function PostComposer({
     if (lastHash !== -1 && !textBeforeCursor.slice(lastHash + 1).includes(' ')) {
       setShowHashPanel(true)
       setHashQuery(textBeforeCursor.slice(lastHash + 1).toLowerCase())
+      setActiveHashIndex(0)
     } else {
       setShowHashPanel(false)
       setHashQuery('')
+      setActiveHashIndex(0)
     }
   }, [])
 
@@ -141,6 +144,7 @@ export function PostComposer({
       }
       setShowHashPanel(false)
       setHashQuery('')
+      setActiveHashIndex(0)
       textareaRef.current?.focus()
     },
     [value, onSelectContext]
@@ -150,6 +154,14 @@ export function PostComposer({
     if (!hashQuery) return todosForSuggestion
     return todosForSuggestion.filter((t) => t.title.toLowerCase().includes(hashQuery))
   }, [todosForSuggestion, hashQuery])
+
+  useEffect(() => {
+    if (filteredTodos.length === 0) {
+      setActiveHashIndex(0)
+      return
+    }
+    setActiveHashIndex((prev) => Math.min(prev, filteredTodos.length - 1))
+  }, [filteredTodos])
 
   const handleSubmit = useCallback(() => {
     const trimmed = value.trim()
@@ -171,12 +183,28 @@ export function PostComposer({
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault()
         handleSubmit()
+        return
+      }
+      if (showHashPanel && e.key === 'Enter' && filteredTodos.length > 0) {
+        e.preventDefault()
+        handleSelectTodo(filteredTodos[activeHashIndex]!)
+        return
+      }
+      if (showHashPanel && e.key === 'ArrowDown' && filteredTodos.length > 0) {
+        e.preventDefault()
+        setActiveHashIndex((prev) => (prev + 1) % filteredTodos.length)
+        return
+      }
+      if (showHashPanel && e.key === 'ArrowUp' && filteredTodos.length > 0) {
+        e.preventDefault()
+        setActiveHashIndex((prev) => (prev - 1 + filteredTodos.length) % filteredTodos.length)
+        return
       }
       if (e.key === 'Escape') {
         setShowHashPanel(false)
       }
     },
-    [handleSubmit]
+    [handleSubmit, showHashPanel, filteredTodos, activeHashIndex, handleSelectTodo]
   )
 
   return (
@@ -217,8 +245,13 @@ export function PostComposer({
                   <button
                     key={todo.id}
                     type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted/50 text-left"
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-sm text-left ${
+                      filteredTodos[activeHashIndex]?.id === todo.id ? 'bg-muted/60' : 'hover:bg-muted/50'
+                    }`}
                     onClick={() => handleSelectTodo(todo)}
+                    onMouseEnter={() =>
+                      setActiveHashIndex(filteredTodos.findIndex((item) => item.id === todo.id))
+                    }
                   >
                     <Hash className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <span className="truncate">{todo.title}</span>
