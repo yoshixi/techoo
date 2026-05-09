@@ -1068,7 +1068,7 @@ export function CalendarTodoWorkspace({
     const end = new Date(now.getTime() + 60 * 60 * 1000)
     const fmt = (d: Date): string =>
       `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-    setCreateDraft({ title: '', startTime: fmt(now), endTime: fmt(end), useSchedule: true })
+    setCreateDraft({ title: '', startTime: fmt(now), endTime: fmt(end), useSchedule: false })
   }, [])
 
   const handleCreateSubmit = useCallback(async () => {
@@ -1166,15 +1166,10 @@ export function CalendarTodoWorkspace({
                 }
               }}
             />
-            <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm">
-              <div className="space-y-0.5 pr-2">
-                <Label htmlFor="calendar-create-schedule" className="text-sm font-normal cursor-pointer">
-                  Schedule on calendar
-                </Label>
-                <p className="text-[11px] text-muted-foreground leading-snug">
-                  Turn off to create a todo without a time.
-                </p>
-              </div>
+            <div className="flex items-center justify-between gap-3 py-1 text-sm">
+              <Label htmlFor="calendar-create-schedule" className="text-sm font-normal cursor-pointer">
+                Add schedule
+              </Label>
               <Switch
                 id="calendar-create-schedule"
                 checked={createDraft?.useSchedule ?? false}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Plus, Check, Trash2, Clock, Search, ChevronDown, ChevronRight } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -37,6 +37,14 @@ function formatDate(ts: string): string {
 function toDateInputValue(ts: string): string {
   const d = new Date(ts)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+type TodoSavePayload = {
+  title: string
+  description: string | null
+  starts_at: number | null
+  ends_at: number | null
+  is_all_day: number
 }
 
 function startOfDayUnixFromDateInput(dateStr: string): number {
@@ -278,9 +286,13 @@ export function TodoDetailDialog({
       : ''
   )
   const [allDay, setAllDay] = useState(todo.is_all_day === 1)
-  const [saving, setSaving] = useState(false)
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [threadReply, setThreadReply] = useState('')
   const [postingThread, setPostingThread] = useState(false)
+  const saveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const inFlightRef = useRef(false)
+  const lastSavedSerializedRef = useRef<string>('')
+  const pendingRef = useRef<{ serialized: string; payload: TodoSavePayload } | null>(null)
 
   useEffect(() => {
     setTitle(todo.title)
@@ -300,6 +312,18 @@ export function TodoDetailDialog({
     )
     setAllDay(todo.is_all_day === 1)
     setThreadReply('')
+    setSaveState('idle')
+    const startsAtSec = todo.starts_at != null ? Math.floor(new Date(todo.starts_at).getTime() / 1000) : null
+    const endsAtSec = todo.ends_at != null ? Math.floor(new Date(todo.ends_at).getTime() / 1000) : null
+    lastSavedSerializedRef.current = JSON.stringify({
+      title: todo.title,
+      description: (todo.description ?? '').trim() || null,
+      starts_at: startsAtSec,
+      ends_at: endsAtSec,
+      is_all_day: todo.is_all_day
+    } satisfies TodoSavePayload)
+    pendingRef.current = null
+    inFlightRef.current = false
   }, [todo.id, todo.title, todo.description, todo.starts_at, todo.ends_at, todo.is_all_day, todo.created_at])
 
   const relatedPosts = useMemo(() => {
@@ -333,25 +357,59 @@ export function TodoDetailDialog({
     return { starts_at, ends_at, is_all_day: 0 as const }
   }, [allDay, dateStr, startTime, endTime])
 
-  const handleSave = useCallback(async () => {
+  const draftPayload = useMemo<TodoSavePayload | null>(() => {
     const trimmed = title.trim()
-    if (!trimmed) return
-    setSaving(true)
-    try {
-      const sched = buildSchedulePatch()
-      const descTrim = description.trim()
-      await onUpdateTodo(todo.id, {
-        title: trimmed,
-        description: descTrim.length > 0 ? descTrim : null,
-        starts_at: sched.starts_at,
-        ends_at: sched.ends_at,
-        is_all_day: sched.is_all_day
-      })
-      onClose()
-    } finally {
-      setSaving(false)
+    if (!trimmed) return null
+    const sched = buildSchedulePatch()
+    const descTrim = description.trim()
+    return {
+      title: trimmed,
+      description: descTrim.length > 0 ? descTrim : null,
+      starts_at: sched.starts_at,
+      ends_at: sched.ends_at,
+      is_all_day: sched.is_all_day
     }
-  }, [title, description, todo.id, buildSchedulePatch, onUpdateTodo, onClose])
+  }, [title, description, buildSchedulePatch])
+
+  const persistDraft = useCallback(
+    async (serialized: string, payload: TodoSavePayload) => {
+      if (inFlightRef.current) {
+        pendingRef.current = { serialized, payload }
+        return
+      }
+      if (serialized === lastSavedSerializedRef.current) return
+      inFlightRef.current = true
+      setSaveState('saving')
+      try {
+        await onUpdateTodo(todo.id, payload)
+        lastSavedSerializedRef.current = serialized
+        setSaveState('saved')
+      } catch {
+        setSaveState('error')
+      } finally {
+        inFlightRef.current = false
+        const next = pendingRef.current
+        pendingRef.current = null
+        if (next && next.serialized !== lastSavedSerializedRef.current) {
+          void persistDraft(next.serialized, next.payload)
+        }
+      }
+    },
+    [onUpdateTodo, todo.id]
+  )
+
+  useEffect(() => {
+    if (!draftPayload) return
+    const serialized = JSON.stringify(draftPayload)
+    if (serialized === lastSavedSerializedRef.current) return
+    if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current)
+    saveDebounceRef.current = setTimeout(() => {
+      void persistDraft(serialized, draftPayload)
+    }, 600)
+    return () => {
+      if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current)
+    }
+  }, [draftPayload, persistDraft])
 
   const handleAddThreadPost = useCallback(async () => {
     const trimmed = threadReply.trim()
@@ -425,7 +483,24 @@ export function TodoDetailDialog({
         </div>
 
         <div className="w-full max-w-full space-y-3 rounded-xl border border-border bg-muted/25 px-3 py-3 sm:max-w-none">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Schedule</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Schedule</p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                if (!window.confirm('Clear this todo schedule? Date/time settings will be removed.')) return
+                setAllDay(false)
+                setStartTime('')
+                setEndTime('')
+              }}
+              disabled={!allDay && !startTime && !endTime}
+            >
+              Clear schedule
+            </Button>
+          </div>
           <div className="flex items-center justify-between gap-3">
             <Label htmlFor="todo-all-day" className="cursor-pointer text-sm font-normal">
               All day
@@ -543,18 +618,17 @@ export function TodoDetailDialog({
             Delete
           </Button>
           <div className="flex gap-2">
+            <span className="self-center text-[11px] text-muted-foreground px-1">
+              {saveState === 'saving'
+                ? 'Saving…'
+                : saveState === 'saved'
+                  ? 'Saved'
+                  : saveState === 'error'
+                    ? 'Save failed'
+                    : ''}
+            </span>
             <Button type="button" variant="ghost" size="sm" className="h-8 text-xs" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 text-xs"
-              disabled={saving || !title.trim()}
-              style={{ background: 'var(--amber)' }}
-              onClick={() => void handleSave()}
-            >
-              {saving ? 'Saving…' : 'Save'}
+              Close
             </Button>
           </div>
         </div>
@@ -962,15 +1036,10 @@ export function TodoView({
                 }
               }}
             />
-            <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm">
-              <div className="space-y-0.5 pr-2">
-                <Label htmlFor="todo-create-schedule" className="text-sm font-normal cursor-pointer">
-                  Schedule on calendar
-                </Label>
-                <p className="text-[11px] text-muted-foreground leading-snug">
-                  Turn off to add a todo without a time block.
-                </p>
-              </div>
+            <div className="flex items-center justify-between gap-3 py-1 text-sm">
+              <Label htmlFor="todo-create-schedule" className="text-sm font-normal cursor-pointer">
+                Add schedule
+              </Label>
               <Switch
                 id="todo-create-schedule"
                 checked={createDraft?.useSchedule ?? false}

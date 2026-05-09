@@ -792,15 +792,10 @@ export function TodayView(): React.JSX.Element {
                 }
               }}
             />
-            <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm">
-              <div className="space-y-0.5 pr-2">
-                <Label htmlFor="today-create-schedule" className="text-sm font-normal cursor-pointer">
-                  Schedule on calendar
-                </Label>
-                <p className="text-[11px] text-muted-foreground leading-snug">
-                  Turn off to create a todo without a time.
-                </p>
-              </div>
+            <div className="flex items-center justify-between gap-3 py-1 text-sm">
+              <Label htmlFor="today-create-schedule" className="text-sm font-normal cursor-pointer">
+                Add schedule
+              </Label>
               <Switch
                 id="today-create-schedule"
                 checked={createDraft?.useSchedule ?? false}
