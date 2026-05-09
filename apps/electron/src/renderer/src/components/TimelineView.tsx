@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Check, Clock, SquarePen } from 'lucide-react'
 import { PostComposer, type PostComposerContext } from './PostComposer'
 import { PostRow } from './PostRow'
+import { TodoDetailDialog } from './TodoView'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
@@ -12,6 +13,7 @@ import { groupPostsByLocalDay } from '../lib/post-day-groups'
 import type { Todo } from '../gen/api/schemas'
 
 const DEFAULT_TODO_DURATION_SEC = 30 * 60
+const TIMELINE_RAIL_LEFT_PX = 12
 
 const tsToSec = (ts: string | null): number => (ts != null ? new Date(ts).getTime() / 1000 : 0)
 
@@ -49,10 +51,12 @@ function usePeriodicNow(intervalMs = 30_000): number {
 /** Slim sidebar: today’s timed blocks + open todos (no inline create). */
 function TimelineSidePanel({
   todos,
-  toggleDone
+  toggleDone,
+  onTodoSelect
 }: {
   todos: Todo[]
   toggleDone: (id: number, currentDone: number) => Promise<void>
+  onTodoSelect?: (todo: Todo) => void
 }): React.JSX.Element {
   const nowSec = usePeriodicNow()
   const runningTodo = useMemo(() => pickRunningTodo(todos, nowSec), [todos, nowSec])
@@ -119,20 +123,23 @@ function TimelineSidePanel({
               new Date(tsToSec(todo.starts_at) * 1000 + DEFAULT_TODO_DURATION_SEC * 1000).toISOString()
             const isRunning = pickRunningTodo([todo], nowSec)?.id === todo.id
             return (
-              <div
+              <button
                 key={todo.id}
+                type="button"
+                onClick={() => onTodoSelect?.(todo)}
                 className="rounded-xl px-2.5 py-2 text-xs"
                 style={{
                   background: isRunning
                     ? 'color-mix(in srgb, var(--amber-light) 70%, white 30%)'
-                    : 'color-mix(in srgb, var(--background) 65%, var(--card) 35%)'
+                    : 'color-mix(in srgb, var(--background) 65%, var(--card) 35%)',
+                  width: '100%'
                 }}
               >
                 <div className="font-medium leading-tight truncate">{todo.title}</div>
                 <div className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">
                   {formatTime(todo.starts_at!)} – {formatTime(endTs)}
                 </div>
-              </div>
+              </button>
             )
           })
         )}
@@ -151,7 +158,10 @@ function TimelineSidePanel({
               <div key={todo.id} className="group flex items-start gap-2 py-1.5">
                 <button
                   type="button"
-                  onClick={() => void toggleDone(todo.id, todo.done)}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    void toggleDone(todo.id, todo.done)
+                  }}
                   className="flex items-center justify-center shrink-0 mt-0.5 rounded"
                   style={{
                     width: 14,
@@ -163,7 +173,11 @@ function TimelineSidePanel({
                 >
                   {isDone && <Check size={8} color="#fff" strokeWidth={3} />}
                 </button>
-                <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => onTodoSelect?.(todo)}
+                  className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap text-left"
+                >
                   <span className={`text-xs leading-snug ${isDone ? 'line-through text-muted-foreground' : ''}`}>
                     {todo.title}
                   </span>
@@ -186,7 +200,7 @@ function TimelineSidePanel({
                       No time
                     </Badge>
                   )}
-                </div>
+                </button>
               </div>
             )
           })
@@ -216,7 +230,7 @@ export function TimelineView(): React.JSX.Element {
     deletePost
   } = usePostsFeed()
 
-  const { todos: todayTodos, toggleDone } = useTodos({
+  const { todos: todayTodos, toggleDone, updateTodo, deleteTodo } = useTodos({
     from,
     to
   })
@@ -224,6 +238,7 @@ export function TimelineView(): React.JSX.Element {
   const dayGroups = useMemo(() => groupPostsByLocalDay(posts), [posts])
   const [currentContext, setCurrentContext] = useState<PostComposerContext>(null)
   const [isCreatePostDialogOpen, setIsCreatePostDialogOpen] = useState(false)
+  const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
 
   const handleClearContext = useCallback(() => {
     setCurrentContext(null)
@@ -274,7 +289,7 @@ export function TimelineView(): React.JSX.Element {
 
   return (
     <div className="flex flex-1 min-h-0 gap-3 px-3 pb-3">
-      <TimelineSidePanel todos={todayTodos} toggleDone={toggleDone} />
+      <TimelineSidePanel todos={todayTodos} toggleDone={toggleDone} onTodoSelect={setSelectedTodo} />
       <main
         className="flex flex-col flex-1 min-h-0 py-4 px-5 overflow-hidden rounded-2xl"
         style={{ background: 'color-mix(in srgb, var(--card) 84%, white 16%)' }}
@@ -319,12 +334,7 @@ export function TimelineView(): React.JSX.Element {
               </div>
             ) : (
               <>
-                <div className="relative shrink-0 pl-8">
-                  <div
-                    className="pointer-events-none absolute left-3 top-2.5 bottom-2.5 w-px"
-                    style={{ background: 'color-mix(in srgb, var(--border) 62%, transparent)' }}
-                    aria-hidden
-                  />
+                <div className="relative shrink-0">
                   {dayGroups.map((group) => (
                     <section
                       key={group.dayKey}
@@ -332,8 +342,11 @@ export function TimelineView(): React.JSX.Element {
                       aria-labelledby={`timeline-day-${group.dayKey}`}
                     >
                       <div
-                        className="absolute left-3 top-1.5 z-10 h-2 w-2 -translate-x-1/2 rounded-full border border-background bg-background"
-                        style={{ borderColor: 'color-mix(in srgb, var(--amber) 80%, white 20%)' }}
+                        className="absolute top-1.5 z-10 h-2 w-2 -translate-x-1/2 rounded-full border border-background bg-background"
+                        style={{
+                          left: `${TIMELINE_RAIL_LEFT_PX}px`,
+                          borderColor: 'color-mix(in srgb, var(--amber) 80%, white 20%)'
+                        }}
                         aria-hidden
                       />
                       <div className="pl-5">
@@ -391,6 +404,23 @@ export function TimelineView(): React.JSX.Element {
             todosForSuggestion={todayTodos.filter((t) => t.done === 0)}
           />
         </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(selectedTodo)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedTodo(null)
+        }}
+      >
+        {selectedTodo && (
+          <TodoDetailDialog
+            todo={selectedTodo}
+            onClose={() => setSelectedTodo(null)}
+            onUpdateTodo={updateTodo}
+            onDeleteTodo={deleteTodo}
+            onToggleDone={toggleDone}
+          />
+        )}
       </Dialog>
     </div>
   )

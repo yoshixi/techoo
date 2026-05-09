@@ -9,7 +9,7 @@ import type { Todo } from '../gen/api/schemas'
  */
 export function TodoTabView(): React.JSX.Element {
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
-  const { todos: resolverTodos } = useTodos({ showAll: true })
+  const { todos: resolverTodos } = useTodos({ fetchAll: true })
 
   const handleCalendarTodoSelect = useCallback(
     (calTodo: { id: number }) => {

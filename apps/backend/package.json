@@ -29,7 +29,7 @@
   "types": "./src/app/api/[[...route]]/route.ts",
   "dependencies": {
     "@hono/zod-openapi": "catalog:",
-    "@libsql/client": "^0.15.15",
+    "@libsql/client": "^0.17.0",
     "better-auth": "^1.4.18",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.7",

@@ -7,7 +7,8 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
-    "test": "turbo run test",
+    "check:dup-deps": "node scripts/check-duplicate-dependency-versions.mjs",
+    "test": "pnpm run check:dup-deps && turbo run test",
     "release:electron": "./scripts/release-electron.sh"
   },
   "devDependencies": {

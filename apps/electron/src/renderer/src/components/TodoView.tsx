@@ -819,8 +819,15 @@ export function TodoView({
   useEffect(() => {
     if (!selectedTodo) return
     const next = rawTodos.find((t) => t.id === selectedTodo.id)
-    if (!next) setSelectedTodo(null)
-  }, [rawTodos, selectedTodo?.id, setSelectedTodo])
+    if (next) {
+      // Keep dialog data fresh when the selected todo exists in the current dataset.
+      if (next !== selectedTodo) setSelectedTodo(next)
+      return
+    }
+    // In controlled mode (e.g. calendar-driven selection), keep the dialog open
+    // even when current list filters don't include the selected todo.
+    if (!controlled) setSelectedTodo(null)
+  }, [rawTodos, selectedTodo, setSelectedTodo, controlled])
 
   const filteredTodos = useMemo(() => {
     let t = rawTodos
