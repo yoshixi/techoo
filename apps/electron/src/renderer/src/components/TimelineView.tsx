@@ -261,6 +261,17 @@ export function TimelineView(): React.JSX.Element {
     return () => obs.disconnect()
   }, [hasMore, loadingMore, initialLoading, loadMore, posts.length, error])
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) return
+      if (event.key.toLowerCase() !== 'n') return
+      event.preventDefault()
+      setIsCreatePostDialogOpen(true)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   return (
     <div className="flex flex-1 min-h-0 gap-3 px-3 pb-3">
       <TimelineSidePanel todos={todayTodos} toggleDone={toggleDone} />
@@ -310,7 +321,7 @@ export function TimelineView(): React.JSX.Element {
               <>
                 <div className="relative shrink-0 pl-8">
                   <div
-                    className="pointer-events-none absolute left-2.5 top-2.5 bottom-2.5 w-px"
+                    className="pointer-events-none absolute left-3 top-2.5 bottom-2.5 w-px"
                     style={{ background: 'color-mix(in srgb, var(--border) 62%, transparent)' }}
                     aria-hidden
                   />
@@ -321,7 +332,7 @@ export function TimelineView(): React.JSX.Element {
                       aria-labelledby={`timeline-day-${group.dayKey}`}
                     >
                       <div
-                        className="absolute left-2.5 top-1.5 z-10 h-2 w-2 -translate-x-1/2 rounded-full border border-background bg-background"
+                        className="absolute left-3 top-1.5 z-10 h-2 w-2 -translate-x-1/2 rounded-full border border-background bg-background"
                         style={{ borderColor: 'color-mix(in srgb, var(--amber) 80%, white 20%)' }}
                         aria-hidden
                       />

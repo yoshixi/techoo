@@ -976,6 +976,82 @@ export function TodoView({
     }
   }, [createDraft, createTodo])
 
+  useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false
+      if (target.isContentEditable) return true
+      const tag = target.tagName
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+    }
+
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'n') {
+        event.preventDefault()
+        openCreateDialog()
+        return
+      }
+
+      // Tab/Shift+Tab cycles todo detail focus when dialogs are closed and user is not typing in a field.
+      if (
+        event.key === 'Tab' &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.defaultPrevented &&
+        !createDraft &&
+        !quickTimeDraft &&
+        !selectedTodo &&
+        !isEditableTarget(event.target)
+      ) {
+        if (filteredTodos.length === 0) return
+        event.preventDefault()
+        if (event.shiftKey) {
+          setSelectedTodo(filteredTodos[filteredTodos.length - 1] ?? null)
+          return
+        }
+        setSelectedTodo(filteredTodos[0] ?? null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [openCreateDialog, filteredTodos, createDraft, quickTimeDraft, selectedTodo, setSelectedTodo])
+
+  useEffect(() => {
+    if (!selectedTodo || filteredTodos.length === 0) return
+    const currentIdx = filteredTodos.findIndex((todo) => todo.id === selectedTodo.id)
+    if (currentIdx === -1) return
+
+    const isEditableTarget = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false
+      if (target.isContentEditable) return true
+      const tag = target.tagName
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+    }
+
+    const handleDialogTabCycle = (event: KeyboardEvent): void => {
+      if (
+        event.key !== 'Tab' ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.defaultPrevented ||
+        createDraft ||
+        quickTimeDraft ||
+        isEditableTarget(event.target)
+      ) {
+        return
+      }
+      event.preventDefault()
+      const direction = event.shiftKey ? -1 : 1
+      const nextIdx = (currentIdx + direction + filteredTodos.length) % filteredTodos.length
+      setSelectedTodo(filteredTodos[nextIdx] ?? null)
+    }
+
+    window.addEventListener('keydown', handleDialogTabCycle)
+    return () => window.removeEventListener('keydown', handleDialogTabCycle)
+  }, [selectedTodo?.id, filteredTodos, createDraft, quickTimeDraft, setSelectedTodo])
+
   const padding = variant === 'column' ? 'px-4 py-3' : 'p-6'
 
   return (

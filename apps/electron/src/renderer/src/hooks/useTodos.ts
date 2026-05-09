@@ -12,6 +12,14 @@ import { mutate as globalMutate } from 'swr'
 const TODO_LIST_LIMIT = 500
 const TODOS_SWR_KEY = '/api/v1/todos'
 
+function dedupeTodosById(todos: Todo[]): Todo[] {
+  const byId = new Map<number, Todo>()
+  for (const todo of todos) {
+    byId.set(todo.id, todo)
+  }
+  return Array.from(byId.values())
+}
+
 export function useTodos(options?: {
   from?: number
   to?: number
@@ -108,7 +116,7 @@ export function useTodos(options?: {
     (current: { data: Todo[] } | undefined, server: Todo) => {
       if (!current) return { data: [server] }
       const noTemp = current.data.filter((t) => t.id > 0)
-      return { data: [...noTemp, server] }
+      return { data: dedupeTodosById([...noTemp, server]) }
     },
     []
   )
@@ -130,14 +138,14 @@ export function useTodos(options?: {
       mutate(
         (current) => {
           if (!current) return { data: [optimisticTodo] }
-          return { data: [...current.data, optimisticTodo] }
+          return { data: dedupeTodosById([...current.data, optimisticTodo]) }
         },
         { revalidate: false }
       )
       mutateAllTodoCaches(
         (current) => {
           if (!current) return current
-          return { data: [...current.data, optimisticTodo] }
+          return { data: dedupeTodosById([...current.data, optimisticTodo]) }
         },
         false
       )

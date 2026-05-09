@@ -33,6 +33,24 @@ function App(): React.JSX.Element {
     return () => clearInterval(id)
   }, [])
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) return
+      if (event.key === '1') {
+        event.preventDefault()
+        setCurrentView('todo')
+      } else if (event.key === '2') {
+        event.preventDefault()
+        setCurrentView('timeline')
+      } else if (event.key === '3') {
+        event.preventDefault()
+        setCurrentView('account')
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background">
       {/* Topbar */}

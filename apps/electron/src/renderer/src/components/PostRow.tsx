@@ -5,6 +5,31 @@ import { Badge } from './ui/badge'
 import { Textarea } from './ui/textarea'
 import type { Post } from '../gen/api/schemas'
 
+const URL_REGEX = /(https?:\/\/[^\s]+)/g
+const URL_PART_REGEX = /^https?:\/\/[^\s]+$/
+
+function renderTextWithLinks(text: string): React.ReactNode[] {
+  const parts = text.split(URL_REGEX)
+  return parts.map((part, idx) => {
+    if (!URL_PART_REGEX.test(part)) return <React.Fragment key={`txt-${idx}`}>{part}</React.Fragment>
+    return (
+      <a
+        key={`url-${idx}`}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline underline-offset-2 text-primary/90 hover:text-primary"
+        onClick={(event) => {
+          event.preventDefault()
+          window.open(part, '_blank', 'noopener,noreferrer')
+        }}
+      >
+        {part}
+      </a>
+    )
+  })
+}
+
 export function PostRow({
   post,
   onDelete,
@@ -117,7 +142,7 @@ export function PostRow({
             </div>
           ) : (
             <>
-              <p className="text-[11px] leading-snug whitespace-pre-wrap line-clamp-3">{post.body}</p>
+              <p className="text-[11px] leading-snug whitespace-pre-wrap line-clamp-3">{renderTextWithLinks(post.body)}</p>
               {badges}
               <span className="text-[10px] text-muted-foreground">{timeStr}</span>
             </>
@@ -191,7 +216,9 @@ export function PostRow({
           </div>
         ) : (
           <>
-            <p className="text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-dark)' }}>{post.body}</p>
+            <p className="text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-dark)' }}>
+              {renderTextWithLinks(post.body)}
+            </p>
             {badges}
             <span className="block text-[11px] text-muted-foreground">{timeStr}</span>
           </>
