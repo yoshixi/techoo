@@ -1058,7 +1058,7 @@ export function CalendarTodoWorkspace({
   /** When false, omit header “New”; drag-to-create still opens the dialog (e.g. Todo tab uses list-side create). */
   showHeaderNew?: boolean
 }): React.JSX.Element {
-  const { todos: apiTodos, createTodo, updateTodo, deleteTodo } = useTodos({ showAll: true })
+  const { todos: apiTodos, createTodo, updateTodo, deleteTodo } = useTodos({ fetchAll: true })
   const todos = apiTodos.map(apiTodoToCalendar)
   const [visibleDate, setVisibleDate] = useState<Date>(() => startOfDay(new Date()))
 
