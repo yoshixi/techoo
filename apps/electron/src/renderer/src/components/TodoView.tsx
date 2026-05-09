@@ -459,7 +459,7 @@ export function TodoDetailDialog({
 
   return (
     <DialogContent className="max-h-[90vh] w-full max-w-[min(100vw-2rem,36rem)] gap-0 overflow-y-auto p-5 sm:max-w-[min(100vw-3rem,52rem)] sm:p-6">
-      <DialogHeader className="space-y-0 pb-3 text-left">
+      <DialogHeader className="space-y-0 pb-1.5 text-left">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0">
             <DialogTitle className="font-title text-lg leading-tight">Edit todo</DialogTitle>
@@ -484,30 +484,25 @@ export function TodoDetailDialog({
         </div>
       </DialogHeader>
 
-      <div className="flex flex-col gap-4">
-        <div className="space-y-1.5 rounded-2xl bg-card/85 px-3 py-3">
-          <Label htmlFor="todo-detail-title" className="text-xs text-muted-foreground">
-            Title
-          </Label>
+      <div className="flex flex-col gap-1.5">
+        <div className="space-y-0.5 rounded-2xl bg-card/85 px-3 py-1">
           <Input
             id="todo-detail-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="h-9 text-sm"
+            placeholder="Todo title"
+            className="h-10 !text-xl md:!text-xl font-semibold tracking-tight border-transparent bg-background/60 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
           />
         </div>
 
-        <div className="space-y-1.5 rounded-2xl bg-card/85 px-3 py-3">
-          <Label htmlFor="todo-detail-description" className="text-xs text-muted-foreground">
-            Description
-          </Label>
+        <div className="space-y-0.5 rounded-2xl bg-card/85 px-3 py-1">
           <Textarea
             id="todo-detail-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Notes, context, links…"
+            placeholder="Add notes, context, links…"
             rows={4}
-            className="min-h-[88px] resize-y text-sm"
+            className="min-h-[92px] resize-y text-sm border-transparent bg-background/60 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
           />
         </div>
 
@@ -624,21 +619,19 @@ export function TodoDetailDialog({
           )}
         </div>
 
-        <p className="text-xs text-muted-foreground">Created {formatDate(todo.created_at)}</p>
-
         <div className="space-y-2 rounded-2xl bg-card/85 px-3 py-3">
-          <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Post thread
-          </h4>
-          <p className="text-[11px] text-muted-foreground leading-snug">
-            Chronological log entries linked to this todo (from Today / Work or #tags).
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="text-xs font-medium tracking-wide text-muted-foreground">Thread</h4>
+            <Badge variant="outline" className="h-5 px-2 text-[10px]">
+              {relatedPosts.length}
+            </Badge>
+          </div>
           {postsLoading && relatedPosts.length === 0 ? (
             <p className="text-xs text-muted-foreground">Loading posts…</p>
           ) : relatedPosts.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No posts linked yet.</p>
+            <p className="text-xs text-muted-foreground">No entries yet.</p>
           ) : (
-            <div className="max-h-52 space-y-2 overflow-y-auto pr-0.5">
+            <div className="max-h-52 space-y-1.5 overflow-y-auto pr-0.5">
               {relatedPosts.map((post) => (
                 <div
                   key={post.id}
@@ -647,25 +640,22 @@ export function TodoDetailDialog({
                     background: 'color-mix(in srgb, var(--background) 72%, white 28%)'
                   }}
                 >
-                  <p className="whitespace-pre-wrap text-[13px] leading-snug">{post.body}</p>
-                  <span className="mt-1 block text-[10px] text-muted-foreground">
+                  <p className="whitespace-pre-wrap text-[12px] leading-snug">{post.body}</p>
+                  <span className="mt-1 block text-[10px] text-muted-foreground/90">
                     {formatTime(post.posted_at)} · {formatDate(post.posted_at)}
                   </span>
                 </div>
               ))}
             </div>
           )}
-          <div className="space-y-1.5 pt-1">
-            <Label htmlFor="todo-thread-reply" className="text-xs text-muted-foreground">
-              Add to thread
-            </Label>
+          <div className="space-y-1 pt-0.5">
             <Textarea
               id="todo-thread-reply"
               value={threadReply}
               onChange={(e) => setThreadReply(e.target.value)}
-              placeholder="Write a log entry for this todo…"
+              placeholder="Add to thread…"
               rows={2}
-              className="min-h-[52px] resize-y text-sm"
+              className="min-h-[52px] resize-y text-sm border-transparent bg-background/60 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
               onKeyDown={(e) => {
                 if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
                   e.preventDefault()
@@ -687,7 +677,7 @@ export function TodoDetailDialog({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
           <Button type="button" variant="destructive" size="sm" className="h-8 text-xs" onClick={() => void handleDelete()}>
             Delete
           </Button>
@@ -804,10 +794,10 @@ export function TodoView({
       : allOpenMode
         ? { showAll: true }
         : {
-            from: listRange.from,
-            to: listRange.to,
-            includeCompletedInRange: showCompletedInRange
-          }
+          from: listRange.from,
+          to: listRange.to,
+          includeCompletedInRange: showCompletedInRange
+        }
   )
 
   useEffect(() => {
