@@ -8,6 +8,7 @@ import { Label } from './ui/label'
 import { Switch } from './ui/switch'
 import { Separator } from './ui/separator'
 import { Textarea } from './ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { useTodos } from '../hooks/useTodos'
 import { usePosts } from '../hooks/usePosts'
 import type { Todo } from '../gen/api/schemas'
@@ -46,6 +47,11 @@ type TodoSavePayload = {
   ends_at: number | null
   is_all_day: number
 }
+
+type ScheduleMode = 'none' | 'timed' | 'all_day'
+
+const DEFAULT_DURATION_MIN = 30
+const DURATION_OPTIONS_MINUTES = [15, 30, 45, 60, 90, 120]
 
 function startOfDayUnixFromDateInput(dateStr: string): number {
   const d = new Date(dateStr + 'T00:00:00')
@@ -120,12 +126,14 @@ export function TodoItem({
   todo,
   onToggleDone,
   onDeleteTodo,
-  onSelect
+  onSelect,
+  onQuickAdjustTime
 }: {
   todo: Todo
   onToggleDone: (id: number, done: number) => void
   onDeleteTodo: (id: number) => void
   onSelect: (todo: Todo) => void
+  onQuickAdjustTime: (todo: Todo) => void
 }): React.JSX.Element {
   const isDone = todo.done === 1
   const [justCompleted, setJustCompleted] = useState(false)
@@ -197,21 +205,37 @@ export function TodoItem({
           )}
         </div>
 
-        <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+        <div className="shrink-0">
           {todo.starts_at != null ? (
-            <Badge
-              variant="outline"
-              className="text-[11px] px-2 py-0.5 rounded gap-1 pointer-events-none"
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onQuickAdjustTime(todo)
+              }}
             >
-              <Clock className="w-3 h-3" />
-              {formatTime(todo.starts_at!)}
-              {todo.ends_at != null && ` – ${formatTime(todo.ends_at!)}`}
-            </Badge>
+              <Badge variant="outline" className="text-[11px] px-2 py-0.5 rounded gap-1 hover:bg-accent/40">
+                <Clock className="w-3 h-3" />
+                {formatTime(todo.starts_at!)}
+                {todo.ends_at != null && ` – ${formatTime(todo.ends_at!)}`}
+              </Badge>
+            </button>
           ) : (
-            <Badge variant="outline" className="text-[11px] px-2 py-0.5 rounded gap-1 text-muted-foreground">
-              <Clock className="w-3 h-3" />
-              No time
-            </Badge>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onQuickAdjustTime(todo)
+              }}
+            >
+              <Badge
+                variant="outline"
+                className="text-[11px] px-2 py-0.5 rounded gap-1 text-muted-foreground hover:bg-accent/40"
+              >
+                <Clock className="w-3 h-3" />
+                No time
+              </Badge>
+            </button>
           )}
         </div>
 
@@ -280,12 +304,16 @@ export function TodoDetailDialog({
       ? `${String(new Date(todo.starts_at).getHours()).padStart(2, '0')}:${String(new Date(todo.starts_at).getMinutes()).padStart(2, '0')}`
       : ''
   )
-  const [endTime, setEndTime] = useState(() =>
-    todo.ends_at != null
-      ? `${String(new Date(todo.ends_at).getHours()).padStart(2, '0')}:${String(new Date(todo.ends_at).getMinutes()).padStart(2, '0')}`
-      : ''
-  )
-  const [allDay, setAllDay] = useState(todo.is_all_day === 1)
+  const [durationMinutes, setDurationMinutes] = useState(() => {
+    if (todo.starts_at == null || todo.ends_at == null) return String(DEFAULT_DURATION_MIN)
+    const diffMin = Math.round((new Date(todo.ends_at).getTime() - new Date(todo.starts_at).getTime()) / 60000)
+    return String(diffMin > 0 ? diffMin : DEFAULT_DURATION_MIN)
+  })
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(() => {
+    if (todo.is_all_day === 1) return 'all_day'
+    if (todo.starts_at != null) return 'timed'
+    return 'none'
+  })
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [threadReply, setThreadReply] = useState('')
   const [postingThread, setPostingThread] = useState(false)
@@ -305,12 +333,13 @@ export function TodoDetailDialog({
         ? `${String(new Date(todo.starts_at).getHours()).padStart(2, '0')}:${String(new Date(todo.starts_at).getMinutes()).padStart(2, '0')}`
         : ''
     )
-    setEndTime(
-      todo.ends_at != null
-        ? `${String(new Date(todo.ends_at).getHours()).padStart(2, '0')}:${String(new Date(todo.ends_at).getMinutes()).padStart(2, '0')}`
-        : ''
-    )
-    setAllDay(todo.is_all_day === 1)
+    if (todo.starts_at != null && todo.ends_at != null) {
+      const diffMin = Math.round((new Date(todo.ends_at).getTime() - new Date(todo.starts_at).getTime()) / 60000)
+      setDurationMinutes(String(diffMin > 0 ? diffMin : DEFAULT_DURATION_MIN))
+    } else {
+      setDurationMinutes(String(DEFAULT_DURATION_MIN))
+    }
+    setScheduleMode(todo.is_all_day === 1 ? 'all_day' : todo.starts_at != null ? 'timed' : 'none')
     setThreadReply('')
     setSaveState('idle')
     const startsAtSec = todo.starts_at != null ? Math.floor(new Date(todo.starts_at).getTime() / 1000) : null
@@ -332,7 +361,10 @@ export function TodoDetailDialog({
   }, [posts, todo.id])
 
   const buildSchedulePatch = useCallback(() => {
-    if (allDay) {
+    if (scheduleMode === 'none') {
+      return { starts_at: null as null, ends_at: null as null, is_all_day: 0 as const }
+    }
+    if (scheduleMode === 'all_day') {
       const dayStart = startOfDayUnixFromDateInput(dateStr)
       return {
         starts_at: dayStart,
@@ -347,15 +379,12 @@ export function TodoDetailDialog({
     const base = new Date(dateStr + 'T00:00:00')
     base.setHours(sh, sm, 0, 0)
     const starts_at = Math.floor(base.getTime() / 1000)
-    let ends_at: number | null = null
-    if (endTime) {
-      const [eh, em] = endTime.split(':').map(Number)
-      const end = new Date(dateStr + 'T00:00:00')
-      end.setHours(eh, em, 0, 0)
-      ends_at = Math.floor(end.getTime() / 1000)
-    }
+    const parsedDuration = Number.parseInt(durationMinutes, 10)
+    const safeDurationMin =
+      Number.isFinite(parsedDuration) && parsedDuration > 0 ? parsedDuration : DEFAULT_DURATION_MIN
+    const ends_at = starts_at + safeDurationMin * 60
     return { starts_at, ends_at, is_all_day: 0 as const }
-  }, [allDay, dateStr, startTime, endTime])
+  }, [scheduleMode, dateStr, startTime, durationMinutes])
 
   const draftPayload = useMemo<TodoSavePayload | null>(() => {
     const trimmed = title.trim()
@@ -483,44 +512,80 @@ export function TodoDetailDialog({
         </div>
 
         <div className="w-full max-w-full space-y-3 rounded-xl border border-border bg-muted/25 px-3 py-3 sm:max-w-none">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Schedule</p>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                if (!window.confirm('Clear this todo schedule? Date/time settings will be removed.')) return
-                setAllDay(false)
-                setStartTime('')
-                setEndTime('')
-              }}
-              disabled={!allDay && !startTime && !endTime}
-            >
-              Clear schedule
-            </Button>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <Label htmlFor="todo-all-day" className="cursor-pointer text-sm font-normal">
-              All day
-            </Label>
-            <Switch id="todo-all-day" checked={allDay} onCheckedChange={setAllDay} />
-          </div>
           <div className="space-y-1">
-            <Label htmlFor="todo-detail-date" className="text-xs text-muted-foreground">
-              Date
-            </Label>
-            <Input
-              id="todo-detail-date"
-              type="date"
-              value={dateStr}
-              onChange={(e) => setDateStr(e.target.value)}
-              className="h-9 w-[11.5rem] max-w-full text-sm"
-            />
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Schedule</p>
+            <div
+              className="inline-flex flex-wrap items-center gap-1 rounded-full p-0.5"
+              style={{ background: 'var(--background)' }}
+              role="tablist"
+              aria-label="Schedule mode"
+            >
+              {(
+                [
+                  { id: 'none' as const, label: 'No schedule' },
+                  { id: 'timed' as const, label: 'Time block' },
+                  { id: 'all_day' as const, label: 'All day' }
+                ] satisfies Array<{ id: ScheduleMode; label: string }>
+              ).map((mode) => {
+                const active = scheduleMode === mode.id
+                return (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+                    style={{
+                      background: active ? 'var(--text-dark)' : 'transparent',
+                      color: active ? '#fff' : 'var(--text-muted-custom)'
+                    }}
+                    onClick={() => {
+                      if (mode.id === 'none' && scheduleMode !== 'none') {
+                        if (
+                          !window.confirm('Clear this todo schedule? Date/time settings will be removed.')
+                        )
+                          return
+                        setStartTime('')
+                        setDurationMinutes(String(DEFAULT_DURATION_MIN))
+                      }
+                      if (mode.id === 'timed' && !startTime) {
+                        setStartTime('09:00')
+                      }
+                      setScheduleMode(mode.id)
+                    }}
+                  >
+                    {mode.label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
-          {!allDay && (
+          {scheduleMode === 'all_day' && (
+            <div className="space-y-1">
+              <Label htmlFor="todo-detail-date" className="text-xs text-muted-foreground">
+                Date
+              </Label>
+              <Input
+                id="todo-detail-date"
+                type="date"
+                value={dateStr}
+                onChange={(e) => setDateStr(e.target.value)}
+                className="h-9 w-[11.5rem] max-w-full text-sm"
+              />
+            </div>
+          )}
+          {scheduleMode === 'timed' && (
             <div className="flex flex-wrap items-end gap-3 pt-0.5">
+              <div className="space-y-1">
+                <Label htmlFor="todo-detail-date" className="text-xs text-muted-foreground">
+                  Date
+                </Label>
+                <Input
+                  id="todo-detail-date"
+                  type="date"
+                  value={dateStr}
+                  onChange={(e) => setDateStr(e.target.value)}
+                  className="h-9 w-[11.5rem] max-w-full text-sm"
+                />
+              </div>
               <div className="space-y-1">
                 <Label htmlFor="todo-detail-start" className="text-xs text-muted-foreground">
                   Start
@@ -534,18 +599,28 @@ export function TodoDetailDialog({
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="todo-detail-end" className="text-xs text-muted-foreground">
-                  End <span className="font-normal opacity-80">(optional)</span>
+                <Label htmlFor="todo-detail-duration" className="text-xs text-muted-foreground">
+                  Duration
                 </Label>
-                <Input
-                  id="todo-detail-end"
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="h-9 w-[7.25rem] text-sm"
-                />
+                <div className="flex items-center gap-1.5">
+                  <Select value={durationMinutes} onValueChange={setDurationMinutes}>
+                    <SelectTrigger id="todo-detail-duration" className="h-8 w-[7.5rem] rounded-md px-2 text-sm">
+                      <SelectValue placeholder="Duration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DURATION_OPTIONS_MINUTES.map((m) => (
+                        <SelectItem key={m} value={String(m)}>
+                          {m === 60 ? '1 hour' : `${m} min`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
+          )}
+          {scheduleMode === 'none' && (
+            <p className="text-[11px] text-muted-foreground">This todo has no schedule.</p>
           )}
         </div>
 
@@ -699,6 +774,20 @@ export function TodoView({
   const [overdueOnly, setOverdueOnly] = useState(false)
   const [titleSearch, setTitleSearch] = useState('')
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [quickTimeDraft, setQuickTimeDraft] = useState<{
+    todoId: number
+    dateStr: string
+    startTime: string
+    durationMinutes: string
+  } | null>(null)
+  const [quickTimeSaveState, setQuickTimeSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const quickTimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const quickTimeInFlightRef = useRef(false)
+  const quickTimeLastSavedRef = useRef<string>('')
+  const quickTimePendingRef = useRef<{
+    serialized: string
+    payload: { todoId: number; starts_at: number; ends_at: number; is_all_day: number }
+  } | null>(null)
 
   const nowSec = useNowSec()
 
@@ -787,6 +876,92 @@ export function TodoView({
       `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
     setCreateDraft({ title: '', startTime: fmt(now), endTime: fmt(end), useSchedule: false })
   }, [])
+
+  const openQuickTimeAdjust = useCallback((todo: Todo) => {
+    const starts = todo.starts_at != null ? new Date(todo.starts_at) : new Date()
+    const dateStr = `${starts.getFullYear()}-${String(starts.getMonth() + 1).padStart(2, '0')}-${String(starts.getDate()).padStart(2, '0')}`
+    const startTime = `${String(starts.getHours()).padStart(2, '0')}:${String(starts.getMinutes()).padStart(2, '0')}`
+    const durationMinutes =
+      todo.starts_at != null && todo.ends_at != null
+        ? String(Math.max(1, Math.round((new Date(todo.ends_at).getTime() - new Date(todo.starts_at).getTime()) / 60000)))
+        : String(DEFAULT_DURATION_MIN)
+    const startsAt = todo.starts_at != null ? Math.floor(new Date(todo.starts_at).getTime() / 1000) : null
+    const endsAt = todo.ends_at != null ? Math.floor(new Date(todo.ends_at).getTime() / 1000) : null
+    quickTimeLastSavedRef.current = JSON.stringify({
+      todoId: todo.id,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      is_all_day: todo.is_all_day
+    })
+    setQuickTimeSaveState('idle')
+    setQuickTimeDraft({ todoId: todo.id, dateStr, startTime, durationMinutes })
+  }, [])
+
+  const quickTimePayload = useMemo(() => {
+    if (!quickTimeDraft) return null
+    const [sh, sm] = quickTimeDraft.startTime.split(':').map(Number)
+    if (!Number.isFinite(sh) || !Number.isFinite(sm)) return null
+    const parsedDuration = Number.parseInt(quickTimeDraft.durationMinutes, 10)
+    const safeDurationMin =
+      Number.isFinite(parsedDuration) && parsedDuration > 0 ? parsedDuration : DEFAULT_DURATION_MIN
+    const base = new Date(quickTimeDraft.dateStr + 'T00:00:00')
+    base.setHours(sh, sm, 0, 0)
+    const starts_at = Math.floor(base.getTime() / 1000)
+    const ends_at = starts_at + safeDurationMin * 60
+    return {
+      todoId: quickTimeDraft.todoId,
+      starts_at,
+      ends_at,
+      is_all_day: 0
+    }
+  }, [quickTimeDraft])
+
+  const persistQuickTime = useCallback(
+    async (
+      serialized: string,
+      payload: { todoId: number; starts_at: number; ends_at: number; is_all_day: number }
+    ) => {
+      if (quickTimeInFlightRef.current) {
+        quickTimePendingRef.current = { serialized, payload }
+        return
+      }
+      if (serialized === quickTimeLastSavedRef.current) return
+      quickTimeInFlightRef.current = true
+      setQuickTimeSaveState('saving')
+      try {
+        await updateTodo(payload.todoId, {
+          starts_at: payload.starts_at,
+          ends_at: payload.ends_at,
+          is_all_day: payload.is_all_day
+        })
+        quickTimeLastSavedRef.current = serialized
+        setQuickTimeSaveState('saved')
+      } catch {
+        setQuickTimeSaveState('error')
+      } finally {
+        quickTimeInFlightRef.current = false
+        const next = quickTimePendingRef.current
+        quickTimePendingRef.current = null
+        if (next && next.serialized !== quickTimeLastSavedRef.current) {
+          void persistQuickTime(next.serialized, next.payload)
+        }
+      }
+    },
+    [updateTodo]
+  )
+
+  useEffect(() => {
+    if (!quickTimePayload) return
+    const serialized = JSON.stringify(quickTimePayload)
+    if (serialized === quickTimeLastSavedRef.current) return
+    if (quickTimeDebounceRef.current) clearTimeout(quickTimeDebounceRef.current)
+    quickTimeDebounceRef.current = setTimeout(() => {
+      void persistQuickTime(serialized, quickTimePayload)
+    }, 400)
+    return () => {
+      if (quickTimeDebounceRef.current) clearTimeout(quickTimeDebounceRef.current)
+    }
+  }, [quickTimePayload, persistQuickTime])
 
   const handleCreateSubmit = useCallback(async () => {
     if (!createDraft || !createDraft.title.trim()) return
@@ -1007,6 +1182,7 @@ export function TodoView({
                 onToggleDone={toggleDone}
                 onDeleteTodo={deleteTodo}
                 onSelect={(t) => setSelectedTodo(t)}
+                onQuickAdjustTime={openQuickTimeAdjust}
               />
             ))
           )}
@@ -1097,6 +1273,117 @@ export function TodoView({
             onToggleDone={toggleDone}
           />
         )}
+      </Dialog>
+
+      <Dialog
+        open={Boolean(quickTimeDraft)}
+        onOpenChange={(open) => {
+          if (!open) setQuickTimeDraft(null)
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <div className="space-y-4">
+            <DialogHeader className="space-y-1 text-left p-0">
+              <DialogTitle className="font-title text-lg">Quick time adjust</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-1">
+              <Label htmlFor="quick-time-date" className="text-xs text-muted-foreground">
+                Date
+              </Label>
+              <Input
+                id="quick-time-date"
+                type="date"
+                value={quickTimeDraft?.dateStr ?? ''}
+                onChange={(e) =>
+                  setQuickTimeDraft((d) => (d ? { ...d, dateStr: e.target.value } : d))
+                }
+                className="h-9 text-sm"
+              />
+            </div>
+            <div className="flex items-end gap-2">
+              <div className="space-y-1">
+                <Label htmlFor="quick-time-start" className="text-xs text-muted-foreground">
+                  Start
+                </Label>
+                <Input
+                  id="quick-time-start"
+                  type="time"
+                  value={quickTimeDraft?.startTime ?? ''}
+                  onChange={(e) =>
+                    setQuickTimeDraft((d) => (d ? { ...d, startTime: e.target.value } : d))
+                  }
+                  className="h-9 w-[7.25rem] text-sm"
+                />
+              </div>
+              <div className="space-y-1 flex-1">
+                <Label htmlFor="quick-time-duration" className="text-xs text-muted-foreground">
+                  Duration
+                </Label>
+                <Select
+                  value={quickTimeDraft?.durationMinutes ?? String(DEFAULT_DURATION_MIN)}
+                  onValueChange={(v) =>
+                    setQuickTimeDraft((d) => (d ? { ...d, durationMinutes: v } : d))
+                  }
+                >
+                  <SelectTrigger id="quick-time-duration" className="h-9 rounded-md text-sm">
+                    <SelectValue placeholder="Duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DURATION_OPTIONS_MINUTES.map((m) => (
+                      <SelectItem key={m} value={String(m)}>
+                        {m === 60 ? '1 hour' : `${m} min`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-between gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  if (!quickTimeDraft) return
+                  setQuickTimeSaveState('saving')
+                  try {
+                    await updateTodo(quickTimeDraft.todoId, { starts_at: null, ends_at: null, is_all_day: 0 })
+                    quickTimeLastSavedRef.current = JSON.stringify({
+                      todoId: quickTimeDraft.todoId,
+                      starts_at: null,
+                      ends_at: null,
+                      is_all_day: 0
+                    })
+                    setQuickTimeDraft(null)
+                  } finally {
+                    setQuickTimeSaveState('idle')
+                  }
+                }}
+                disabled={quickTimeSaveState === 'saving'}
+              >
+                Clear schedule
+              </Button>
+              <div className="flex gap-2">
+                <span className="self-center text-[11px] text-muted-foreground px-1">
+                  {quickTimeSaveState === 'saving'
+                    ? 'Saving…'
+                    : quickTimeSaveState === 'saved'
+                      ? 'Saved'
+                      : quickTimeSaveState === 'error'
+                        ? 'Save failed'
+                        : ''}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setQuickTimeDraft(null)}
+                  disabled={quickTimeSaveState === 'saving'}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
       </Dialog>
     </div>
   )
