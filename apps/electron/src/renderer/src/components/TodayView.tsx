@@ -15,6 +15,7 @@ import { usePosts } from '../hooks/usePosts'
 import { useLocalDayBounds } from '../hooks/useLocalDayBounds'
 import { useTodayFocusMode } from '../hooks/useTodayFocusMode'
 import type { Post, Todo } from '../gen/api/schemas'
+import { isMacPlatform } from '../lib/platform'
 
 /* ------------------------------------------------------------------ */
 
@@ -121,7 +122,7 @@ function TodayFocusToolbar({
   onPlan: () => void
   onWork: () => void
 }): React.JSX.Element {
-  const isMac = typeof navigator !== 'undefined' && navigator.platform.includes('Mac')
+  const isMac = isMacPlatform()
   const mod = isMac ? '⌘' : 'Ctrl+'
 
   return (

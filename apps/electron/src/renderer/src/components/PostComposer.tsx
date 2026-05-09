@@ -5,6 +5,7 @@ import { Textarea } from './ui/textarea'
 import { Card } from './ui/card'
 import { Badge } from './ui/badge'
 import type { Todo } from '../gen/api/schemas'
+import { isMacPlatform } from '../lib/platform'
 
 export type PostComposerContext =
   | { type: 'event'; id: number; title: string }
@@ -69,7 +70,7 @@ export function PostComposer({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   /** Avoid clobbering storage before the first read from localStorage completes */
   const draftHydratedRef = useRef(false)
-  const isMacPlatform = typeof navigator !== 'undefined' && navigator.platform.includes('Mac')
+  const isMac = isMacPlatform()
 
   useEffect(() => {
     const el = textareaRef.current
@@ -270,7 +271,7 @@ export function PostComposer({
       </div>
 
       <span className="text-[11px] text-muted-foreground">
-        Press {isMacPlatform ? '⌘' : 'Ctrl'}+Enter to post
+        Press {isMac ? '⌘' : 'Ctrl'}+Enter to post
       </span>
     </div>
   )

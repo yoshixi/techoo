@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { Plus, Check, Trash2, Clock, Search, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, Check, Trash2, Clock, Search, ChevronDown, ChevronRight, Send } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Badge } from './ui/badge'
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useTodos } from '../hooks/useTodos'
 import { usePosts } from '../hooks/usePosts'
 import type { Todo } from '../gen/api/schemas'
+import { isMacPlatform } from '../lib/platform'
 
 const DEFAULT_BLOCK_SEC = 30 * 60
 
@@ -314,6 +315,7 @@ export function TodoDetailDialog({
     return 'none'
   })
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const isMac = isMacPlatform()
   const [threadReply, setThreadReply] = useState('')
   const [postingThread, setPostingThread] = useState(false)
   const saveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -619,7 +621,7 @@ export function TodoDetailDialog({
           )}
         </div>
 
-        <div className="space-y-2 rounded-2xl bg-card/85 px-3 py-3">
+        <div className="space-y-2.5 rounded-2xl bg-card/85 px-3 py-3">
           <div className="flex items-center justify-between gap-2">
             <h4 className="text-xs font-medium tracking-wide text-muted-foreground">Thread</h4>
             <Badge variant="outline" className="h-5 px-2 text-[10px]">
@@ -631,16 +633,18 @@ export function TodoDetailDialog({
           ) : relatedPosts.length === 0 ? (
             <p className="text-xs text-muted-foreground">No entries yet.</p>
           ) : (
-            <div className="max-h-52 space-y-1.5 overflow-y-auto pr-0.5">
+            <div className="max-h-52 space-y-2 overflow-y-auto pr-0.5">
               {relatedPosts.map((post) => (
                 <div
                   key={post.id}
-                  className="rounded-xl px-2.5 py-2 text-sm"
+                  className="rounded-xl px-3 py-2.5 text-sm"
                   style={{
-                    background: 'color-mix(in srgb, var(--background) 72%, white 28%)'
+                    background: 'color-mix(in srgb, var(--background) 70%, var(--card) 30%)'
                   }}
                 >
-                  <p className="whitespace-pre-wrap text-[12px] leading-snug">{post.body}</p>
+                  <p className="whitespace-pre-wrap text-[13px] leading-relaxed" style={{ color: 'var(--text-dark)' }}>
+                    {post.body}
+                  </p>
                   <span className="mt-1 block text-[10px] text-muted-foreground/90">
                     {formatTime(post.posted_at)} · {formatDate(post.posted_at)}
                   </span>
@@ -648,32 +652,44 @@ export function TodoDetailDialog({
               ))}
             </div>
           )}
-          <div className="space-y-1 pt-0.5">
-            <Textarea
-              id="todo-thread-reply"
-              value={threadReply}
-              onChange={(e) => setThreadReply(e.target.value)}
-              placeholder="Add to thread…"
-              rows={2}
-              className="min-h-[52px] resize-y text-sm border-transparent bg-background/60 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
-              onKeyDown={(e) => {
-                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                  e.preventDefault()
-                  void handleAddThreadPost()
-                }
-              }}
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="default"
-              className="h-8 text-xs"
-              style={{ background: 'var(--amber)' }}
-              disabled={postingThread || !threadReply.trim()}
-              onClick={() => void handleAddThreadPost()}
-            >
-              {postingThread ? 'Posting…' : 'Post to thread'}
-            </Button>
+          <div
+            className="rounded-2xl p-3"
+            style={{
+              background: 'color-mix(in srgb, var(--card) 82%, var(--background) 18%)',
+              border: '1px solid color-mix(in srgb, var(--border) 60%, transparent)'
+            }}
+          >
+            <div className="relative">
+              <Textarea
+                id="todo-thread-reply"
+                value={threadReply}
+                onChange={(e) => setThreadReply(e.target.value)}
+                placeholder="Write something... (this will be posted to thread)"
+                rows={2}
+                className="min-h-[96px] resize-none pr-12 border-transparent bg-background/55 shadow-none focus-visible:ring-2 focus-visible:ring-primary/30 text-sm leading-relaxed"
+                onKeyDown={(e) => {
+                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                    e.preventDefault()
+                    void handleAddThreadPost()
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="default"
+                className="absolute bottom-2 right-2 h-7 w-7 p-0 rounded-full"
+                style={{ background: 'var(--amber)' }}
+                disabled={postingThread || !threadReply.trim()}
+                onClick={() => void handleAddThreadPost()}
+                title={postingThread ? 'Posting…' : 'Post to thread'}
+              >
+                <Send className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+            <span className="mt-1.5 block text-[11px] text-muted-foreground">
+              Press {isMac ? '⌘' : 'Ctrl'}+Enter to post
+            </span>
           </div>
         </div>
 
