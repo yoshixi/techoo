@@ -23,7 +23,7 @@ export default function LogbookScreen() {
     return { from: startOfLocalDay(from), to: endExclusive };
   }, [selectedDay]);
 
-  const { posts, isLoading, deletePost, mutate } = usePosts(range);
+  const { posts, isLoading, mutate } = usePosts(range);
   const [refreshing, setRefreshing] = useState(false);
 
   const sorted = useMemo(
@@ -88,7 +88,15 @@ export default function LogbookScreen() {
             </Text>
             {group.posts.map((item) => (
               <View key={item.id} className="px-4">
-                <PostRow post={item} onDelete={deletePost} />
+                <PostRow
+                  post={item}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/post/[id]',
+                      params: { id: String(item.id), postedAt: item.posted_at },
+                    })
+                  }
+                />
               </View>
             ))}
           </View>

@@ -5,6 +5,7 @@ import {
   deleteApiV1PostsId,
 } from '@/gen/api/endpoints/techooAPI.gen'
 import type { ErrorResponse, GetApiV1PostsParams, Post } from '@/gen/api/schemas'
+import { revalidateAllPostLists } from '@/lib/revalidatePostLists'
 import { toRfc3339 } from '@/lib/time'
 
 function todayBoundaries(): { from: Date; to: Date } {
@@ -52,9 +53,9 @@ export function usePosts(options?: { from: Date; to: Date; limit?: number }): {
       )
       try {
         await postApiV1Posts({ body, event_ids: eventIds, todo_ids: todoIds })
-        await mutate()
+        await revalidateAllPostLists()
       } catch (err) {
-        await mutate()
+        await revalidateAllPostLists()
         throw err
       }
     },
@@ -65,13 +66,13 @@ export function usePosts(options?: { from: Date; to: Date; limit?: number }): {
     async (id: number) => {
       try {
         await deleteApiV1PostsId(id)
-        await mutate()
+        await revalidateAllPostLists()
       } catch (err) {
-        await mutate()
+        await revalidateAllPostLists()
         throw err
       }
     },
-    [mutate]
+    []
   )
 
   return { posts, isLoading, error, createPost, deletePost, mutate }

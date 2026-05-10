@@ -2,6 +2,7 @@ import { getJwt, clearAuthState } from '../auth'
 import { ApiRequestError } from './ApiRequestError'
 import { API_BASE_URL } from './baseUrl'
 import { reportApiFailure } from '../showApiError'
+import { notifySessionInvalidated } from '../sessionEvents'
 
 export { API_BASE_URL } from './baseUrl'
 
@@ -56,6 +57,7 @@ export const customInstance = async <T>(config: CustomRequestConfig): Promise<T>
     // Handle 401 (JWT expired AND refresh also failed)
     if (response.status === 401) {
       await clearAuthState()
+      notifySessionInvalidated()
       throw new Error('Unauthorized')
     }
 

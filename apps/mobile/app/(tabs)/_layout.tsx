@@ -1,13 +1,24 @@
 import { Tabs, Redirect } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { CheckSquare, MessageSquare } from 'lucide-react-native';
-import { ActivityIndicator, View } from 'react-native';
-import { NAV_THEME } from '@/lib/theme';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
+import { NAV_THEME, THEME } from '@/lib/theme';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function TabLayout() {
   const { colorScheme } = useColorScheme();
-  const theme = NAV_THEME[colorScheme ?? 'light'];
+  const scheme = colorScheme ?? 'light';
+  const theme = NAV_THEME[scheme];
+  const palette = THEME[scheme];
+  /** Soft hairline: avoid iOS default shadow (reads as a harsh black line). */
+  const tabBarChrome =
+    scheme === 'dark'
+      ? {
+          borderTopColor: 'hsla(32, 12%, 92%, 0.12)',
+        }
+      : {
+          borderTopColor: 'hsla(36, 8%, 11%, 0.09)',
+        };
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
@@ -32,11 +43,17 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.text,
+        tabBarActiveTintColor: palette.primary,
+        tabBarInactiveTintColor: palette.mutedForeground,
         tabBarStyle: {
-          backgroundColor: theme.colors.card,
-          borderTopColor: theme.colors.border,
+          backgroundColor: palette.card,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          ...tabBarChrome,
+          elevation: 0,
+          shadowOpacity: 0,
+          shadowOffset: { width: 0, height: 0 },
+          shadowColor: 'transparent',
+          ...(Platform.OS === 'android' ? { borderTopWidth: 1 } : {}),
         },
         headerShown: false,
       }}

@@ -1,44 +1,36 @@
-import { View, Pressable, Alert } from 'react-native';
+import { Pressable, View } from 'react-native';
 import type { Post } from '@/gen/api/schemas';
 import { Text } from '@/components/ui/text';
-import { Trash2 } from 'lucide-react-native';
 import { formatTime } from '@/lib/time';
 
 export function PostRow({
   post,
-  onDelete,
+  onPress,
 }: {
   post: Post;
-  onDelete: (id: number) => void | Promise<void>;
+  onPress: () => void;
 }) {
-  const confirmDelete = () => {
-    Alert.alert('Delete post', 'Remove this log entry?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => void Promise.resolve(onDelete(post.id)).catch(() => {}),
-      },
-    ]);
-  };
-
-  const links =
-    [...post.todos.map((t) => t.title), ...post.events.map((e) => e.title)].filter(Boolean);
-
   return (
-    <View className="mb-3 rounded-xl bg-card/60 px-3 py-3 active:opacity-85">
+    <Pressable onPress={onPress} className="mb-3 rounded-xl bg-card/60 px-3 py-3 active:opacity-85">
       <View className="mb-1 flex-row items-start justify-between gap-2">
         <Text className="text-xs text-muted-foreground">{formatTime(post.posted_at)}</Text>
-        <Pressable onPress={confirmDelete} hitSlop={8}>
-          <Trash2 size={16} className="text-muted-foreground" />
-        </Pressable>
       </View>
       <Text className="text-sm leading-snug text-foreground">{post.body}</Text>
-      {links.length > 0 ? (
-        <Text className="mt-2 text-[11px] text-muted-foreground" numberOfLines={2}>
-          {links.join(' · ')}
-        </Text>
+      {post.todos.length > 0 ? (
+        <View className="mt-2 gap-1.5">
+          <Text className="text-[11px] font-medium text-muted-foreground">Linked ToDo</Text>
+          <View className="flex-row flex-wrap gap-1.5">
+            {post.todos.map((todo) => (
+              <View
+                key={todo.id}
+                className="min-h-[32px] justify-center rounded-xl border border-primary/35 bg-primary/10 px-2.5 py-1"
+              >
+                <Text className="text-xs font-semibold text-primary">{todo.title}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
       ) : null}
-    </View>
+    </Pressable>
   );
 }

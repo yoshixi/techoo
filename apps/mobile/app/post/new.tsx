@@ -18,6 +18,7 @@ import { startOfLocalDay } from '@/lib/dayBounds';
 import { formatTime } from '@/lib/time';
 import type { Todo } from '@/gen/api/schemas';
 import { postApiV1Posts } from '@/gen/api/endpoints/techooAPI.gen';
+import { revalidateAllPostLists } from '@/lib/revalidatePostLists';
 
 type PickerTarget = 'date' | 'time';
 
@@ -70,6 +71,7 @@ export default function NewPostScreen() {
         event_ids: [],
         todo_ids: selectedTodo ? [selectedTodo.id] : [],
       });
+      await revalidateAllPostLists();
       router.back();
     } catch {
       // API error is surfaced in customInstance; avoid unhandled promise rejection in UI event.
