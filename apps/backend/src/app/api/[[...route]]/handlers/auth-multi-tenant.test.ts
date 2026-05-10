@@ -18,7 +18,7 @@ import { pushSQLiteSchema } from 'drizzle-kit/api'
 import * as schema from '../../../db/schema/schema'
 import { resetDbForTests } from '../../../core/common.db'
 import { googleCalendarProvider } from '../../../core/calendar-providers/google.service'
-import { createApp, type Auth } from '../route'
+import { createApp } from '../route'
 
 // ---------------------------------------------------------------------------
 // Mock Turso Platform API (creates local SQLite files instead of real DBs)
@@ -123,7 +123,7 @@ describe('Auth with multi-tenant provisioning', () => {
   ]
 
   let request: (input: Request) => Promise<Response>
-  let testAuth: Auth
+  let appResult: ReturnType<typeof createApp>
 
   beforeAll(async () => {
     for (const key of envKeys) savedEnv[key] = process.env[key]
@@ -165,9 +165,8 @@ describe('Auth with multi-tenant provisioning', () => {
 
     resetDbForTests()
 
-    const result = createApp({ skipEnvValidation: true })
-    testAuth = result.auth
-    request = (input: Request) => result.app.request(input) as Promise<Response>
+    appResult = createApp({ skipEnvValidation: true })
+    request = (input: Request) => appResult.app.request(input) as Promise<Response>
   })
 
   afterEach(() => {
@@ -225,7 +224,7 @@ describe('Auth with multi-tenant provisioning', () => {
   }
 
   async function mockGoogleProvider() {
-    const authContext = await (testAuth as unknown as { $context: Promise<any> }).$context
+    const authContext = await (appResult.auth as unknown as { $context: Promise<any> }).$context
     const provider = authContext.socialProviders.find(
       (item: { id: string }) => item.id === 'google'
     ) as any

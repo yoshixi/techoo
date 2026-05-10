@@ -8,7 +8,10 @@ import { isAllowedMobileRedirectUri } from '../middleware/mobile-redirect'
  * These endpoints involve redirects, cookies, and HTML responses that
  * don't map cleanly to OpenAPI, so they use plain Hono route handlers.
  */
-export function registerOAuthRoutes(app: OpenAPIHono<AppBindings>, auth: Auth) {
+export function registerOAuthRoutes(
+  app: OpenAPIHono<AppBindings>,
+  resolveAuth: () => Auth,
+) {
   // --- Desktop OAuth ---
 
   // Desktop app OAuth initiation: the browser navigates here directly so that
@@ -24,7 +27,7 @@ export function registerOAuthRoutes(app: OpenAPIHono<AppBindings>, auth: Auth) {
     const baseUrl = url.origin
     const callbackURL = `${baseUrl}/api/oauth/desktop/callback?port=${port}`
 
-    const authResponse = await auth.handler(
+    const authResponse = await resolveAuth().handler(
       new Request(`${baseUrl}/api/auth/sign-in/social`, {
         method: 'POST',
         headers: new Headers({
@@ -102,7 +105,7 @@ export function registerOAuthRoutes(app: OpenAPIHono<AppBindings>, auth: Auth) {
     const baseUrl = url.origin
     const callbackURL = `http://127.0.0.1:${port}/callback?linked=1`
 
-    const authResponse = await auth.handler(
+    const authResponse = await resolveAuth().handler(
       new Request(`${baseUrl}/api/auth/link-social`, {
         method: 'POST',
         headers: new Headers({
@@ -153,7 +156,7 @@ export function registerOAuthRoutes(app: OpenAPIHono<AppBindings>, auth: Auth) {
     const baseUrl = url.origin
     const callbackURL = `${baseUrl}/api/oauth/mobile/callback?redirect_uri=${encodeURIComponent(redirectUri)}`
 
-    const authResponse = await auth.handler(
+    const authResponse = await resolveAuth().handler(
       new Request(`${baseUrl}/api/auth/sign-in/social`, {
         method: 'POST',
         headers: new Headers({
@@ -237,7 +240,7 @@ export function registerOAuthRoutes(app: OpenAPIHono<AppBindings>, auth: Auth) {
     const baseUrl = url.origin
     const callbackURL = `${baseUrl}/api/oauth/mobile-link/callback?redirect_uri=${encodeURIComponent(redirectUri)}`
 
-    const authResponse = await auth.handler(
+    const authResponse = await resolveAuth().handler(
       new Request(`${baseUrl}/api/auth/link-social`, {
         method: 'POST',
         headers: new Headers({

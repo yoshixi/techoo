@@ -6,15 +6,16 @@ import { getMainDb } from "./internal/main-db";
 import { googleCalendarProvider } from "./calendar-providers/google.service";
 import { getEnv } from "./env";
 import { rootLogger } from "../lib/logger";
+import { serializeForLog, summarizeMainDbUrl } from "../lib/serialize-for-log";
 import { readPossiblyProtectedValue } from "./data-protection";
-
-const authLogger = rootLogger.child({ module: 'auth' });
 import {
   usersTable,
   sessionsTable,
   accountsTable,
   verificationsTable,
 } from "../db/schema/schema";
+
+const authLogger = rootLogger.child({ module: 'auth' });
 
 const updateGoogleAccountProfile = async (account: {
   id?: number | string
@@ -83,6 +84,8 @@ export const createAuth = () => {
       googleRedirectUriLength: googleRedirectUri.length,
     }, 'auth config loaded')
   }
+  const mainDbHostHint = summarizeMainDbUrl(env.TURSO_MAIN_DB_URL);
+
   return betterAuth({
     secret,
     baseURL: betterAuthUrl || "http://localhost:8787",
@@ -99,8 +102,21 @@ export const createAuth = () => {
     logger: {
       level: "debug",
       log: (level, message, ...args) => {
-        authLogger[level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'debug']({ metadata: args }, String(message));
-      }
+        const pinoLevel =
+          level === "error" ? "error" : level === "warn" ? "warn" : "debug";
+        const serializedArgs = args.map((a) => serializeForLog(a));
+        authLogger[pinoLevel](
+          {
+            betterAuth: true,
+            mainDbHost: mainDbHostHint,
+            /** Original Better Auth message before string coercion */
+            authEvent: message,
+            /** Full argument list (errors get full cause chains; params redacted when sensitive keys match) */
+            details: serializedArgs,
+          },
+          `[better-auth] ${String(message)}`,
+        );
+      },
     },
     emailAndPassword: { enabled: true },
     account: {

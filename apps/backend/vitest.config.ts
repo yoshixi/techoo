@@ -7,7 +7,7 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['./test/setup.ts'],
     include: ['**/*.test.{js,ts}'],
-    exclude: ['node_modules', 'dist'],
+    exclude: ['node_modules', 'dist', '**/*.worker.test.ts'],
     coverage: {
       reporter: ['text', 'json', 'html'],
       exclude: [

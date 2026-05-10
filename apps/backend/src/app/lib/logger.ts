@@ -1,5 +1,6 @@
 import pino from 'pino'
 import type { Logger } from 'pino'
+import { serializeForLog } from './serialize-for-log'
 
 export type { Logger } from 'pino'
 
@@ -14,15 +15,7 @@ function getLogger(): Logger {
       timestamp: pino.stdTimeFunctions.isoTime,
       serializers: {
         err(err: unknown) {
-          if (err instanceof Error) {
-            return {
-              type: err.constructor.name,
-              message: err.message,
-              stack: err.stack,
-              ...(err.cause ? { cause: String(err.cause) } : {}),
-            }
-          }
-          return err
+          return serializeForLog(err)
         },
       },
       browser: {
