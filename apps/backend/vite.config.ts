@@ -23,10 +23,10 @@ export default defineConfig({
   plugins: [cloudflare(), ssrPlugin()],
   resolve: {
     dedupe: ['@libsql/client', 'drizzle-orm'],
-    alias: [
-      { find: /^pino$/, replacement: require.resolve('pino/browser') },
-      { find: /^@libsql\/client$/, replacement: require.resolve('@libsql/client/web') },
-      { find: /^drizzle-orm\/libsql$/, replacement: require.resolve('drizzle-orm/libsql/web') },
-    ],
+    alias: {
+      pino: require.resolve('pino/browser'),
+      '@libsql/client': require.resolve('@libsql/client/web'),
+      'drizzle-orm/libsql': require.resolve('drizzle-orm/libsql/web'),
+    },
   },
 })
