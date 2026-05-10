@@ -14,19 +14,14 @@ const require = createRequire(import.meta.url)
  * throws `[unenv] https.request is not implemented yet!` on Workers. The `web` build
  * uses fetch (tenanso, drizzle, main-db). Scripts and Vitest resolve `@libsql/client`
  * normally via Node and are unaffected by this Vite bundle alias.
- *
- * Drizzle's default `drizzle-orm/libsql` entry also follows the Node-oriented path unless
- * the bundler switches it. Alias it to `drizzle-orm/libsql/web` explicitly so the Worker
- * bundle cannot pull in the Node sqlite/http dialects by mistake.
  */
 export default defineConfig({
   plugins: [cloudflare(), ssrPlugin()],
   resolve: {
-    dedupe: ['@libsql/client', 'drizzle-orm'],
+    dedupe: ['@libsql/client'],
     alias: {
       pino: require.resolve('pino/browser'),
       '@libsql/client': require.resolve('@libsql/client/web'),
-      'drizzle-orm/libsql': require.resolve('drizzle-orm/libsql/web'),
     },
   },
 })
