@@ -4,8 +4,8 @@
  * Only core modules (auth, oauth-service, exchange-codes) should import from here.
  * Handlers must NEVER import from internal/ — use the user-scoped services instead.
  */
-import { drizzle as drizzleLibsql } from 'drizzle-orm/libsql'
-import { createClient } from '@libsql/client'
+import { drizzle as drizzleLibsql } from 'drizzle-orm/libsql/web'
+import { createClient } from '@libsql/client/web'
 import * as schema from '../../db/schema/schema'
 import type { DB } from '../common.db'
 import { getEnv } from '../env'
