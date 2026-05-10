@@ -27,6 +27,15 @@ pnpm exec wrangler secret put GOOGLE_CLIENT_SECRET --config wrangler.jsonc
 
 For custom domains, configure `routes` and `zone_name` in `wrangler.jsonc`.
 
+## Worker Notes
+
+`@libsql/client` is intentionally pinned to `0.15.15`.
+
+Reason: the `0.17.x` line brings in a newer hrana client path that has repeatedly
+resolved to a Node `https.request` transport in our Cloudflare Worker bundle,
+causing runtime failures like `[unenv] https.request is not implemented yet!`.
+The `0.15.15` line keeps the older Workers-compatible fetch behavior.
+
 ## Schema & Migrations
 
 Generate a new migration from the backend schema:
