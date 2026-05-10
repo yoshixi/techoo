@@ -37,3 +37,6 @@ jobs:
 
       - name: Test backend Worker runtime (Vitest pool)
         run: pnpm --filter @apps/backend run test:workers
+
+      - name: Verify backend Worker bundle does not include Node HTTPS transport
+        run: pnpm --filter @apps/backend run verify:worker-bundle

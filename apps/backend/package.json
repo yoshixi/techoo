@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "wrangler dev --config ./wrangler.jsonc",
     "build": "vite build",
-    "build:prod": "CLOUDFLARE_ENV=prod vite build",
+    "build:prod": "CLOUDFLARE_ENV=prod vite build && node ./scripts/check-worker-bundle.mjs",
+    "verify:worker-bundle": "pnpm run build:prod",
     "preview": "$npm_execpath run build && vite preview",
     "deploy": "CLOUDFLARE_ENV=prod $npm_execpath run build && CLOUDFLARE_ENV=prod wrangler deploy --config ./wrangler.jsonc --env prod",
     "deploy:prod": "$npm_execpath run deploy",
