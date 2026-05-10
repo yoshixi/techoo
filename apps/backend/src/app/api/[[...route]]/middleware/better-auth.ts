@@ -11,9 +11,12 @@ const SIGN_UP_PATHS = ['/api/auth/sign-up/email', '/api/auth/sign-in/social', '/
  * Mount better-auth handler (sign-up, sign-in, sign-out, OAuth callbacks, etc.)
  * Sign-up paths are intercepted to provision the tenant DB after user creation.
  */
-export function registerBetterAuthHandler(app: OpenAPIHono<AppBindings>, auth: Auth) {
+export function registerBetterAuthHandler(
+  app: OpenAPIHono<AppBindings>,
+  resolveAuth: () => Auth,
+) {
   app.on(['POST', 'GET'], '/auth/*', async (c) => {
-    const response = await auth.handler(c.req.raw)
+    const response = await resolveAuth().handler(c.req.raw)
 
     // After a successful sign-up, provision the tenant DB before returning
     // the response to the client. If provisioning fails, clean up the user

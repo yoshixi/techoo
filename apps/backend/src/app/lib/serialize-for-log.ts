@@ -6,8 +6,9 @@
 const MAX_DEPTH = 10
 const MAX_STRING_LEN = 4000
 
+/** Property names whose values are never logged verbatim (passwords, OAuth material, etc.). */
 const SENSITIVE_KEY =
-  /^(password|client_?secret|code_?verifier|access_?token|refresh_?token|id_?token|authorization|cookie)$/i
+  /^(password|client_?secret|code_?verifier|access_?token|refresh_?token|id_?token|authorization|cookie|api_?key|bearer(?:_token)?|jwt|secret|session_?secret|private_?key)$/i
 
 export function summarizeMainDbUrl(url: string | undefined): string | undefined {
   if (!url) return undefined

@@ -24,19 +24,40 @@ export function getMainDb(): DB {
   const env = getEnv()
   if (mainDbInstance) return mainDbInstance as unknown as DB
 
-  if (env.TURSO_MAIN_DB_URL && env.TURSO_MAIN_DB_AUTH_TOKEN) {
+  const mainUrl = env.TURSO_MAIN_DB_URL
+
+  /**
+   * Remote Turso URLs use the driver's HTTP/WebSocket client.
+   *
+   * `file:` SQLite is used for Vitest / Node and for wrangler dev; the Workers bundle resolves
+   * `@libsql/client` via the Web build (`vite.config`), which does not support `file:` — avoid
+   * calling `createAuth()` (and thus opening the DB) on routes like `/health` that do not need it.
+   */
+  if (
+    mainUrl &&
+    !mainUrl.startsWith('file:') &&
+    env.TURSO_MAIN_DB_AUTH_TOKEN
+  ) {
     mainDbInstance = drizzleLibsql({
       connection: {
-        url: env.TURSO_MAIN_DB_URL,
-        authToken: env.TURSO_MAIN_DB_AUTH_TOKEN
+        url: mainUrl,
+        authToken: env.TURSO_MAIN_DB_AUTH_TOKEN,
       },
       schema,
-      ...DRIZZLE_CONFIG
+      ...DRIZZLE_CONFIG,
     })
     return mainDbInstance as unknown as DB
   }
 
-  // Local dev fallback: SQLite file
+  if (mainUrl?.startsWith('file:')) {
+    mainDbInstance = drizzleLibsql({
+      client: createClient({ url: mainUrl }),
+      schema,
+      ...DRIZZLE_CONFIG,
+    })
+    return mainDbInstance as unknown as DB
+  }
+
   const sqliteUrl = env.SQLITE_URL || 'file:./tmp/local.db'
   mainDbInstance = drizzleLibsql({
     client: createClient({ url: sqliteUrl }),

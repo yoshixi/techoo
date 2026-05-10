@@ -119,6 +119,11 @@ export interface AppDeps {
   skipEnvValidation?: boolean
 }
 
+export interface CreateAppResult {
+  app: OpenAPIHono<AppBindings>
+  readonly auth: Auth
+}
+
 function getAllowedCorsOrigins(): Set<string> {
   const env = getEnv()
   const allowed = new Set<string>()
@@ -151,12 +156,18 @@ function applyWorkerBindingsToProcessEnv(env: Record<string, unknown> | undefine
   }
 }
 
-export function createApp(deps?: AppDeps) {
+export function createApp(deps?: AppDeps): CreateAppResult {
   if (!deps?.skipEnvValidation) {
     validateEnv()
   }
 
-  const auth = deps?.auth ?? createAuth()
+  /** Lazily instantiated so Worker smoke tests can hit /health without opening the DB. */
+  let authMemo: Auth | undefined
+  const resolveAuth = (): Auth => {
+    if (deps?.auth) return deps.auth
+    return (authMemo ??= createAuth())
+  }
+
   const app = new OpenAPIHono<AppBindings>().basePath('/api')
 
   app.onError((err, c) => {
@@ -204,18 +215,18 @@ export function createApp(deps?: AppDeps) {
   }))
 
   // Mount better-auth handler (sign-up, sign-in, sign-out, OAuth callbacks, etc.)
-  registerBetterAuthHandler(app, auth)
+  registerBetterAuthHandler(app, resolveAuth)
 
   // Register OAuth flow routes (desktop and mobile)
-  registerOAuthRoutes(app, auth)
+  registerOAuthRoutes(app, resolveAuth)
 
   // JWT auth middleware — must be registered after auth/OAuth routes but before protected routes
   registerJwtAuthMiddleware(app)
 
   // Register auth routes (token, session, session-code)
-  app.openapi(tokenRoute, createTokenHandler(auth))
-  app.openapi(sessionRoute, createSessionHandler(auth))
-  app.openapi(sessionCodeRoute, createSessionCodeHandler(auth))
+  app.openapi(tokenRoute, createTokenHandler(resolveAuth))
+  app.openapi(sessionRoute, createSessionHandler(resolveAuth))
+  app.openapi(sessionCodeRoute, createSessionCodeHandler(resolveAuth))
 
   // Register health check route
   app.openapi(healthRoute, healthHandler)
@@ -283,7 +294,12 @@ export function createApp(deps?: AppDeps) {
     }
   })
 
-  return { app, auth }
+  return {
+    app,
+    get auth(): Auth {
+      return resolveAuth()
+    },
+  }
 }
 
 // Lazy-init the default app so that importing createApp alone

@@ -19,8 +19,11 @@ async function resolveSession(auth: Auth, headers: Headers, bearerToken: string 
 }
 
 // POST /token - Exchange session/code for JWT
-export function createTokenHandler(auth: Auth): RouteHandler<typeof tokenRoute, AppBindings> {
+export function createTokenHandler(
+  resolveAuth: () => Auth,
+): RouteHandler<typeof tokenRoute, AppBindings> {
   return async (c) => {
+    const auth = resolveAuth()
     // If a code is provided in the body, exchange it for a session token first.
     const body = await c.req.json().catch(() => ({}))
     const code = typeof body?.code === 'string' ? body.code.trim() : ''
@@ -73,8 +76,11 @@ export function createTokenHandler(auth: Auth): RouteHandler<typeof tokenRoute, 
 }
 
 // GET /session - Session lookup: bearer session token → user/session data
-export function createSessionHandler(auth: Auth): RouteHandler<typeof sessionRoute, AppBindings> {
+export function createSessionHandler(
+  resolveAuth: () => Auth,
+): RouteHandler<typeof sessionRoute, AppBindings> {
   return async (c) => {
+    const auth = resolveAuth()
     const authHeader = c.req.header('Authorization')
     const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
     const session = await resolveSession(auth, c.req.raw.headers, bearerToken)
@@ -92,8 +98,11 @@ export function createSessionHandler(auth: Auth): RouteHandler<typeof sessionRou
 }
 
 // POST /session-code - Create a short-lived code tied to a session token
-export function createSessionCodeHandler(auth: Auth): RouteHandler<typeof sessionCodeRoute, AppBindings> {
+export function createSessionCodeHandler(
+  resolveAuth: () => Auth,
+): RouteHandler<typeof sessionCodeRoute, AppBindings> {
   return async (c) => {
+    const auth = resolveAuth()
     const authHeader = c.req.header('Authorization')
     const sessionToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
     if (!sessionToken) {

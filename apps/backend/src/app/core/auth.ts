@@ -107,7 +107,6 @@ export const createAuth = () => {
         const serializedArgs = args.map((a) => serializeForLog(a));
         authLogger[pinoLevel](
           {
-            module: "auth",
             betterAuth: true,
             mainDbHost: mainDbHostHint,
             /** Original Better Auth message before string coercion */
