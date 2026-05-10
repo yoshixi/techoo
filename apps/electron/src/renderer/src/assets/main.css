@@ -4,23 +4,23 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --radius: 0.875rem;
+  --radius: 1rem;
 
   /* Off-white base — #F4F2EE */
-  --background: #F4F2EE;
+  --background: #F5F3EF;
   /* Primary text — #1C1C1C */
   --foreground: #1C1C1C;
 
   /* White card — #FAFAF8 */
-  --card: #FAFAF8;
+  --card: #FBFAF8;
   --card-foreground: #1C1C1C;
 
   /* Popover (same as card) */
   --popover: #FAFAF8;
   --popover-foreground: #1C1C1C;
 
-  /* Burnt orange primary — #C65A11 */
-  --primary: #C65A11;
+  /* Warm amber primary — aligned with Create todo */
+  --primary: #D4953A;
   --primary-foreground: #FFFFFF;
 
   /* Soft orange secondary — #E8CFC2 */
@@ -40,12 +40,12 @@
   --destructive-foreground: #FFFFFF;
 
   /* Warm divider — #E0DDD7 */
-  --border: #E0DDD7;
-  --input: #E0DDD7;
-  --ring: #C65A11;
+  --border: #E7E2D9;
+  --input: #E7E2D9;
+  --ring: #D4953A;
 
   /* Chart palette */
-  --chart-1: #C65A11;
+  --chart-1: #D4953A;
   --chart-2: #E8CFC2;
   --chart-3: #F4C400;
   --chart-4: #E04A3A;
@@ -54,12 +54,12 @@
   /* Sidebar */
   --sidebar: #E7E3DB;
   --sidebar-foreground: #1C1C1C;
-  --sidebar-primary: #C65A11;
+  --sidebar-primary: #D4953A;
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #D4C8BA;
   --sidebar-accent-foreground: #1C1C1C;
   --sidebar-border: #E0DDD7;
-  --sidebar-ring: #C65A11;
+  --sidebar-ring: #D4953A;
 
   /* Semantic tokens */
   --success: #2E7D32;
@@ -139,7 +139,7 @@
 /* Design system: Techo-specific tokens */
 :root {
   /* Panel / sidebar background */
-  --panel: #EDE8DF;
+  --panel: #F2EEE7;
   --panel-foreground: #4A3E2E;
 
   /* Amber accent variants */
@@ -165,7 +165,7 @@
   --text-hint: #B0A494;
 
   /* Border light */
-  --border-l: #E2D9CA;
+  --border-l: #E9E2D6;
 }
 
 /* Playfair Display for titles */

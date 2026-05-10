@@ -18,6 +18,7 @@ const require = createRequire(import.meta.url)
 export default defineConfig({
   plugins: [cloudflare(), ssrPlugin()],
   resolve: {
+    dedupe: ['@libsql/client'],
     alias: {
       pino: require.resolve('pino/browser'),
       '@libsql/client': require.resolve('@libsql/client/web'),

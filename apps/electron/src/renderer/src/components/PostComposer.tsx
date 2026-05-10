@@ -5,6 +5,7 @@ import { Textarea } from './ui/textarea'
 import { Card } from './ui/card'
 import { Badge } from './ui/badge'
 import type { Todo } from '../gen/api/schemas'
+import { isMacPlatform } from '../lib/platform'
 
 export type PostComposerContext =
   | { type: 'event'; id: number; title: string }
@@ -23,9 +24,12 @@ function ContextBar({
   if (!context) return null
 
   return (
-    <div className="flex items-center gap-2 rounded-md border border-input bg-muted/40 px-3 py-1.5 text-sm">
-      <span className="text-muted-foreground">Context:</span>
-      <Badge variant="default" className="gap-1">
+    <div
+      className="flex items-center gap-2 rounded-full px-3 py-1.5 text-xs"
+      style={{ background: 'color-mix(in srgb, var(--background) 72%, var(--card) 28%)' }}
+    >
+      <span className="text-muted-foreground">Context</span>
+      <Badge variant="outline" className="gap-1 border-transparent bg-background/70 text-[11px]">
         {context.title}
         <button
           type="button"
@@ -62,10 +66,11 @@ export function PostComposer({
   const [value, setValue] = useState('')
   const [showHashPanel, setShowHashPanel] = useState(false)
   const [hashQuery, setHashQuery] = useState('')
+  const [activeHashIndex, setActiveHashIndex] = useState(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   /** Avoid clobbering storage before the first read from localStorage completes */
   const draftHydratedRef = useRef(false)
-  const isMacPlatform = typeof navigator !== 'undefined' && navigator.platform.includes('Mac')
+  const isMac = isMacPlatform()
 
   useEffect(() => {
     const el = textareaRef.current
@@ -124,9 +129,11 @@ export function PostComposer({
     if (lastHash !== -1 && !textBeforeCursor.slice(lastHash + 1).includes(' ')) {
       setShowHashPanel(true)
       setHashQuery(textBeforeCursor.slice(lastHash + 1).toLowerCase())
+      setActiveHashIndex(0)
     } else {
       setShowHashPanel(false)
       setHashQuery('')
+      setActiveHashIndex(0)
     }
   }, [])
 
@@ -141,6 +148,7 @@ export function PostComposer({
       }
       setShowHashPanel(false)
       setHashQuery('')
+      setActiveHashIndex(0)
       textareaRef.current?.focus()
     },
     [value, onSelectContext]
@@ -150,6 +158,14 @@ export function PostComposer({
     if (!hashQuery) return todosForSuggestion
     return todosForSuggestion.filter((t) => t.title.toLowerCase().includes(hashQuery))
   }, [todosForSuggestion, hashQuery])
+
+  useEffect(() => {
+    if (filteredTodos.length === 0) {
+      setActiveHashIndex(0)
+      return
+    }
+    setActiveHashIndex((prev) => Math.min(prev, filteredTodos.length - 1))
+  }, [filteredTodos])
 
   const handleSubmit = useCallback(() => {
     const trimmed = value.trim()
@@ -171,16 +187,32 @@ export function PostComposer({
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault()
         handleSubmit()
+        return
+      }
+      if (showHashPanel && e.key === 'Enter' && filteredTodos.length > 0) {
+        e.preventDefault()
+        handleSelectTodo(filteredTodos[activeHashIndex]!)
+        return
+      }
+      if (showHashPanel && e.key === 'ArrowDown' && filteredTodos.length > 0) {
+        e.preventDefault()
+        setActiveHashIndex((prev) => (prev + 1) % filteredTodos.length)
+        return
+      }
+      if (showHashPanel && e.key === 'ArrowUp' && filteredTodos.length > 0) {
+        e.preventDefault()
+        setActiveHashIndex((prev) => (prev - 1 + filteredTodos.length) % filteredTodos.length)
+        return
       }
       if (e.key === 'Escape') {
         setShowHashPanel(false)
       }
     },
-    [handleSubmit]
+    [handleSubmit, showHashPanel, filteredTodos, activeHashIndex, handleSelectTodo]
   )
 
   return (
-    <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
+    <div className={compact ? 'space-y-1.5' : 'space-y-2.5'}>
       <ContextBar context={currentContext} onClear={onClearContext} />
 
       <div className="relative">
@@ -191,21 +223,24 @@ export function PostComposer({
           onKeyDown={handleKeyDown}
           placeholder="Write something... (type # to tag a todo)"
           rows={compact ? 2 : 2}
-          className={`resize-none pr-12 ${compact ? 'min-h-[52px] text-xs' : ''}`}
+          className={`resize-none pr-12 border-transparent bg-background/55 shadow-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
+            compact ? 'min-h-[52px] text-xs' : 'min-h-[148px] text-sm leading-relaxed'
+          }`}
         />
         <Button
           size="sm"
-          variant="ghost"
-          className="absolute bottom-2 right-2 h-7 w-7 p-0"
+          variant="default"
+          className="absolute bottom-2 right-2 h-7 w-7 p-0 rounded-full"
+          style={{ background: 'var(--amber)' }}
           disabled={!value.trim()}
           onClick={handleSubmit}
           title="Send"
         >
-          <Send className="h-4 w-4" />
+          <Send className="h-3.5 w-3.5" />
         </Button>
 
         {showHashPanel && (
-          <Card className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto">
+          <Card className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto border-border/60 bg-card/95">
             {filteredTodos.length === 0 ? (
               <div className="flex gap-2 p-3 text-sm text-muted-foreground">
                 <Hash className="h-4 w-4 shrink-0" />
@@ -217,8 +252,13 @@ export function PostComposer({
                   <button
                     key={todo.id}
                     type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted/50 text-left"
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-sm text-left ${
+                      filteredTodos[activeHashIndex]?.id === todo.id ? 'bg-muted/60' : 'hover:bg-muted/50'
+                    }`}
                     onClick={() => handleSelectTodo(todo)}
+                    onMouseEnter={() =>
+                      setActiveHashIndex(filteredTodos.findIndex((item) => item.id === todo.id))
+                    }
                   >
                     <Hash className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <span className="truncate">{todo.title}</span>
@@ -230,8 +270,8 @@ export function PostComposer({
         )}
       </div>
 
-      <span className="text-xs text-muted-foreground">
-        Press {isMacPlatform ? '⌘' : 'Ctrl'}+Enter to post
+      <span className="text-[11px] text-muted-foreground">
+        Press {isMac ? '⌘' : 'Ctrl'}+Enter to post
       </span>
     </div>
   )

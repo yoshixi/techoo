@@ -1,23 +1,17 @@
 import React, { useEffect, useState } from 'react'
-import { Home, CalendarDays, MessageSquare, ListTodo, StickyNote, User } from 'lucide-react'
+import { ListTodo, ScrollText, User } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
-import { NotesView } from './components/NotesView'
-import { TodoView } from './components/TodoView'
-import { PostsView } from './components/PostsView'
-import { TodayView } from './components/TodayView'
-import { CalendarView } from './components/CalendarView'
+import { TodoTabView } from './components/TodoTabView'
+import { TimelineView } from './components/TimelineView'
 import { AccountView } from './components/AccountView'
 
-type View = 'today' | 'calendar' | 'posts' | 'todo' | 'notes' | 'account'
+type View = 'todo' | 'timeline' | 'account'
 
 const tabs: { id: View; label: string; icon: LucideIcon }[] = [
-  { id: 'today', label: 'Today', icon: Home },
-  { id: 'calendar', label: 'Calendar', icon: CalendarDays },
-  { id: 'posts', label: 'Posts', icon: MessageSquare },
-  { id: 'todo', label: 'ToDo', icon: ListTodo },
-  { id: 'notes', label: 'Notes', icon: StickyNote },
-  { id: 'account', label: 'Account', icon: User }
+  { id: 'todo', label: 'Todo', icon: ListTodo },
+  { id: 'timeline', label: 'Timeline', icon: ScrollText },
+  { id: 'account', label: 'Settings', icon: User }
 ]
 
 function formatDate(date: Date): string {
@@ -30,7 +24,7 @@ function formatDate(date: Date): string {
 }
 
 function App(): React.JSX.Element {
-  const [currentView, setCurrentView] = useState<View>('today')
+  const [currentView, setCurrentView] = useState<View>('todo')
   const [todayStr, setTodayStr] = useState(() => formatDate(new Date()))
   useEffect(() => {
     const tick = (): void => setTodayStr(formatDate(new Date()))
@@ -39,18 +33,38 @@ function App(): React.JSX.Element {
     return () => clearInterval(id)
   }, [])
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) return
+      if (event.key === '1') {
+        event.preventDefault()
+        setCurrentView('todo')
+      } else if (event.key === '2') {
+        event.preventDefault()
+        setCurrentView('timeline')
+      } else if (event.key === '3') {
+        event.preventDefault()
+        setCurrentView('account')
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden bg-background">
       {/* Topbar */}
       <header
         className="flex items-center justify-between px-5 shrink-0"
         style={{
-          height: 44,
-          background: 'var(--panel)',
-          borderBottom: '0.5px solid var(--border-l)'
+          height: 48,
+          background: 'color-mix(in srgb, var(--panel) 70%, #ffffff 30%)'
         }}
       >
-        <span className="font-title text-lg tracking-wide" style={{ color: 'var(--text-dark)' }}>
+        <span
+          className="font-sans text-lg font-semibold tracking-tight"
+          style={{ color: 'color-mix(in srgb, var(--text-dark) 72%, var(--text-muted-custom) 28%)' }}
+        >
           Techo
         </span>
         <span
@@ -63,11 +77,10 @@ function App(): React.JSX.Element {
 
       {/* Tab row */}
       <nav
-        className="flex items-end px-5 gap-1 shrink-0"
+        className="flex items-center px-5 gap-1.5 shrink-0"
         style={{
-          height: 36,
-          background: 'var(--panel)',
-          borderBottom: '0.5px solid var(--border-l)'
+          height: 44,
+          background: 'color-mix(in srgb, var(--panel) 42%, transparent)'
         }}
       >
         {tabs.map((tab) => {
@@ -76,12 +89,13 @@ function App(): React.JSX.Element {
           return (
             <button
               key={tab.id}
+              type="button"
               onClick={() => setCurrentView(tab.id)}
-              className="flex items-center gap-1.5 px-3 pb-2 text-xs transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-colors"
               style={{
                 fontWeight: isActive ? 500 : 400,
                 color: isActive ? 'var(--text-dark)' : 'var(--text-muted-custom)',
-                borderBottom: isActive ? '2px solid var(--amber)' : '2px solid transparent'
+                background: isActive ? 'color-mix(in srgb, var(--card) 86%, #fff 14%)' : 'transparent'
               }}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -93,11 +107,8 @@ function App(): React.JSX.Element {
 
       {/* Screen content */}
       <main className="flex flex-col flex-1 min-h-0">
-        {currentView === 'today' && <TodayView />}
-        {currentView === 'calendar' && <CalendarView />}
-        {currentView === 'posts' && <PostsView />}
-        {currentView === 'todo' && <TodoView />}
-        {currentView === 'notes' && <NotesView />}
+        {currentView === 'todo' && <TodoTabView />}
+        {currentView === 'timeline' && <TimelineView />}
         {currentView === 'account' && <AccountView />}
       </main>
     </div>

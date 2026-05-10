@@ -6,9 +6,19 @@ import {
 } from '../gen/api/endpoints/techooAPI.gen'
 import type { ErrorResponse, GetApiV1TodosParams, Todo } from '../gen/api/schemas'
 import { useCallback, useMemo } from 'react'
+import { mutate as globalMutate } from 'swr'
 
 /** Match backend `MAX_LIST_LIMIT` so the client can request the full allowed page. */
 const TODO_LIST_LIMIT = 500
+const TODOS_SWR_KEY = '/api/v1/todos'
+
+function dedupeTodosById(todos: Todo[]): Todo[] {
+  const byId = new Map<number, Todo>()
+  for (const todo of todos) {
+    byId.set(todo.id, todo)
+  }
+  return Array.from(byId.values())
+}
 
 export function useTodos(options?: {
   from?: number
@@ -64,6 +74,20 @@ export function useTodos(options?: {
 
   const todos = data?.data ?? []
 
+  const mutateAllTodoCaches = useCallback(
+    (
+      updater: (current: { data: Todo[] } | undefined) => { data: Todo[] } | undefined,
+      revalidate = false
+    ) => {
+      void globalMutate(
+        (key) => Array.isArray(key) && key[0] === TODOS_SWR_KEY,
+        updater,
+        { revalidate }
+      )
+    },
+    []
+  )
+
   const mergeTodoFromServer = useCallback(
     (id: number, server: Todo) => {
       mutate(
@@ -75,15 +99,24 @@ export function useTodos(options?: {
         },
         { revalidate: false }
       )
+      mutateAllTodoCaches(
+        (current) => {
+          if (!current) return current
+          return {
+            data: current.data.map((t) => (t.id === id ? server : t))
+          }
+        },
+        false
+      )
     },
-    [mutate]
+    [mutate, mutateAllTodoCaches]
   )
 
   const stripTempTodos = useCallback(
     (current: { data: Todo[] } | undefined, server: Todo) => {
       if (!current) return { data: [server] }
       const noTemp = current.data.filter((t) => t.id > 0)
-      return { data: [...noTemp, server] }
+      return { data: dedupeTodosById([...noTemp, server]) }
     },
     []
   )
@@ -105,9 +138,16 @@ export function useTodos(options?: {
       mutate(
         (current) => {
           if (!current) return { data: [optimisticTodo] }
-          return { data: [...current.data, optimisticTodo] }
+          return { data: dedupeTodosById([...current.data, optimisticTodo]) }
         },
         { revalidate: false }
+      )
+      mutateAllTodoCaches(
+        (current) => {
+          if (!current) return current
+          return { data: dedupeTodosById([...current.data, optimisticTodo]) }
+        },
+        false
       )
 
       try {
@@ -117,11 +157,13 @@ export function useTodos(options?: {
           ends_at: endsAt != null ? new Date(endsAt * 1000).toISOString() : undefined
         })
         mutate((current) => stripTempTodos(current, res.data), { revalidate: false })
+        mutateAllTodoCaches((current) => stripTempTodos(current, res.data), false)
       } catch {
         await mutate()
+        mutateAllTodoCaches((current) => current, true)
       }
     },
-    [mutate, stripTempTodos]
+    [mutate, stripTempTodos, mutateAllTodoCaches]
   )
 
   const toggleDone = useCallback(
@@ -139,15 +181,27 @@ export function useTodos(options?: {
         },
         { revalidate: false }
       )
+      mutateAllTodoCaches(
+        (current) => {
+          if (!current) return current
+          return {
+            data: current.data.map((t) =>
+              t.id === id ? { ...t, done: newDone, done_at: newDone === 1 ? new Date().toISOString() : null } : t
+            )
+          }
+        },
+        false
+      )
 
       try {
         const res = await patchApiV1TodosId(id, { done: newDone })
         mergeTodoFromServer(id, res.data)
       } catch {
         await mutate()
+        mutateAllTodoCaches((current) => current, true)
       }
     },
-    [mutate, mergeTodoFromServer]
+    [mutate, mergeTodoFromServer, mutateAllTodoCaches]
   )
 
   const updateTodo = useCallback(
@@ -187,15 +241,25 @@ export function useTodos(options?: {
         },
         { revalidate: false }
       )
+      mutateAllTodoCaches(
+        (current) => {
+          if (!current) return current
+          return {
+            data: current.data.map((t) => (t.id === id ? ({ ...t, ...isoUpdates } as Todo) : t))
+          }
+        },
+        false
+      )
 
       try {
         const res = await patchApiV1TodosId(id, isoUpdates)
         mergeTodoFromServer(id, res.data)
       } catch {
         await mutate()
+        mutateAllTodoCaches((current) => current, true)
       }
     },
-    [mutate, mergeTodoFromServer]
+    [mutate, mergeTodoFromServer, mutateAllTodoCaches]
   )
 
   const deleteTodo = useCallback(
@@ -207,14 +271,22 @@ export function useTodos(options?: {
         },
         { revalidate: false }
       )
+      mutateAllTodoCaches(
+        (current) => {
+          if (!current) return current
+          return { data: current.data.filter((t) => t.id !== id) }
+        },
+        false
+      )
 
       try {
         await deleteApiV1TodosId(id)
       } catch {
         await mutate()
+        mutateAllTodoCaches((current) => current, true)
       }
     },
-    [mutate]
+    [mutate, mutateAllTodoCaches]
   )
 
   return { todos, isLoading, error, createTodo, updateTodo, toggleDone, deleteTodo, mutate }

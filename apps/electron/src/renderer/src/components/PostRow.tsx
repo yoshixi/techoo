@@ -5,6 +5,31 @@ import { Badge } from './ui/badge'
 import { Textarea } from './ui/textarea'
 import type { Post } from '../gen/api/schemas'
 
+const URL_REGEX = /(https?:\/\/[^\s]+)/g
+const URL_PART_REGEX = /^https?:\/\/[^\s]+$/
+
+function renderTextWithLinks(text: string): React.ReactNode[] {
+  const parts = text.split(URL_REGEX)
+  return parts.map((part, idx) => {
+    if (!URL_PART_REGEX.test(part)) return <React.Fragment key={`txt-${idx}`}>{part}</React.Fragment>
+    return (
+      <a
+        key={`url-${idx}`}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline underline-offset-2 text-primary/90 hover:text-primary"
+        onClick={(event) => {
+          event.preventDefault()
+          window.open(part, '_blank', 'noopener,noreferrer')
+        }}
+      >
+        {part}
+      </a>
+    )
+  })
+}
+
 export function PostRow({
   post,
   onDelete,
@@ -61,7 +86,7 @@ export function PostRow({
         <Badge
           key={`ev-${ev.id}`}
           variant="outline"
-          className={variant === 'compact' ? 'text-[9px] px-1 py-0 h-4' : 'text-xs'}
+          className={variant === 'compact' ? 'text-[9px] px-1 py-0 h-4 border-transparent bg-background/70' : 'text-[10px] border-transparent bg-background/70 text-muted-foreground'}
         >
           {ev.title}
         </Badge>
@@ -70,7 +95,7 @@ export function PostRow({
         <Badge
           key={`td-${td.id}`}
           variant="outline"
-          className={variant === 'compact' ? 'text-[9px] px-1 py-0 h-4' : 'text-xs'}
+          className={variant === 'compact' ? 'text-[9px] px-1 py-0 h-4 border-transparent bg-background/70' : 'text-[10px] border-transparent bg-background/70 text-muted-foreground'}
         >
           {td.title}
         </Badge>
@@ -117,7 +142,7 @@ export function PostRow({
             </div>
           ) : (
             <>
-              <p className="text-[11px] leading-snug whitespace-pre-wrap line-clamp-3">{post.body}</p>
+              <p className="text-[11px] leading-snug whitespace-pre-wrap line-clamp-3">{renderTextWithLinks(post.body)}</p>
               {badges}
               <span className="text-[10px] text-muted-foreground">{timeStr}</span>
             </>
@@ -152,7 +177,10 @@ export function PostRow({
   }
 
   return (
-    <div className="group flex items-start gap-3 rounded-lg border bg-card px-4 py-3">
+    <div
+      className="group flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors"
+      style={{ background: 'color-mix(in srgb, var(--background) 70%, var(--card) 30%)' }}
+    >
       <div className="flex-1 min-w-0 space-y-1.5">
         {editing ? (
           <div className="space-y-2">
@@ -188,9 +216,11 @@ export function PostRow({
           </div>
         ) : (
           <>
-            <p className="text-sm whitespace-pre-wrap">{post.body}</p>
+            <p className="text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-dark)' }}>
+              {renderTextWithLinks(post.body)}
+            </p>
             {badges}
-            <span className="block text-xs text-muted-foreground">{timeStr}</span>
+            <span className="block text-[11px] text-muted-foreground">{timeStr}</span>
           </>
         )}
       </div>

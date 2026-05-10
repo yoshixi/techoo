@@ -1,120 +1,134 @@
 ---
 title: "UI Design Principles"
-brief_description: "Charming, character-driven design guidelines for Techoo."
+brief_description: "Current desktop UI theme and implementation guidance for Techoo."
 created_at: "2026-01-17"
-update_at: "2026-02-22"
+update_at: "2026-05-09"
 ---
 
 # UI Design Principles
 
-Techoo's visual identity is warm, emotionally supportive, and charming. The app should feel like a cozy companion helping users focus, not a cold productivity tool.
+This document is the single source of truth for the current desktop UI theme.
+
+Scope: `apps/electron/src/renderer/src`
 
 ## Core Identity
 
-- **Warm & Cozy**: Warm beige backgrounds, burnt orange accents, soft orange highlights
-- **Encouraging**: Microcopy that feels like a gentle friend, not a drill sergeant
-- **Character-Driven**: Animal companion illustrations that react to user activity
-- **Light-Only**: Currently optimized for light theme only
+- Flat and soft: avoid heavy depth, hard outlines, and high-contrast blocks.
+- Border-light and mostly shadowless: hierarchy should come from spacing and subtle surface contrast.
+- Warm and calm: warm neutrals plus amber accents over sharp/high-saturation palettes.
+- Quiet productivity: reduce visual noise and keep workflows direct.
+- Light-only: current desktop theme is optimized for light mode.
 
-## Color Palette
+## Source of truth
 
-### Foundation
-- **Background**: Off-white (`#F4F2EE`)
-- **Foreground**: Dark (`#1C1C1C`) — primary text
-- **Card**: White-ish (`#FAFAF8`)
-- **Border / Divider**: Warm divider (`#E0DDD7`)
+- Design tokens and semantic colors:
+  - `apps/electron/src/renderer/src/assets/main.css`
+- App shell and tab styling:
+  - `apps/electron/src/renderer/src/App.tsx`
+- Primary desktop surfaces:
+  - `apps/electron/src/renderer/src/components/TodoTabView.tsx`
+  - `apps/electron/src/renderer/src/components/TodoView.tsx`
+  - `apps/electron/src/renderer/src/components/TimelineView.tsx`
+  - `apps/electron/src/renderer/src/components/CalendarView.tsx`
 
-### Primary & Accents
-- **Primary / Active Icons**: Burnt orange (`#C65A11`)
-- **Accent**: Warm beige (`#E7E3DB`)
-- **Secondary / Icon Backgrounds**: Soft orange (`#E8CFC2`)
-- **Muted**: Inactive tab warm gray (`#D9D6CF`)
-- **Muted Text**: Gray (`#8E8A84`)
-- **Sidebar Active**: Warm brown (`#D4C8BA`) — distinct from sidebar background
+## Color System (Current Desktop)
 
-### Semantic Colors
-- **Success**: Calming green (`#2E7D32`)
-- **Warning**: Golden amber (`#E0A800`)
-- **Destructive**: Soft red (`#E04A3A`)
-- **Timer Active**: Calming green with breathe animation — not urgent red
-- **Celebration**: Golden yellow (`#F4C400`)
+Use CSS variables from `main.css`. Prefer tokens over hardcoded hex values.
 
-### Reserved (Future CTA)
-- **Primary CTA**: Golden yellow (`#F4C400`) / amber (`#E0A800`) — for upgrade buttons
+- Base surfaces:
+  - `--background`, `--card`, `--panel`
+- Text hierarchy:
+  - `--foreground`, `--text-dark`, `--text-mid`, `--text-muted-custom`, `--text-hint`
+- Borders and input boundaries:
+  - `--border`, `--input`, `--border-l`
+- Accent system:
+  - `--primary` and `--amber` are aligned to the same amber family
+  - Primary action buttons should use the unified amber style
+- Semantic states:
+  - `--success`, `--warning`, `--destructive`
 
-### Charts
-- Burnt orange, soft orange, golden yellow, soft red, muted gray
-- Never all-green or monochromatic
+### Practical color rules
+
+- Prefer `color-mix(...)` with tokens for nuanced tone changes.
+- Do not add one-off accent colors when an existing token fits.
+- Keep destructive color usage scoped to destructive actions/errors.
 
 ## Typography
 
-- **Font**: Nunito (bundled locally for Electron, Google Fonts for mobile)
-- **Weights**: 400 (body), 500 (medium), 600 (semibold headings), 700 (bold emphasis)
-- **Character**: Rounded, friendly letterforms that match the warm visual style
+- Body font is `DM Sans` (see base `body` style in `main.css`).
+- Default heading style for current desktop surfaces:
+  - `font-sans`
+  - `font-semibold`
+  - `tracking-tight`
+- `.font-title` (Playfair Display) remains for legacy screens only; avoid using it in new/updated desktop surfaces.
 
-## Shape & Rounding
+## Shape, Spacing, and Structure
 
-- **Buttons**: Pill-shaped (`rounded-full`)
-- **Cards**: Generous rounding (`rounded-3xl`)
-- **Inputs**: Soft rounding (`rounded-xl`)
-- **Tabs**: Pill-shaped list and triggers (`rounded-full`)
-- **Base radius**: `0.875rem` (14px)
-
-## Text Inputs
-
-- **Background**: White (`bg-white`) for clear contrast against card backgrounds
-- **Border**: Warm divider color (`#E0DDD7`) at rest
-- **Focus**: Primary burnt orange border (`#C65A11`) on focus
-- On mobile, focus states are implemented via React Native `style` prop (not Tailwind pseudo-classes)
+- Base radius token: `--radius: 1rem`.
+- Common shape patterns:
+  - pills (`rounded-full`) for tabs/toggles/compact actions
+  - soft cards (`rounded-2xl`) for panes and grouped content
+- Spacing should be compact but breathable.
+- Remove redundant labels where placeholders/grouping already communicate intent.
 
 ## No Shadows
 
-- **No shadows anywhere** — the design relies on borders, background contrast, and color to create visual hierarchy
-- Use `border` and `ring` utilities for separation between elements
-- Elevation is conveyed through background color differences (e.g., card on background)
+- Keep shadows minimal to none on standard surfaces.
+- Prefer borders and surface contrast for hierarchy.
+- Elevation should mainly come from background tone differences.
 
-## Animation
+## Component Patterns
 
-- **Breathe**: 3s scale pulse for active states (replaces harsh red pulse)
-- **Gentle Bounce**: 2s translateY for working character
-- **Soft Glow**: 2s opacity pulse for celebration/focus states
-- Timer indicators use `animate-breathe` (calming) not `animate-pulse` (urgent)
-- View transitions: `fade-in` + `slide-up` (0.3s)
-- All interactive elements: `transition-all duration-200 ease-in-out`
+### App shell
 
-## Character Companion
+- Use soft two-layer chrome:
+  - top bar with subtle panel tint
+  - tab row with low-contrast active pill
+- Brand/title should be visually calm (not max-contrast emphasis).
 
-A small animal character appears in empty states and celebrations:
-- **Idle**: Breathe animation, neutral expression
-- **Working**: Gentle bounce, focused expression
-- **Celebrating**: Soft glow, happy expression
-- **Resting**: Static, sleepy expression
-- **Encouraging**: Breathe animation, supportive expression
-- **Thinking**: Breathe animation, curious expression
+### Todo surfaces
 
-Placeholder SVG shapes (circle body, ears) — intended to be replaced with proper art later.
+- Keep split workspace model: calendar left, todo list right.
+- Keep create/edit flows direct and low-friction.
+- Dialogs should feel lightweight: soft fills, minimal hard framing.
+- For edit dialogs:
+  - favor autosave plus subtle status feedback
+  - hide redundant visible headers when context is obvious
+  - keep accessibility labels (`sr-only`) where needed
 
-## Microcopy Guidelines
+### Timeline
 
-| Instead of | Use |
-|-----------|-----|
-| "What are you working on?" | "What would you like to focus on?" |
-| "Start" / "Start Timer" | "Let's Go" / "Start Focusing" |
-| "Stop" / "Stop Timer" | "Pause" |
-| "In Progress" | "Focusing Now" |
-| "Running Tasks" | "In the Flow" |
-| "Quick Capture" | "Ready to Focus" |
-| "No tasks running..." | "All clear! Ready when you are." |
-| "No upcoming tasks found." | "Nothing coming up. Enjoy the calm!" |
-| "Failed to load..." | "Hmm, couldn't load that. Let's try again." |
-| "Account" | "Your Space" |
-| "Daily Hours (Last 14 Days)" | "Your Focus Journey (14 Days)" |
-| "Task Summary" | "What You Accomplished" |
+- Use the same heading language and typography system as Todo.
+- Sidebar and feed should share the same warm-card family.
 
-## What to Avoid
+### Calendar
 
-- **No harsh reds**: Timer states use calming green, errors use warm amber
-- **No pure white/black**: Always tinted warm
-- **No cold grays**: Use cream-tinted neutrals
-- **No aggressive animations**: Pulse → breathe, flash → glow
-- **No clinical language**: Frame actions as invitations, not commands
+- Soften grid and controls.
+- Prefer ghost/secondary controls unless emphasis is needed.
+- `Today` highlight should be state-aware (highlight only when view is not on today).
+
+## Motion and Interaction Tone
+
+- Prefer gentle transitions (`duration-200` range) over attention-grabbing effects.
+- Avoid urgent pulse/flash patterns for normal states.
+- Interaction feedback should feel immediate but soft.
+
+## Microcopy Tone
+
+- Friendly and calm over strict/system-heavy language.
+- Short, plain labels on controls and actions.
+- Avoid jargon or overly clinical wording for user-facing copy.
+
+## Do / Don't
+
+### Do
+
+- Use tokens first.
+- Keep typography consistent across active desktop tabs.
+- Keep actions and editing flows lightweight and immediate.
+
+### Don't
+
+- Reintroduce heavy borders/shadows as defaults.
+- Introduce competing accent colors without token updates.
+- Mix serif and sans headings inconsistently on the same surface.

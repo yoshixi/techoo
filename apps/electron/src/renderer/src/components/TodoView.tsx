@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { Plus, Check, Trash2, Clock, Search, ChevronDown, ChevronRight } from 'lucide-react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { Plus, Check, Trash2, Clock, Search, ChevronDown, ChevronRight, Send } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Badge } from './ui/badge'
@@ -8,15 +8,18 @@ import { Label } from './ui/label'
 import { Switch } from './ui/switch'
 import { Separator } from './ui/separator'
 import { Textarea } from './ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { useTodos } from '../hooks/useTodos'
 import { usePosts } from '../hooks/usePosts'
-import { useLocalDayBounds } from '../hooks/useLocalDayBounds'
 import type { Todo } from '../gen/api/schemas'
+import { isMacPlatform } from '../lib/platform'
 
 const DEFAULT_BLOCK_SEC = 30 * 60
 
-/** Primary list scope — avoids mixing “today” with custom dates or “all open” with range. */
-type ListScope = 'today' | 'range' | 'all'
+function todayDateInputValue(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 function formatTime(ts: string): string {
   return new Date(ts).toLocaleTimeString(undefined, {
@@ -37,6 +40,19 @@ function toDateInputValue(ts: string): string {
   const d = new Date(ts)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+
+type TodoSavePayload = {
+  title: string
+  description: string | null
+  starts_at: number | null
+  ends_at: number | null
+  is_all_day: number
+}
+
+type ScheduleMode = 'none' | 'timed' | 'all_day'
+
+const DEFAULT_DURATION_MIN = 30
+const DURATION_OPTIONS_MINUTES = [15, 30, 45, 60, 90, 120]
 
 function startOfDayUnixFromDateInput(dateStr: string): number {
   const d = new Date(dateStr + 'T00:00:00')
@@ -66,202 +82,40 @@ function useNowSec(intervalMs = 30_000): number {
 }
 
 /* ------------------------------------------------------------------ */
-/*  List scope — Today | custom Range | All open                        */
+/*  List filter — time range (default today) | all open                  */
 /* ------------------------------------------------------------------ */
 
-function ScopeToggle({
-  scope,
-  onScopeChange
+function FilterModeToggle({
+  allOpenMode,
+  onAllOpenModeChange
 }: {
-  scope: ListScope
-  onScopeChange: (s: ListScope) => void
+  allOpenMode: boolean
+  onAllOpenModeChange: (allOpen: boolean) => void
 }): React.JSX.Element {
-  const pill = (s: ListScope, label: string): React.JSX.Element => {
-    const active = scope === s
-    return (
-      <button
-        type="button"
-        className="px-2.5 py-1 rounded-full text-xs font-medium transition-colors sm:px-3"
-        style={{
-          background: active ? 'var(--text-dark)' : 'transparent',
-          color: active ? '#fff' : 'var(--text-muted-custom)'
-        }}
-        onClick={() => onScopeChange(s)}
-      >
-        {active ? '● ' : ''}
-        {label}
-      </button>
-    )
-  }
+  const pill = (active: boolean, label: string, onClick: () => void): React.JSX.Element => (
+    <button
+      type="button"
+      className="px-2.5 py-1 rounded-full text-xs font-medium transition-colors sm:px-3"
+      style={{
+        background: active ? 'var(--text-dark)' : 'transparent',
+        color: active ? '#fff' : 'var(--text-muted-custom)'
+      }}
+      onClick={onClick}
+    >
+      {active ? '● ' : ''}
+      {label}
+    </button>
+  )
   return (
     <div
       className="inline-flex flex-wrap items-center gap-1 rounded-full p-0.5"
       style={{ background: 'var(--panel)' }}
       role="tablist"
-      aria-label="Todo list scope"
+      aria-label="Todo list filter"
     >
-      {pill('today', 'Today')}
-      {pill('range', 'Range')}
-      {pill('all', 'All open')}
+      {pill(!allOpenMode, 'Time range', () => onAllOpenModeChange(false))}
+      {pill(allOpenMode, 'All open', () => onAllOpenModeChange(true))}
     </div>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-/*  Quick-add composer                                                 */
-/* ------------------------------------------------------------------ */
-
-function TodoComposer({
-  onCreateTodo
-}: {
-  onCreateTodo: (title: string, startsAt?: number, endsAt?: number) => void
-}): React.JSX.Element {
-  const [title, setTitle] = useState('')
-  const [showTime, setShowTime] = useState(false)
-  const [selectedDate, setSelectedDate] = useState<string>(() => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  })
-  const [showDatePicker, setShowDatePicker] = useState(false)
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
-
-  const dateLabel = useMemo(() => {
-    const today = new Date()
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    if (selectedDate === todayStr) return 'Today'
-    return new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric'
-    })
-  }, [selectedDate])
-
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault()
-      const trimmed = title.trim()
-      if (!trimmed) return
-
-      if (!showTime) {
-        onCreateTodo(trimmed)
-        setTitle('')
-        setStartTime('')
-        setEndTime('')
-        setShowDatePicker(false)
-        inputRef.current?.focus()
-        return
-      }
-
-      const baseDate = new Date(selectedDate + 'T00:00:00')
-      let startsAt: number
-
-      if (startTime) {
-        const [h, m] = startTime.split(':').map(Number)
-        baseDate.setHours(h, m, 0, 0)
-        startsAt = Math.floor(baseDate.getTime() / 1000)
-      } else {
-        baseDate.setHours(9, 0, 0, 0)
-        startsAt = Math.floor(baseDate.getTime() / 1000)
-      }
-
-      let endsAt: number | undefined
-      if (endTime) {
-        const [eh, em] = endTime.split(':').map(Number)
-        const ed = new Date(selectedDate + 'T00:00:00')
-        ed.setHours(eh, em, 0, 0)
-        endsAt = Math.floor(ed.getTime() / 1000)
-      }
-
-      onCreateTodo(trimmed, startsAt, endsAt)
-      setTitle('')
-      setStartTime('')
-      setEndTime('')
-      setShowDatePicker(false)
-      inputRef.current?.focus()
-    },
-    [title, showTime, startTime, endTime, selectedDate, onCreateTodo]
-  )
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-2">
-      <div className="flex items-center gap-2 flex-wrap">
-        <Input
-          ref={inputRef}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Add a todo..."
-          className="flex-1 min-w-[160px] h-9"
-        />
-        <div className="relative shrink-0">
-          <Badge
-            variant="outline"
-            className="cursor-pointer hover:bg-accent px-3 py-1.5 text-xs rounded-full"
-            onClick={() => setShowDatePicker(!showDatePicker)}
-          >
-            {dateLabel} ▾
-          </Badge>
-          {showDatePicker && (
-            <div
-              className="absolute top-full right-0 mt-1 z-10 bg-white border rounded-lg shadow-md p-2"
-              style={{ borderColor: 'var(--border-l)' }}
-            >
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => {
-                  setSelectedDate(e.target.value)
-                  setShowDatePicker(false)
-                }}
-                className="text-xs border rounded px-2 py-1"
-                style={{ borderColor: 'var(--border-l)' }}
-              />
-            </div>
-          )}
-        </div>
-        <Badge
-          variant="outline"
-          className={`cursor-pointer hover:bg-accent px-3 py-1.5 text-xs rounded-full shrink-0 ${
-            showTime ? 'bg-amber-50 border-amber-300' : ''
-          }`}
-          onClick={() => setShowTime(!showTime)}
-        >
-          <Clock className="w-3 h-3 mr-1" />
-          Time
-        </Badge>
-        <Button
-          type="submit"
-          size="sm"
-          disabled={!title.trim()}
-          className="rounded-full w-8 h-8 p-0"
-          style={{ background: title.trim() ? 'var(--amber)' : undefined }}
-        >
-          <Plus className="w-4 h-4" />
-        </Button>
-      </div>
-      {showTime && (
-        <div className="flex items-center gap-2 pl-1 text-xs text-muted-foreground flex-wrap">
-          <span className="w-8">From</span>
-          <Input
-            type="time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            className="w-28 h-7 text-xs"
-          />
-          <span className="w-4">To</span>
-          <Input
-            type="time"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-            className="w-28 h-7 text-xs"
-          />
-        </div>
-      )}
-    </form>
   )
 }
 
@@ -269,16 +123,18 @@ function TodoComposer({
 /*  Todo row (open detail for edit)                                    */
 /* ------------------------------------------------------------------ */
 
-function TodoItem({
+export function TodoItem({
   todo,
   onToggleDone,
   onDeleteTodo,
-  onSelect
+  onSelect,
+  onQuickAdjustTime
 }: {
   todo: Todo
   onToggleDone: (id: number, done: number) => void
   onDeleteTodo: (id: number) => void
   onSelect: (todo: Todo) => void
+  onQuickAdjustTime: (todo: Todo) => void
 }): React.JSX.Element {
   const isDone = todo.done === 1
   const [justCompleted, setJustCompleted] = useState(false)
@@ -302,8 +158,7 @@ function TodoItem({
 
   return (
     <div
-      className={`group py-2.5 cursor-pointer hover:bg-accent/30 px-2 -mx-2 rounded transition-all duration-300 ${fading ? 'opacity-30 max-h-0 py-0 overflow-hidden' : 'opacity-100'}`}
-      style={{ borderBottom: '0.5px solid var(--border-l)' }}
+      className={`group py-2.5 cursor-pointer hover:bg-accent/35 px-2 rounded-xl transition-all duration-300 ${fading ? 'opacity-30 max-h-0 py-0 overflow-hidden' : 'opacity-100'}`}
       onClick={() => onSelect(todo)}
       role="button"
       tabIndex={0}
@@ -350,21 +205,37 @@ function TodoItem({
           )}
         </div>
 
-        <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+        <div className="shrink-0">
           {todo.starts_at != null ? (
-            <Badge
-              variant="outline"
-              className="text-[11px] px-2 py-0.5 rounded gap-1 pointer-events-none"
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onQuickAdjustTime(todo)
+              }}
             >
-              <Clock className="w-3 h-3" />
-              {formatTime(todo.starts_at!)}
-              {todo.ends_at != null && ` – ${formatTime(todo.ends_at!)}`}
-            </Badge>
+              <Badge variant="outline" className="text-[11px] px-2 py-0.5 rounded gap-1 hover:bg-accent/40">
+                <Clock className="w-3 h-3" />
+                {formatTime(todo.starts_at!)}
+                {todo.ends_at != null && ` – ${formatTime(todo.ends_at!)}`}
+              </Badge>
+            </button>
           ) : (
-            <Badge variant="outline" className="text-[11px] px-2 py-0.5 rounded gap-1 text-muted-foreground">
-              <Clock className="w-3 h-3" />
-              No time
-            </Badge>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onQuickAdjustTime(todo)
+              }}
+            >
+              <Badge
+                variant="outline"
+                className="text-[11px] px-2 py-0.5 rounded gap-1 text-muted-foreground hover:bg-accent/40"
+              >
+                <Clock className="w-3 h-3" />
+                No time
+              </Badge>
+            </button>
           )}
         </div>
 
@@ -388,7 +259,7 @@ function TodoItem({
 /*  Todo detail dialog — view, related posts, edit                    */
 /* ------------------------------------------------------------------ */
 
-function TodoDetailDialog({
+export function TodoDetailDialog({
   todo,
   onClose,
   onUpdateTodo,
@@ -433,15 +304,24 @@ function TodoDetailDialog({
       ? `${String(new Date(todo.starts_at).getHours()).padStart(2, '0')}:${String(new Date(todo.starts_at).getMinutes()).padStart(2, '0')}`
       : ''
   )
-  const [endTime, setEndTime] = useState(() =>
-    todo.ends_at != null
-      ? `${String(new Date(todo.ends_at).getHours()).padStart(2, '0')}:${String(new Date(todo.ends_at).getMinutes()).padStart(2, '0')}`
-      : ''
-  )
-  const [allDay, setAllDay] = useState(todo.is_all_day === 1)
-  const [saving, setSaving] = useState(false)
+  const [durationMinutes, setDurationMinutes] = useState(() => {
+    if (todo.starts_at == null || todo.ends_at == null) return String(DEFAULT_DURATION_MIN)
+    const diffMin = Math.round((new Date(todo.ends_at).getTime() - new Date(todo.starts_at).getTime()) / 60000)
+    return String(diffMin > 0 ? diffMin : DEFAULT_DURATION_MIN)
+  })
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(() => {
+    if (todo.is_all_day === 1) return 'all_day'
+    if (todo.starts_at != null) return 'timed'
+    return 'none'
+  })
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const isMac = isMacPlatform()
   const [threadReply, setThreadReply] = useState('')
   const [postingThread, setPostingThread] = useState(false)
+  const saveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const inFlightRef = useRef(false)
+  const lastSavedSerializedRef = useRef<string>('')
+  const pendingRef = useRef<{ serialized: string; payload: TodoSavePayload } | null>(null)
 
   useEffect(() => {
     setTitle(todo.title)
@@ -454,13 +334,26 @@ function TodoDetailDialog({
         ? `${String(new Date(todo.starts_at).getHours()).padStart(2, '0')}:${String(new Date(todo.starts_at).getMinutes()).padStart(2, '0')}`
         : ''
     )
-    setEndTime(
-      todo.ends_at != null
-        ? `${String(new Date(todo.ends_at).getHours()).padStart(2, '0')}:${String(new Date(todo.ends_at).getMinutes()).padStart(2, '0')}`
-        : ''
-    )
-    setAllDay(todo.is_all_day === 1)
+    if (todo.starts_at != null && todo.ends_at != null) {
+      const diffMin = Math.round((new Date(todo.ends_at).getTime() - new Date(todo.starts_at).getTime()) / 60000)
+      setDurationMinutes(String(diffMin > 0 ? diffMin : DEFAULT_DURATION_MIN))
+    } else {
+      setDurationMinutes(String(DEFAULT_DURATION_MIN))
+    }
+    setScheduleMode(todo.is_all_day === 1 ? 'all_day' : todo.starts_at != null ? 'timed' : 'none')
     setThreadReply('')
+    setSaveState('idle')
+    const startsAtSec = todo.starts_at != null ? Math.floor(new Date(todo.starts_at).getTime() / 1000) : null
+    const endsAtSec = todo.ends_at != null ? Math.floor(new Date(todo.ends_at).getTime() / 1000) : null
+    lastSavedSerializedRef.current = JSON.stringify({
+      title: todo.title,
+      description: (todo.description ?? '').trim() || null,
+      starts_at: startsAtSec,
+      ends_at: endsAtSec,
+      is_all_day: todo.is_all_day
+    } satisfies TodoSavePayload)
+    pendingRef.current = null
+    inFlightRef.current = false
   }, [todo.id, todo.title, todo.description, todo.starts_at, todo.ends_at, todo.is_all_day, todo.created_at])
 
   const relatedPosts = useMemo(() => {
@@ -469,7 +362,10 @@ function TodoDetailDialog({
   }, [posts, todo.id])
 
   const buildSchedulePatch = useCallback(() => {
-    if (allDay) {
+    if (scheduleMode === 'none') {
+      return { starts_at: null as null, ends_at: null as null, is_all_day: 0 as const }
+    }
+    if (scheduleMode === 'all_day') {
       const dayStart = startOfDayUnixFromDateInput(dateStr)
       return {
         starts_at: dayStart,
@@ -484,35 +380,66 @@ function TodoDetailDialog({
     const base = new Date(dateStr + 'T00:00:00')
     base.setHours(sh, sm, 0, 0)
     const starts_at = Math.floor(base.getTime() / 1000)
-    let ends_at: number | null = null
-    if (endTime) {
-      const [eh, em] = endTime.split(':').map(Number)
-      const end = new Date(dateStr + 'T00:00:00')
-      end.setHours(eh, em, 0, 0)
-      ends_at = Math.floor(end.getTime() / 1000)
-    }
+    const parsedDuration = Number.parseInt(durationMinutes, 10)
+    const safeDurationMin =
+      Number.isFinite(parsedDuration) && parsedDuration > 0 ? parsedDuration : DEFAULT_DURATION_MIN
+    const ends_at = starts_at + safeDurationMin * 60
     return { starts_at, ends_at, is_all_day: 0 as const }
-  }, [allDay, dateStr, startTime, endTime])
+  }, [scheduleMode, dateStr, startTime, durationMinutes])
 
-  const handleSave = useCallback(async () => {
+  const draftPayload = useMemo<TodoSavePayload | null>(() => {
     const trimmed = title.trim()
-    if (!trimmed) return
-    setSaving(true)
-    try {
-      const sched = buildSchedulePatch()
-      const descTrim = description.trim()
-      await onUpdateTodo(todo.id, {
-        title: trimmed,
-        description: descTrim.length > 0 ? descTrim : null,
-        starts_at: sched.starts_at,
-        ends_at: sched.ends_at,
-        is_all_day: sched.is_all_day
-      })
-      onClose()
-    } finally {
-      setSaving(false)
+    if (!trimmed) return null
+    const sched = buildSchedulePatch()
+    const descTrim = description.trim()
+    return {
+      title: trimmed,
+      description: descTrim.length > 0 ? descTrim : null,
+      starts_at: sched.starts_at,
+      ends_at: sched.ends_at,
+      is_all_day: sched.is_all_day
     }
-  }, [title, description, todo.id, buildSchedulePatch, onUpdateTodo, onClose])
+  }, [title, description, buildSchedulePatch])
+
+  const persistDraft = useCallback(
+    async (serialized: string, payload: TodoSavePayload) => {
+      if (inFlightRef.current) {
+        pendingRef.current = { serialized, payload }
+        return
+      }
+      if (serialized === lastSavedSerializedRef.current) return
+      inFlightRef.current = true
+      setSaveState('saving')
+      try {
+        await onUpdateTodo(todo.id, payload)
+        lastSavedSerializedRef.current = serialized
+        setSaveState('saved')
+      } catch {
+        setSaveState('error')
+      } finally {
+        inFlightRef.current = false
+        const next = pendingRef.current
+        pendingRef.current = null
+        if (next && next.serialized !== lastSavedSerializedRef.current) {
+          void persistDraft(next.serialized, next.payload)
+        }
+      }
+    },
+    [onUpdateTodo, todo.id]
+  )
+
+  useEffect(() => {
+    if (!draftPayload) return
+    const serialized = JSON.stringify(draftPayload)
+    if (serialized === lastSavedSerializedRef.current) return
+    if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current)
+    saveDebounceRef.current = setTimeout(() => {
+      void persistDraft(serialized, draftPayload)
+    }, 600)
+    return () => {
+      if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current)
+    }
+  }, [draftPayload, persistDraft])
 
   const handleAddThreadPost = useCallback(async () => {
     const trimmed = threadReply.trim()
@@ -533,18 +460,19 @@ function TodoDetailDialog({
   }, [todo.id, onDeleteTodo, onClose])
 
   return (
-    <DialogContent className="max-h-[90vh] max-w-md gap-0 overflow-y-auto p-5 sm:max-w-lg sm:p-6">
-      <DialogHeader className="space-y-0 pb-4 text-left">
+    <DialogContent className="max-h-[90vh] w-full max-w-[min(100vw-2rem,36rem)] gap-0 overflow-y-auto p-5 sm:max-w-[min(100vw-3rem,52rem)] sm:p-6">
+      <DialogHeader className="space-y-0 pb-1.5 text-left">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0">
-            <DialogTitle className="font-title text-lg leading-tight">Edit todo</DialogTitle>
+            <DialogTitle className="sr-only">Edit todo</DialogTitle>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2 sm:pt-0.5">
             <Button
               type="button"
-              variant="outline"
+              variant="default"
               size="sm"
               className="h-8 text-xs"
+              style={{ background: 'var(--amber)' }}
               onClick={() => onToggleDone(todo.id, todo.done)}
             >
               {todo.done === 1 ? 'Mark incomplete' : 'Mark done'}
@@ -558,55 +486,103 @@ function TodoDetailDialog({
         </div>
       </DialogHeader>
 
-      <div className="flex flex-col gap-5">
-        <div className="space-y-1.5">
-          <Label htmlFor="todo-detail-title" className="text-xs text-muted-foreground">
-            Title
-          </Label>
+      <div className="flex flex-col gap-1.5">
+        <div className="space-y-0.5 rounded-2xl bg-card/85 px-3 py-1">
           <Input
             id="todo-detail-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="h-9 text-sm"
+            placeholder="Todo title"
+            className="h-10 !text-xl md:!text-xl font-semibold tracking-tight border-transparent bg-background/60 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
           />
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="todo-detail-description" className="text-xs text-muted-foreground">
-            Description
-          </Label>
+        <div className="space-y-0.5 rounded-2xl bg-card/85 px-3 py-1">
           <Textarea
             id="todo-detail-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Notes, context, links…"
+            placeholder="Add notes, context, links…"
             rows={4}
-            className="min-h-[88px] resize-y text-sm"
+            className="min-h-[92px] resize-y text-sm border-transparent bg-background/60 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
           />
         </div>
 
-        <div className="max-w-sm space-y-3 rounded-xl border border-border bg-muted/25 px-3 py-3">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Schedule</p>
-          <div className="flex items-center justify-between gap-3">
-            <Label htmlFor="todo-all-day" className="cursor-pointer text-sm font-normal">
-              All day
-            </Label>
-            <Switch id="todo-all-day" checked={allDay} onCheckedChange={setAllDay} />
-          </div>
+        <div className="w-full max-w-full space-y-3 rounded-2xl bg-card/85 px-3 py-3 sm:max-w-none">
           <div className="space-y-1">
-            <Label htmlFor="todo-detail-date" className="text-xs text-muted-foreground">
-              Date
-            </Label>
-            <Input
-              id="todo-detail-date"
-              type="date"
-              value={dateStr}
-              onChange={(e) => setDateStr(e.target.value)}
-              className="h-9 w-[11.5rem] max-w-full text-sm"
-            />
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Schedule</p>
+            <div
+              className="inline-flex flex-wrap items-center gap-1 rounded-full p-0.5"
+              style={{ background: 'color-mix(in srgb, var(--background) 78%, white 22%)' }}
+              role="tablist"
+              aria-label="Schedule mode"
+            >
+              {(
+                [
+                  { id: 'none' as const, label: 'No schedule' },
+                  { id: 'timed' as const, label: 'Time block' },
+                  { id: 'all_day' as const, label: 'All day' }
+                ] satisfies Array<{ id: ScheduleMode; label: string }>
+              ).map((mode) => {
+                const active = scheduleMode === mode.id
+                return (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+                    style={{
+                      background: active ? 'var(--text-dark)' : 'transparent',
+                      color: active ? '#fff' : 'var(--text-muted-custom)'
+                    }}
+                    onClick={() => {
+                      if (mode.id === 'none' && scheduleMode !== 'none') {
+                        if (
+                          !window.confirm('Clear this todo schedule? Date/time settings will be removed.')
+                        )
+                          return
+                        setStartTime('')
+                        setDurationMinutes(String(DEFAULT_DURATION_MIN))
+                      }
+                      if (mode.id === 'timed' && !startTime) {
+                        setStartTime('09:00')
+                      }
+                      setScheduleMode(mode.id)
+                    }}
+                  >
+                    {mode.label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
-          {!allDay && (
+          {scheduleMode === 'all_day' && (
+            <div className="space-y-1">
+              <Label htmlFor="todo-detail-date" className="text-xs text-muted-foreground">
+                Date
+              </Label>
+              <Input
+                id="todo-detail-date"
+                type="date"
+                value={dateStr}
+                onChange={(e) => setDateStr(e.target.value)}
+                className="h-9 w-[11.5rem] max-w-full text-sm"
+              />
+            </div>
+          )}
+          {scheduleMode === 'timed' && (
             <div className="flex flex-wrap items-end gap-3 pt-0.5">
+              <div className="space-y-1">
+                <Label htmlFor="todo-detail-date" className="text-xs text-muted-foreground">
+                  Date
+                </Label>
+                <Input
+                  id="todo-detail-date"
+                  type="date"
+                  value={dateStr}
+                  onChange={(e) => setDateStr(e.target.value)}
+                  className="h-9 w-[11.5rem] max-w-full text-sm"
+                />
+              </div>
               <div className="space-y-1">
                 <Label htmlFor="todo-detail-start" className="text-xs text-muted-foreground">
                   Start
@@ -620,102 +596,119 @@ function TodoDetailDialog({
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="todo-detail-end" className="text-xs text-muted-foreground">
-                  End <span className="font-normal opacity-80">(optional)</span>
+                <Label htmlFor="todo-detail-duration" className="text-xs text-muted-foreground">
+                  Duration
                 </Label>
-                <Input
-                  id="todo-detail-end"
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="h-9 w-[7.25rem] text-sm"
-                />
+                <div className="flex items-center gap-1.5">
+                  <Select value={durationMinutes} onValueChange={setDurationMinutes}>
+                    <SelectTrigger id="todo-detail-duration" className="h-8 w-[7.5rem] rounded-md px-2 text-sm">
+                      <SelectValue placeholder="Duration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DURATION_OPTIONS_MINUTES.map((m) => (
+                        <SelectItem key={m} value={String(m)}>
+                          {m === 60 ? '1 hour' : `${m} min`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           )}
+          {scheduleMode === 'none' && (
+            <p className="text-[11px] text-muted-foreground">This todo has no schedule.</p>
+          )}
         </div>
 
-        <p className="text-xs text-muted-foreground">Created {formatDate(todo.created_at)}</p>
-
-        <div className="space-y-2">
-          <h4 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Post thread
-          </h4>
-          <p className="text-[11px] text-muted-foreground leading-snug">
-            Chronological log entries linked to this todo (from Today / Work or #tags).
-          </p>
+        <div className="space-y-2.5 rounded-2xl bg-card/85 px-3 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="text-xs font-medium tracking-wide text-muted-foreground">Thread</h4>
+            <Badge variant="outline" className="h-5 px-2 text-[10px]">
+              {relatedPosts.length}
+            </Badge>
+          </div>
           {postsLoading && relatedPosts.length === 0 ? (
             <p className="text-xs text-muted-foreground">Loading posts…</p>
           ) : relatedPosts.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No posts linked yet.</p>
+            <p className="text-xs text-muted-foreground">No entries yet.</p>
           ) : (
             <div className="max-h-52 space-y-2 overflow-y-auto pr-0.5">
               {relatedPosts.map((post) => (
                 <div
                   key={post.id}
-                  className="rounded-lg border px-2.5 py-2 text-sm"
+                  className="rounded-xl px-3 py-2.5 text-sm"
                   style={{
-                    borderColor: 'var(--border-l)',
-                    borderLeftWidth: 3,
-                    borderLeftColor: 'var(--amber)'
+                    background: 'color-mix(in srgb, var(--background) 70%, var(--card) 30%)'
                   }}
                 >
-                  <p className="whitespace-pre-wrap text-[13px] leading-snug">{post.body}</p>
-                  <span className="mt-1 block text-[10px] text-muted-foreground">
+                  <p className="whitespace-pre-wrap text-[13px] leading-relaxed" style={{ color: 'var(--text-dark)' }}>
+                    {post.body}
+                  </p>
+                  <span className="mt-1 block text-[10px] text-muted-foreground/90">
                     {formatTime(post.posted_at)} · {formatDate(post.posted_at)}
                   </span>
                 </div>
               ))}
             </div>
           )}
-          <div className="space-y-1.5 pt-1">
-            <Label htmlFor="todo-thread-reply" className="text-xs text-muted-foreground">
-              Add to thread
-            </Label>
-            <Textarea
-              id="todo-thread-reply"
-              value={threadReply}
-              onChange={(e) => setThreadReply(e.target.value)}
-              placeholder="Write a log entry for this todo…"
-              rows={2}
-              className="min-h-[52px] resize-y text-sm"
-              onKeyDown={(e) => {
-                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                  e.preventDefault()
-                  void handleAddThreadPost()
-                }
-              }}
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              className="h-8 text-xs"
-              disabled={postingThread || !threadReply.trim()}
-              onClick={() => void handleAddThreadPost()}
-            >
-              {postingThread ? 'Posting…' : 'Post to thread'}
-            </Button>
+          <div
+            className="rounded-2xl p-3"
+            style={{
+              background: 'color-mix(in srgb, var(--card) 82%, var(--background) 18%)',
+              border: '1px solid color-mix(in srgb, var(--border) 60%, transparent)'
+            }}
+          >
+            <div className="relative">
+              <Textarea
+                id="todo-thread-reply"
+                value={threadReply}
+                onChange={(e) => setThreadReply(e.target.value)}
+                placeholder="Write something... (this will be posted to thread)"
+                rows={2}
+                className="min-h-[96px] resize-none pr-12 border-transparent bg-background/55 shadow-none focus-visible:ring-2 focus-visible:ring-primary/30 text-sm leading-relaxed"
+                onKeyDown={(e) => {
+                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                    e.preventDefault()
+                    void handleAddThreadPost()
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="default"
+                className="absolute bottom-2 right-2 h-7 w-7 p-0 rounded-full"
+                style={{ background: 'var(--amber)' }}
+                disabled={postingThread || !threadReply.trim()}
+                onClick={() => void handleAddThreadPost()}
+                title={postingThread ? 'Posting…' : 'Post to thread'}
+              >
+                <Send className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+            <span className="mt-1.5 block text-[11px] text-muted-foreground">
+              Press {isMac ? '⌘' : 'Ctrl'}+Enter to post
+            </span>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
           <Button type="button" variant="destructive" size="sm" className="h-8 text-xs" onClick={() => void handleDelete()}>
             Delete
           </Button>
           <div className="flex gap-2">
+            <span className="self-center text-[11px] text-muted-foreground px-1">
+              {saveState === 'saving'
+                ? 'Saving…'
+                : saveState === 'saved'
+                  ? 'Saved'
+                  : saveState === 'error'
+                    ? 'Save failed'
+                    : ''}
+            </span>
             <Button type="button" variant="ghost" size="sm" className="h-8 text-xs" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 text-xs"
-              disabled={saving || !title.trim()}
-              style={{ background: 'var(--amber)' }}
-              onClick={() => void handleSave()}
-            >
-              {saving ? 'Saving…' : 'Save'}
+              Close
             </Button>
           </div>
         </div>
@@ -743,54 +736,98 @@ function sortTodos(todos: Todo[], pinIncompleteFirst: boolean): Todo[] {
 /*  TodoView                                                           */
 /* ------------------------------------------------------------------ */
 
-export function TodoView(): React.JSX.Element {
-  const [listScope, setListScope] = useState<ListScope>('today')
-  const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
+export type TodoViewProps = {
+  /** Narrow layout for split Todo tab (calendar + list). */
+  variant?: 'page' | 'column'
+  className?: string
+  /** Controlled selection for split layout (calendar + list share detail). */
+  selectedTodo?: Todo | null
+  onSelectedTodoChange?: (todo: Todo | null) => void
+}
+
+export function TodoView({
+  variant = 'page',
+  className,
+  selectedTodo: controlledSelected,
+  onSelectedTodoChange
+}: TodoViewProps = {}): React.JSX.Element {
+  const [internalSelected, setInternalSelected] = useState<Todo | null>(null)
+  const controlled =
+    controlledSelected !== undefined && onSelectedTodoChange !== undefined
+  const selectedTodo = controlled ? controlledSelected! : internalSelected
+  const setSelectedTodo = useCallback(
+    (t: Todo | null) => {
+      if (controlled) onSelectedTodoChange!(t)
+      else setInternalSelected(t)
+    },
+    [controlled, onSelectedTodoChange]
+  )
+
+  const [allOpenMode, setAllOpenMode] = useState(false)
+  const [rangeFrom, setRangeFrom] = useState(todayDateInputValue)
+  const [rangeTo, setRangeTo] = useState(todayDateInputValue)
+  const [createDraft, setCreateDraft] = useState<{
+    title: string
+    startTime: string
+    endTime: string
+    useSchedule: boolean
+  } | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
+
   const [showCompletedInRange, setShowCompletedInRange] = useState(false)
   const [showCompletedInAllMode, setShowCompletedInAllMode] = useState(false)
   const [overdueOnly, setOverdueOnly] = useState(false)
   const [titleSearch, setTitleSearch] = useState('')
-  const [customFrom, setCustomFrom] = useState<string | null>(null)
-  const [customTo, setCustomTo] = useState<string | null>(null)
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [quickTimeDraft, setQuickTimeDraft] = useState<{
+    todoId: number
+    dateStr: string
+    startTime: string
+    durationMinutes: string
+  } | null>(null)
+  const [quickTimeSaveState, setQuickTimeSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const quickTimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const quickTimeInFlightRef = useRef(false)
+  const quickTimeLastSavedRef = useRef<string>('')
+  const quickTimePendingRef = useRef<{
+    serialized: string
+    payload: { todoId: number; starts_at: number; ends_at: number; is_all_day: number }
+  } | null>(null)
 
-  const showAll = listScope === 'all'
-
-  const defaultBounds = useLocalDayBounds()
   const nowSec = useNowSec()
 
   const listRange = useMemo(() => {
-    if (listScope === 'range' && customFrom && customTo) {
-      const a = startOfDayUnixFromDateInput(customFrom)
-      const b = startOfDayUnixFromDateInput(customTo) + 86400
-      return { from: Math.min(a, b), to: Math.max(a, b) }
-    }
-    return defaultBounds
-  }, [listScope, customFrom, customTo, defaultBounds])
+    const a = startOfDayUnixFromDateInput(rangeFrom)
+    const b = startOfDayUnixFromDateInput(rangeTo) + 86400
+    return { from: Math.min(a, b), to: Math.max(a, b) }
+  }, [rangeFrom, rangeTo])
 
-  const rangeDatesReady = Boolean(customFrom && customTo)
-
-  const useFetchAll = showAll && showCompletedInAllMode
+  const useFetchAll = allOpenMode && showCompletedInAllMode
 
   const { todos: rawTodos, isLoading, createTodo, updateTodo, toggleDone, deleteTodo } = useTodos(
     useFetchAll
       ? { fetchAll: true }
-      : showAll
+      : allOpenMode
         ? { showAll: true }
         : {
-            from: listRange.from,
-            to: listRange.to,
-            includeCompletedInRange: showCompletedInRange
-          }
+          from: listRange.from,
+          to: listRange.to,
+          includeCompletedInRange: showCompletedInRange
+        }
   )
 
   useEffect(() => {
-    setSelectedTodo((prev) => {
-      if (!prev) return prev
-      const next = rawTodos.find((t) => t.id === prev.id)
-      return next ?? null
-    })
-  }, [rawTodos])
+    if (!selectedTodo) return
+    const next = rawTodos.find((t) => t.id === selectedTodo.id)
+    if (next) {
+      // Keep dialog data fresh when the selected todo exists in the current dataset.
+      if (next !== selectedTodo) setSelectedTodo(next)
+      return
+    }
+    // In controlled mode (e.g. calendar-driven selection), keep the dialog open
+    // even when current list filters don't include the selected todo.
+    if (!controlled) setSelectedTodo(null)
+  }, [rawTodos, selectedTodo, setSelectedTodo, controlled])
 
   const filteredTodos = useMemo(() => {
     let t = rawTodos
@@ -800,89 +837,325 @@ export function TodoView(): React.JSX.Element {
     if (useFetchAll && !showCompletedInAllMode) {
       t = t.filter((x) => x.done === 0)
     }
-    if (!showAll && !showCompletedInRange) {
+    if (!allOpenMode && !showCompletedInRange) {
       t = t.filter((x) => x.done === 0)
     }
-    const pinIncomplete = !showAll || showCompletedInRange || useFetchAll
+    const pinIncomplete = !allOpenMode || showCompletedInRange || useFetchAll
     return sortTodos(t, pinIncomplete)
   }, [
     rawTodos,
     titleSearch,
     overdueOnly,
     nowSec,
-    showAll,
+    allOpenMode,
     showCompletedInRange,
     useFetchAll,
     showCompletedInAllMode
   ])
 
-  const clearCustomRange = useCallback(() => {
-    setCustomFrom(null)
-    setCustomTo(null)
-  }, [])
-
-  const handleScopeChange = useCallback((s: ListScope) => {
-    if (s === 'today' || s === 'all') {
-      setCustomFrom(null)
-      setCustomTo(null)
-    }
-    if (s === 'all') {
+  const handleAllOpenModeChange = useCallback((open: boolean) => {
+    setAllOpenMode(open)
+    if (open) {
       setShowCompletedInRange(false)
     } else {
       setShowCompletedInAllMode(false)
     }
-    if (s === 'range') {
-      setAdvancedOpen(true)
-    }
-    setListScope(s)
   }, [])
 
   const advancedActiveCount = useMemo(() => {
     let n = 0
-    if (listScope === 'all') {
+    if (allOpenMode) {
       if (showCompletedInAllMode) n++
     } else if (showCompletedInRange) {
       n++
     }
     if (overdueOnly) n++
     if (titleSearch.trim()) n++
-    if (listScope === 'range' && (customFrom != null || customTo != null)) n++
     return n
-  }, [
-    listScope,
-    showCompletedInRange,
-    showCompletedInAllMode,
-    overdueOnly,
-    titleSearch,
-    customFrom,
-    customTo
-  ])
+  }, [allOpenMode, showCompletedInRange, showCompletedInAllMode, overdueOnly, titleSearch])
 
   const clearAdvancedFilters = useCallback(() => {
     setShowCompletedInRange(false)
     setShowCompletedInAllMode(false)
     setOverdueOnly(false)
     setTitleSearch('')
-    clearCustomRange()
-    if (listScope === 'range') {
-      setListScope('today')
+  }, [])
+
+  const openCreateDialog = useCallback(() => {
+    const now = new Date()
+    const end = new Date(now.getTime() + 60 * 60 * 1000)
+    const fmt = (d: Date): string =>
+      `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    setCreateDraft({ title: '', startTime: fmt(now), endTime: fmt(end), useSchedule: false })
+  }, [])
+
+  const openQuickTimeAdjust = useCallback((todo: Todo) => {
+    const starts = todo.starts_at != null ? new Date(todo.starts_at) : new Date()
+    const dateStr = `${starts.getFullYear()}-${String(starts.getMonth() + 1).padStart(2, '0')}-${String(starts.getDate()).padStart(2, '0')}`
+    const startTime = `${String(starts.getHours()).padStart(2, '0')}:${String(starts.getMinutes()).padStart(2, '0')}`
+    const durationMinutes =
+      todo.starts_at != null && todo.ends_at != null
+        ? String(Math.max(1, Math.round((new Date(todo.ends_at).getTime() - new Date(todo.starts_at).getTime()) / 60000)))
+        : String(DEFAULT_DURATION_MIN)
+    const startsAt = todo.starts_at != null ? Math.floor(new Date(todo.starts_at).getTime() / 1000) : null
+    const endsAt = todo.ends_at != null ? Math.floor(new Date(todo.ends_at).getTime() / 1000) : null
+    quickTimeLastSavedRef.current = JSON.stringify({
+      todoId: todo.id,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      is_all_day: todo.is_all_day
+    })
+    setQuickTimeSaveState('idle')
+    setQuickTimeDraft({ todoId: todo.id, dateStr, startTime, durationMinutes })
+  }, [])
+
+  const quickTimePayload = useMemo(() => {
+    if (!quickTimeDraft) return null
+    const [sh, sm] = quickTimeDraft.startTime.split(':').map(Number)
+    if (!Number.isFinite(sh) || !Number.isFinite(sm)) return null
+    const parsedDuration = Number.parseInt(quickTimeDraft.durationMinutes, 10)
+    const safeDurationMin =
+      Number.isFinite(parsedDuration) && parsedDuration > 0 ? parsedDuration : DEFAULT_DURATION_MIN
+    const base = new Date(quickTimeDraft.dateStr + 'T00:00:00')
+    base.setHours(sh, sm, 0, 0)
+    const starts_at = Math.floor(base.getTime() / 1000)
+    const ends_at = starts_at + safeDurationMin * 60
+    return {
+      todoId: quickTimeDraft.todoId,
+      starts_at,
+      ends_at,
+      is_all_day: 0
     }
-  }, [clearCustomRange, listScope])
+  }, [quickTimeDraft])
+
+  const persistQuickTime = useCallback(
+    async (
+      serialized: string,
+      payload: { todoId: number; starts_at: number; ends_at: number; is_all_day: number }
+    ) => {
+      if (quickTimeInFlightRef.current) {
+        quickTimePendingRef.current = { serialized, payload }
+        return
+      }
+      if (serialized === quickTimeLastSavedRef.current) return
+      quickTimeInFlightRef.current = true
+      setQuickTimeSaveState('saving')
+      try {
+        await updateTodo(payload.todoId, {
+          starts_at: payload.starts_at,
+          ends_at: payload.ends_at,
+          is_all_day: payload.is_all_day
+        })
+        quickTimeLastSavedRef.current = serialized
+        setQuickTimeSaveState('saved')
+      } catch {
+        setQuickTimeSaveState('error')
+      } finally {
+        quickTimeInFlightRef.current = false
+        const next = quickTimePendingRef.current
+        quickTimePendingRef.current = null
+        if (next && next.serialized !== quickTimeLastSavedRef.current) {
+          void persistQuickTime(next.serialized, next.payload)
+        }
+      }
+    },
+    [updateTodo]
+  )
+
+  useEffect(() => {
+    if (!quickTimePayload) return
+    const serialized = JSON.stringify(quickTimePayload)
+    if (serialized === quickTimeLastSavedRef.current) return
+    if (quickTimeDebounceRef.current) clearTimeout(quickTimeDebounceRef.current)
+    quickTimeDebounceRef.current = setTimeout(() => {
+      void persistQuickTime(serialized, quickTimePayload)
+    }, 400)
+    return () => {
+      if (quickTimeDebounceRef.current) clearTimeout(quickTimeDebounceRef.current)
+    }
+  }, [quickTimePayload, persistQuickTime])
+
+  const handleCreateSubmit = useCallback(async () => {
+    if (!createDraft || !createDraft.title.trim()) return
+    setIsCreating(true)
+    try {
+      if (!createDraft.useSchedule) {
+        await createTodo(createDraft.title.trim())
+      } else {
+        const today = new Date()
+        const [sh, sm] = createDraft.startTime.split(':').map(Number)
+        const [eh, em] = createDraft.endTime.split(':').map(Number)
+        const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), sh, sm)
+        const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), eh, em)
+        await createTodo(
+          createDraft.title.trim(),
+          Math.floor(startDate.getTime() / 1000),
+          Math.floor(endDate.getTime() / 1000)
+        )
+      }
+      setCreateDraft(null)
+    } finally {
+      setIsCreating(false)
+    }
+  }, [createDraft, createTodo])
+
+  useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false
+      if (target.isContentEditable) return true
+      const tag = target.tagName
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+    }
+
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'n') {
+        event.preventDefault()
+        openCreateDialog()
+        return
+      }
+
+      // Tab/Shift+Tab cycles todo detail focus when dialogs are closed and user is not typing in a field.
+      if (
+        event.key === 'Tab' &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.defaultPrevented &&
+        !createDraft &&
+        !quickTimeDraft &&
+        !selectedTodo &&
+        !isEditableTarget(event.target)
+      ) {
+        if (filteredTodos.length === 0) return
+        event.preventDefault()
+        if (event.shiftKey) {
+          setSelectedTodo(filteredTodos[filteredTodos.length - 1] ?? null)
+          return
+        }
+        setSelectedTodo(filteredTodos[0] ?? null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [openCreateDialog, filteredTodos, createDraft, quickTimeDraft, selectedTodo, setSelectedTodo])
+
+  useEffect(() => {
+    if (!selectedTodo || filteredTodos.length === 0) return
+    const currentIdx = filteredTodos.findIndex((todo) => todo.id === selectedTodo.id)
+    if (currentIdx === -1) return
+
+    const isEditableTarget = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false
+      if (target.isContentEditable) return true
+      const tag = target.tagName
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+    }
+
+    const handleDialogTabCycle = (event: KeyboardEvent): void => {
+      if (
+        event.key !== 'Tab' ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.defaultPrevented ||
+        createDraft ||
+        quickTimeDraft ||
+        isEditableTarget(event.target)
+      ) {
+        return
+      }
+      event.preventDefault()
+      const direction = event.shiftKey ? -1 : 1
+      const nextIdx = (currentIdx + direction + filteredTodos.length) % filteredTodos.length
+      setSelectedTodo(filteredTodos[nextIdx] ?? null)
+    }
+
+    window.addEventListener('keydown', handleDialogTabCycle)
+    return () => window.removeEventListener('keydown', handleDialogTabCycle)
+  }, [selectedTodo?.id, filteredTodos, createDraft, quickTimeDraft, setSelectedTodo])
+
+  const padding = variant === 'column' ? 'px-4 py-3' : 'p-6'
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col overflow-hidden p-6">
-      <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <div>
-          <h2 className="font-title text-lg" style={{ color: 'var(--text-dark)' }}>
-            ToDo
-          </h2>
+    <div
+      className={`flex flex-1 min-h-0 flex-col overflow-hidden ${padding} ${className ?? ''}`}
+      style={variant === 'column' ? { background: 'transparent' } : undefined}
+    >
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-2 shrink-0">
+          <div>
+            <h2
+              className="font-sans text-lg font-semibold tracking-tight"
+              style={{ color: 'color-mix(in srgb, var(--text-dark) 72%, var(--text-muted-custom) 28%)' }}
+            >
+              ToDo
+            </h2>
+            {variant === 'column' && (
+              <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                Filter and manage tasks; calendar on the left.
+              </p>
+            )}
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="shrink-0 gap-1 rounded-full h-8 text-xs"
+            style={{ background: 'var(--amber)' }}
+            onClick={openCreateDialog}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Create todo
+          </Button>
         </div>
 
-        {/* Scope + advanced — left-aligned (matches More filters pl-1) */}
         <div className="flex shrink-0 flex-col gap-2">
           <div className="pl-1">
-            <ScopeToggle scope={listScope} onScopeChange={handleScopeChange} />
+            <FilterModeToggle allOpenMode={allOpenMode} onAllOpenModeChange={handleAllOpenModeChange} />
           </div>
+
+          {!allOpenMode && (
+            <div className="flex flex-wrap items-end gap-3 pl-1">
+              <div className="flex min-w-[8.5rem] flex-1 flex-col gap-1 sm:max-w-[11rem]">
+                <Label htmlFor="todo-range-from" className="text-[11px] text-muted-foreground">
+                  From
+                </Label>
+                <Input
+                  id="todo-range-from"
+                  type="date"
+                  value={rangeFrom}
+                  onChange={(e) => setRangeFrom(e.target.value)}
+                  className="h-8 w-full min-w-0 text-xs"
+                />
+              </div>
+              <div className="flex min-w-[8.5rem] flex-1 flex-col gap-1 sm:max-w-[11rem]">
+                <Label htmlFor="todo-range-to" className="text-[11px] text-muted-foreground">
+                  To
+                </Label>
+                <Input
+                  id="todo-range-to"
+                  type="date"
+                  value={rangeTo}
+                  onChange={(e) => setRangeTo(e.target.value)}
+                  className="h-8 w-full min-w-0 text-xs"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 shrink-0 rounded-full px-2.5 text-[11px] text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  const t = todayDateInputValue()
+                  setRangeFrom(t)
+                  setRangeTo(t)
+                }}
+              >
+                Reset to today
+              </Button>
+            </div>
+          )}
+
           <button
             type="button"
             className="flex w-full items-center gap-2 rounded-xl py-2 pl-1 pr-2 text-left text-xs transition-colors hover:bg-accent/50"
@@ -906,10 +1179,10 @@ export function TodoView(): React.JSX.Element {
           </button>
 
           {advancedOpen && (
-            <div className="mt-2 rounded-2xl border border-border bg-card px-3 py-3">
+            <div className="mt-1 rounded-2xl bg-card/80 px-3 py-3">
               <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
                 <div className="flex min-w-[5.5rem] flex-col gap-1">
-                  {listScope === 'all' ? (
+                  {allOpenMode ? (
                     <>
                       <Label htmlFor="adv-completed-all" className="text-[11px] text-muted-foreground">
                         Completed
@@ -940,49 +1213,7 @@ export function TodoView(): React.JSX.Element {
                   </Label>
                   <Switch id="adv-overdue" checked={overdueOnly} onCheckedChange={setOverdueOnly} />
                 </div>
-
-                {listScope === 'range' && (
-                  <>
-                    <div className="flex min-w-[8.5rem] flex-1 flex-col gap-1 sm:max-w-[11rem]">
-                      <Label htmlFor="adv-date-from" className="text-[11px] text-muted-foreground">
-                        From
-                      </Label>
-                      <Input
-                        id="adv-date-from"
-                        type="date"
-                        value={customFrom ?? ''}
-                        onChange={(e) => setCustomFrom(e.target.value || null)}
-                        className="h-8 w-full min-w-0 text-xs"
-                      />
-                    </div>
-                    <div className="flex min-w-[8.5rem] flex-1 flex-col gap-1 sm:max-w-[11rem]">
-                      <Label htmlFor="adv-date-to" className="text-[11px] text-muted-foreground">
-                        To
-                      </Label>
-                      <Input
-                        id="adv-date-to"
-                        type="date"
-                        value={customTo ?? ''}
-                        onChange={(e) => setCustomTo(e.target.value || null)}
-                        className="h-8 w-full min-w-0 text-xs"
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 shrink-0 rounded-full px-2.5 text-[11px] text-muted-foreground hover:text-foreground"
-                      onClick={() => handleScopeChange('today')}
-                    >
-                      Use today
-                    </Button>
-                  </>
-                )}
               </div>
-
-              {listScope === 'range' && !rangeDatesReady && (
-                <p className="mt-2 text-[11px] text-muted-foreground">Set From and To to load that span.</p>
-              )}
 
               <Separator className="my-3" />
 
@@ -1018,14 +1249,12 @@ export function TodoView(): React.JSX.Element {
           )}
         </div>
 
-        <TodoComposer onCreateTodo={createTodo} />
-
         <div className="flex-1 min-h-0 overflow-y-auto">
           {isLoading ? (
             <p className="text-sm text-muted-foreground text-center py-8">Loading...</p>
           ) : filteredTodos.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
-              {showAll && !showCompletedInAllMode
+              {allOpenMode && !showCompletedInAllMode
                 ? 'No open todos.'
                 : 'No todos match these filters.'}
             </p>
@@ -1036,12 +1265,82 @@ export function TodoView(): React.JSX.Element {
                 todo={todo}
                 onToggleDone={toggleDone}
                 onDeleteTodo={deleteTodo}
-                onSelect={setSelectedTodo}
+                onSelect={(t) => setSelectedTodo(t)}
+                onQuickAdjustTime={openQuickTimeAdjust}
               />
             ))
           )}
         </div>
       </div>
+
+      <Dialog
+        open={Boolean(createDraft)}
+        onOpenChange={(open) => {
+          if (!open && !isCreating) setCreateDraft(null)
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <div className="space-y-4">
+            <DialogHeader className="space-y-1 text-left p-0">
+              <DialogTitle className="font-sans text-lg font-semibold tracking-tight">New todo</DialogTitle>
+            </DialogHeader>
+            <Input
+              value={createDraft?.title ?? ''}
+              onChange={(e) => setCreateDraft((d) => (d ? { ...d, title: e.target.value } : d))}
+              placeholder="Title…"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  void handleCreateSubmit()
+                }
+              }}
+            />
+            <div className="flex items-center justify-between gap-3 py-1 text-sm">
+              <Label htmlFor="todo-create-schedule" className="text-sm font-normal cursor-pointer">
+                Add schedule
+              </Label>
+              <Switch
+                id="todo-create-schedule"
+                checked={createDraft?.useSchedule ?? false}
+                onCheckedChange={(v) => setCreateDraft((d) => (d ? { ...d, useSchedule: v } : d))}
+              />
+            </div>
+            {createDraft?.useSchedule && (
+              <div className="flex items-center gap-3 text-sm flex-wrap">
+                <label className="text-muted-foreground w-12 shrink-0">From</label>
+                <Input
+                  type="time"
+                  value={createDraft?.startTime ?? ''}
+                  onChange={(e) =>
+                    setCreateDraft((d) => (d ? { ...d, startTime: e.target.value } : d))
+                  }
+                  className="w-32 h-8"
+                />
+                <label className="text-muted-foreground w-8 shrink-0">To</label>
+                <Input
+                  type="time"
+                  value={createDraft?.endTime ?? ''}
+                  onChange={(e) => setCreateDraft((d) => (d ? { ...d, endTime: e.target.value } : d))}
+                  className="w-32 h-8"
+                />
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setCreateDraft(null)} disabled={isCreating}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => void handleCreateSubmit()}
+                disabled={isCreating || !createDraft?.title.trim()}
+                style={{ background: 'var(--amber)' }}
+              >
+                {isCreating ? 'Creating…' : 'Create'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={Boolean(selectedTodo)}
@@ -1058,6 +1357,117 @@ export function TodoView(): React.JSX.Element {
             onToggleDone={toggleDone}
           />
         )}
+      </Dialog>
+
+      <Dialog
+        open={Boolean(quickTimeDraft)}
+        onOpenChange={(open) => {
+          if (!open) setQuickTimeDraft(null)
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <div className="space-y-4">
+            <DialogHeader className="space-y-1 text-left p-0">
+              <DialogTitle className="font-sans text-lg font-semibold tracking-tight">Quick time adjust</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-1">
+              <Label htmlFor="quick-time-date" className="text-xs text-muted-foreground">
+                Date
+              </Label>
+              <Input
+                id="quick-time-date"
+                type="date"
+                value={quickTimeDraft?.dateStr ?? ''}
+                onChange={(e) =>
+                  setQuickTimeDraft((d) => (d ? { ...d, dateStr: e.target.value } : d))
+                }
+                className="h-9 text-sm"
+              />
+            </div>
+            <div className="flex items-end gap-2">
+              <div className="space-y-1">
+                <Label htmlFor="quick-time-start" className="text-xs text-muted-foreground">
+                  Start
+                </Label>
+                <Input
+                  id="quick-time-start"
+                  type="time"
+                  value={quickTimeDraft?.startTime ?? ''}
+                  onChange={(e) =>
+                    setQuickTimeDraft((d) => (d ? { ...d, startTime: e.target.value } : d))
+                  }
+                  className="h-9 w-[7.25rem] text-sm"
+                />
+              </div>
+              <div className="space-y-1 flex-1">
+                <Label htmlFor="quick-time-duration" className="text-xs text-muted-foreground">
+                  Duration
+                </Label>
+                <Select
+                  value={quickTimeDraft?.durationMinutes ?? String(DEFAULT_DURATION_MIN)}
+                  onValueChange={(v) =>
+                    setQuickTimeDraft((d) => (d ? { ...d, durationMinutes: v } : d))
+                  }
+                >
+                  <SelectTrigger id="quick-time-duration" className="h-9 rounded-md text-sm">
+                    <SelectValue placeholder="Duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DURATION_OPTIONS_MINUTES.map((m) => (
+                      <SelectItem key={m} value={String(m)}>
+                        {m === 60 ? '1 hour' : `${m} min`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-between gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  if (!quickTimeDraft) return
+                  setQuickTimeSaveState('saving')
+                  try {
+                    await updateTodo(quickTimeDraft.todoId, { starts_at: null, ends_at: null, is_all_day: 0 })
+                    quickTimeLastSavedRef.current = JSON.stringify({
+                      todoId: quickTimeDraft.todoId,
+                      starts_at: null,
+                      ends_at: null,
+                      is_all_day: 0
+                    })
+                    setQuickTimeDraft(null)
+                  } finally {
+                    setQuickTimeSaveState('idle')
+                  }
+                }}
+                disabled={quickTimeSaveState === 'saving'}
+              >
+                Clear schedule
+              </Button>
+              <div className="flex gap-2">
+                <span className="self-center text-[11px] text-muted-foreground px-1">
+                  {quickTimeSaveState === 'saving'
+                    ? 'Saving…'
+                    : quickTimeSaveState === 'saved'
+                      ? 'Saved'
+                      : quickTimeSaveState === 'error'
+                        ? 'Save failed'
+                        : ''}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setQuickTimeDraft(null)}
+                  disabled={quickTimeSaveState === 'saving'}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
       </Dialog>
     </div>
   )
