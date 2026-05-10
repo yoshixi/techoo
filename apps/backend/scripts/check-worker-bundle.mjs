@@ -9,6 +9,10 @@ const BLOCKED_PATTERNS = [
     pattern: '[unenv] https.request is not implemented yet!',
     reason: 'Worker bundle still contains the Node HTTPS transport path.',
   },
+  {
+    pattern: 'https.request',
+    reason: 'Worker bundle still references Node https.request.',
+  },
 ]
 
 function listFiles(dir) {
@@ -68,7 +72,7 @@ function main() {
       console.error(`  reason: ${violation.reason}`)
     }
     console.error(
-      '\nThis means the built Worker still contains the exact unenv crash path that breaks Cloudflare Workers at runtime.'
+      '\nThis usually means @libsql/client resolved to a Node build instead of the Worker-safe web/fetch build.'
     )
     process.exit(1)
   }
