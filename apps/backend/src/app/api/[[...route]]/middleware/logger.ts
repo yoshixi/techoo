@@ -13,6 +13,8 @@ export function registerLoggerMiddleware(app: OpenAPIHono<AppBindings>) {
       path: c.req.path,
       ip,
       country,
+      cfRay: c.req.header('cf-ray'),
+      cfColo: c.req.raw.cf?.colo as string | undefined,
     })
 
     c.set('logger', logger)
