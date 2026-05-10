@@ -14,6 +14,11 @@ const require = createRequire(import.meta.url)
  * throws `[unenv] https.request is not implemented yet!` on Workers. The `web` build
  * uses fetch (tenanso, drizzle, main-db). Scripts and Vitest resolve `@libsql/client`
  * normally via Node and are unaffected by this Vite bundle alias.
+ *
+ * Keep `@libsql/client` pinned to `0.15.15` for now. The `0.17.x` line pulls in a
+ * newer hrana client that switched from a Workers-aware fetch layer to `cross-fetch`,
+ * and that path has repeatedly resolved to a Node `https.request` implementation in
+ * our Cloudflare Worker bundle.
  */
 export default defineConfig({
   plugins: [cloudflare(), ssrPlugin()],

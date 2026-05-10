@@ -37,3 +37,6 @@ jobs:
 
       - name: Test backend Worker runtime (Vitest pool)
         run: pnpm --filter @apps/backend run test:workers
+
+      - name: Audit backend Worker compatibility bundle
+        run: pnpm --filter @apps/backend run check:worker-compat
