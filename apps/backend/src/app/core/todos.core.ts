@@ -35,6 +35,7 @@ export const TodoQueryParamsModel = z.object({
   from: Rfc3339InputSchema.optional().openapi({ description: 'Range start (RFC3339)' }),
   to: Rfc3339InputSchema.optional().openapi({ description: 'Range end (RFC3339)' }),
   done: z.enum(['true', 'false']).optional().openapi({ description: 'Filter by completion status' }),
+  unscheduled: z.enum(['true', 'false']).optional().openapi({ description: 'When true, include unscheduled todos (null starts_at) even when a range is set; defaults to false when range is given' }),
   limit: z.coerce.number().int().min(1).max(500).optional().openapi({
     description: 'Max rows to return (default 100, max 500)',
   }),
