@@ -38,8 +38,43 @@ async function loadPostRelations(db: DB, postId: number): Promise<{ events: Link
   return { events: eventRows, todos: todoRows }
 }
 
-async function convertDbPostToApi(db: DB, row: SelectPost): Promise<Post> {
-  const { events, todos } = await loadPostRelations(db, row.id)
+async function loadPostRelationsBatch(
+  db: DB,
+  postIds: number[]
+): Promise<{ events: Map<number, LinkedEvent[]>; todos: Map<number, LinkedTodo[]> }> {
+  if (postIds.length === 0) return { events: new Map(), todos: new Map() }
+
+  const [eventRows, todoRows] = await Promise.all([
+    db
+      .select({ postId: postEventsTable.postId, id: calendarEventsTable.id, title: calendarEventsTable.title })
+      .from(postEventsTable)
+      .innerJoin(calendarEventsTable, eq(postEventsTable.eventId, calendarEventsTable.id))
+      .where(inArray(postEventsTable.postId, postIds)),
+    db
+      .select({ postId: postTodosTable.postId, id: todosTable.id, title: todosTable.title })
+      .from(postTodosTable)
+      .innerJoin(todosTable, eq(postTodosTable.todoId, todosTable.id))
+      .where(inArray(postTodosTable.postId, postIds)),
+  ])
+
+  const events = new Map<number, LinkedEvent[]>()
+  const todos = new Map<number, LinkedTodo[]>()
+
+  for (const row of eventRows) {
+    const list = events.get(row.postId) ?? []
+    list.push({ id: row.id, title: row.title })
+    events.set(row.postId, list)
+  }
+  for (const row of todoRows) {
+    const list = todos.get(row.postId) ?? []
+    list.push({ id: row.id, title: row.title })
+    todos.set(row.postId, list)
+  }
+
+  return { events, todos }
+}
+
+function convertDbPostToApiSync(row: SelectPost, events: LinkedEvent[], todos: LinkedTodo[]): Post {
   return {
     id: row.id,
     body: row.body,
@@ -47,6 +82,11 @@ async function convertDbPostToApi(db: DB, row: SelectPost): Promise<Post> {
     events,
     todos,
   }
+}
+
+async function convertDbPostToApi(db: DB, row: SelectPost): Promise<Post> {
+  const { events, todos } = await loadPostRelations(db, row.id)
+  return convertDbPostToApiSync(row, events, todos)
 }
 
 export async function getPostsByRange(
@@ -67,7 +107,9 @@ export async function getPostsByRange(
     .orderBy(postsTable.postedAt)
     .limit(limitRows)
 
-  return Promise.all(rows.map(row => convertDbPostToApi(db, row)))
+  if (rows.length === 0) return []
+  const { events, todos } = await loadPostRelationsBatch(db, rows.map(r => r.id))
+  return rows.map(row => convertDbPostToApiSync(row, events.get(row.id) ?? [], todos.get(row.id) ?? []))
 }
 
 /** All posts for the user, newest first, with offset pagination. */
@@ -89,7 +131,9 @@ export async function getPostsPaginated(
 
   const hasMore = rows.length > cap
   const slice = hasMore ? rows.slice(0, cap) : rows
-  const posts = await Promise.all(slice.map((row) => convertDbPostToApi(db, row)))
+  if (slice.length === 0) return { posts: [], has_more: false }
+  const { events, todos } = await loadPostRelationsBatch(db, slice.map(r => r.id))
+  const posts = slice.map(row => convertDbPostToApiSync(row, events.get(row.id) ?? [], todos.get(row.id) ?? []))
   return { posts, has_more: hasMore }
 }
 
