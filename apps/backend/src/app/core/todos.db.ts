@@ -25,15 +25,18 @@ export async function getTodosByRange(
   userId: number,
   from: number | undefined,
   to: number | undefined,
-  limitRows: number
+  limitRows: number,
+  scheduledOnly = false
 ): Promise<Todo[]> {
   const conditions = [eq(todosTable.userId, userId)]
-  // Single-day (and similar) windows should include unscheduled inbox todos (null starts_at),
-  // matching getIncompleteTodosInRange behavior but without filtering by done.
   if (from !== undefined && to !== undefined) {
-    conditions.push(
-      sql`(${todosTable.startsAt} IS NULL OR (${todosTable.startsAt} >= ${from} AND ${todosTable.startsAt} < ${to}))`
-    )
+    if (!scheduledOnly) {
+      conditions.push(
+        sql`(${todosTable.startsAt} IS NULL OR (${todosTable.startsAt} >= ${from} AND ${todosTable.startsAt} < ${to}))`
+      )
+    } else {
+      conditions.push(sql`(${todosTable.startsAt} >= ${from} AND ${todosTable.startsAt} < ${to})`)
+    }
   } else {
     if (from !== undefined) {
       conditions.push(sql`${todosTable.startsAt} >= ${from}`)
@@ -62,17 +65,22 @@ export async function getIncompleteTodosWithBounds(
   userId: number,
   from: number | undefined,
   to: number | undefined,
-  limitRows: number
+  limitRows: number,
+  scheduledOnly = false
 ): Promise<Todo[]> {
   const conditions = [eq(todosTable.userId, userId), eq(todosTable.done, 0)]
 
   if (from !== undefined && to !== undefined) {
-    conditions.push(
-      or(
-        isNull(todosTable.startsAt),
-        and(sql`${todosTable.startsAt} >= ${from}`, sql`${todosTable.startsAt} < ${to}`)
-      )!
-    )
+    if (!scheduledOnly) {
+      conditions.push(
+        or(
+          isNull(todosTable.startsAt),
+          and(sql`${todosTable.startsAt} >= ${from}`, sql`${todosTable.startsAt} < ${to}`)
+        )!
+      )
+    } else {
+      conditions.push(and(sql`${todosTable.startsAt} >= ${from}`, sql`${todosTable.startsAt} < ${to}`)!)
+    }
   } else {
     if (from !== undefined) {
       conditions.push(sql`${todosTable.startsAt} >= ${from}`)
@@ -92,15 +100,15 @@ export async function getIncompleteTodosWithBounds(
   return rows.map(convertDbTodoToApi)
 }
 
-/** Incomplete todos whose start falls in [from, to), plus unscheduled (`starts_at` null) inbox items. */
 export async function getIncompleteTodosInRange(
   db: DB,
   userId: number,
   from: number,
   to: number,
-  limitRows: number
+  limitRows: number,
+  scheduledOnly = false
 ): Promise<Todo[]> {
-  return getIncompleteTodosWithBounds(db, userId, from, to, limitRows)
+  return getIncompleteTodosWithBounds(db, userId, from, to, limitRows, scheduledOnly)
 }
 
 export async function getTodoById(db: DB, userId: number, todoId: number): Promise<Todo | null> {

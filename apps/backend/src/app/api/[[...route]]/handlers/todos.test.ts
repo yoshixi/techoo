@@ -124,4 +124,61 @@ describe('Todo Handlers', () => {
     const data = await res.json()
     expect(data.data.map((todo: { title: string }) => todo.title)).toEqual(['before upper bound'])
   })
+
+  it('excludes unscheduled todos by default when range is set', async () => {
+    await testContext.db.insert(todosTable).values([
+      { userId: testUser!.id, title: 'unscheduled' },
+      { userId: testUser!.id, title: 'inside range', startsAt: 250 },
+      { userId: testUser!.id, title: 'outside range', startsAt: 100 },
+    ])
+
+    const res = await request(
+      new Request('http://localhost/v1/todos?done=false&from=1970-01-01T00:03:20.000Z&to=1970-01-01T00:05:00.000Z')
+    )
+
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data.data.map((todo: { title: string }) => todo.title)).toEqual(['inside range'])
+  })
+
+  it('includes unscheduled todos when unscheduled=true with done=false', async () => {
+    await testContext.db.insert(todosTable).values([
+      { userId: testUser!.id, title: 'unscheduled' },
+      { userId: testUser!.id, title: 'inside range', startsAt: 250 },
+      { userId: testUser!.id, title: 'outside range', startsAt: 100 },
+    ])
+
+    const res = await request(
+      new Request(
+        'http://localhost/v1/todos?done=false&from=1970-01-01T00:03:20.000Z&to=1970-01-01T00:05:00.000Z&unscheduled=true'
+      )
+    )
+
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data.data.map((todo: { title: string }) => todo.title)).toEqual(['inside range', 'unscheduled'])
+  })
+
+  it('includes unscheduled todos when unscheduled=true without done filter', async () => {
+    await testContext.db.insert(todosTable).values([
+      { userId: testUser!.id, title: 'unscheduled' },
+      { userId: testUser!.id, title: 'inside range open', startsAt: 250 },
+      { userId: testUser!.id, title: 'inside range done', startsAt: 260, done: 1, doneAt: 270 },
+      { userId: testUser!.id, title: 'outside range', startsAt: 100 },
+    ])
+
+    const res = await request(
+      new Request(
+        'http://localhost/v1/todos?from=1970-01-01T00:03:20.000Z&to=1970-01-01T00:05:00.000Z&unscheduled=true'
+      )
+    )
+
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data.data.map((todo: { title: string }) => todo.title)).toEqual([
+      'inside range open',
+      'inside range done',
+      'unscheduled',
+    ])
+  })
 })

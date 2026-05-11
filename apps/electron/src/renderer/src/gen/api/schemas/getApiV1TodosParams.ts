@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { GetApiV1TodosDone } from './getApiV1TodosDone'
+import type { GetApiV1TodosUnscheduled } from './getApiV1TodosUnscheduled'
 
 export type GetApiV1TodosParams = {
   /**
@@ -20,6 +21,10 @@ export type GetApiV1TodosParams = {
    * Filter by completion status
    */
   done?: GetApiV1TodosDone
+  /**
+   * When true, include unscheduled todos (null starts_at) even when a range is set
+   */
+  unscheduled?: GetApiV1TodosUnscheduled
   /**
    * Max rows to return (default 100, max 500)
    * @minimum 1

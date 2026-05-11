@@ -16,20 +16,24 @@ export const listTodosHandler: RouteHandler<typeof listTodosRoute, AppBindings> 
   try {
     const db = c.get('db')
     const user = c.get('user')
-    const { from, to, done, limit } = c.req.valid('query')
+    const { from, to, done, unscheduled, limit } = c.req.valid('query')
     const lim = clampGenericListLimit(limit ?? undefined)
+    // When a full range is given, exclude unscheduled todos unless explicitly opted in
+    const scheduledOnly = (from !== undefined && to !== undefined)
+      ? unscheduled !== 'true'
+      : false
 
     let todos
     if (done === 'false') {
       if (from !== undefined && to !== undefined) {
-        todos = await getIncompleteTodosInRange(db, user.id, from, to, lim)
+        todos = await getIncompleteTodosInRange(db, user.id, from, to, lim, scheduledOnly)
       } else if (from !== undefined || to !== undefined) {
-        todos = await getIncompleteTodosWithBounds(db, user.id, from, to, lim)
+        todos = await getIncompleteTodosWithBounds(db, user.id, from, to, lim, scheduledOnly)
       } else {
         todos = await getIncompleteTodos(db, user.id, lim)
       }
     } else {
-      todos = await getTodosByRange(db, user.id, from, to, lim)
+      todos = await getTodosByRange(db, user.id, from, to, lim, scheduledOnly)
     }
 
     return c.json({ data: todos }, 200)
