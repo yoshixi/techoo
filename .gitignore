@@ -51,3 +51,4 @@ apps/electron/electron.vite.config.*.mjs
 AuthKey.p8
 certificate.p12
 
+.worktree
