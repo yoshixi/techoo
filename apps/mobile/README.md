@@ -37,3 +37,71 @@ The API validates `redirect_uri` from `expo-linking` before starting OAuth. **Ex
 - Modal routes: `todo/[id]`, `note/[id]`
 
 Legacy **tasks / timers / tags** UI has been removed in favor of **todos** and **posts**.
+
+## Android builds (EAS)
+
+Production EAS builds produce an **AAB** (Android App Bundle) for Google Play, not a directly installable APK.
+
+```bash
+# Production AAB (Play Store)
+nix develop --command pnpm --filter mobile run build:android
+
+# Internal APK (easier to sideload; no conversion needed)
+nix develop --command pnpm --filter mobile exec eas build -p android --profile preview
+```
+
+## Install on a device: AAB → APK
+
+AAB files cannot be installed on a phone directly. Use the repo script to convert one to a universal APK. It runs inside the Nix dev shell (`bundletool` and `adb` come from `flake.nix`).
+
+```bash
+# Convert (output: same path with .apk extension)
+nix develop --command ./scripts/aab-to-apk.sh path/to/app.aab
+
+# Explicit output path
+nix develop --command ./scripts/aab-to-apk.sh path/to/app.aab -o path/to/app.apk
+
+# Convert and install over USB (USB debugging enabled)
+nix develop --command ./scripts/aab-to-apk.sh path/to/app.aab --install
+```
+
+Via pnpm (note the `--` before script arguments):
+
+```bash
+nix develop --command pnpm run aab-to-apk -- path/to/app.aab -o path/to/app.apk
+```
+
+By default the script signs the APK with `~/.android/debug.keystore` (created if missing). That signature is fine for personal sideload testing; it is not the same as your EAS production keystore. For production signing, pass keystore flags:
+
+```bash
+nix develop --command ./scripts/aab-to-apk.sh path/to/app.aab \
+  --ks ./upload.jks --ks-pass pass:secret \
+  --ks-key-alias upload --key-pass pass:secret
+```
+
+See `./scripts/aab-to-apk.sh --help` for all options.
+
+### Install the APK on your phone
+
+**Option A — USB (adb)**
+
+1. On the phone: enable **Developer options** → **USB debugging**.
+2. Connect the phone and confirm the debugging prompt.
+3. Run:
+
+```bash
+nix develop --command ./scripts/aab-to-apk.sh path/to/app.aab --install
+```
+
+Or install an existing APK:
+
+```bash
+nix develop --command adb install -r path/to/app.apk
+```
+
+**Option B — without USB**
+
+1. Copy the `.apk` to the phone (AirDrop, cloud storage, email, etc.).
+2. Open the file on the phone.
+3. Allow **Install unknown apps** for the app you use to open the file (Files, Chrome, …) if prompted.
+4. Tap **Install**.

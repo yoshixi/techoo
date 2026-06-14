@@ -9,7 +9,8 @@
     "check-types": "turbo run check-types",
     "check:dup-deps": "node scripts/check-duplicate-dependency-versions.mjs",
     "test": "pnpm run check:dup-deps && turbo run test",
-    "release:electron": "./scripts/release-electron.sh"
+    "release:electron": "./scripts/release-electron.sh",
+    "aab-to-apk": "./scripts/aab-to-apk.sh"
   },
   "devDependencies": {
     "prettier": "^3.6.2",

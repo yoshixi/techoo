@@ -52,3 +52,6 @@ AuthKey.p8
 certificate.p12
 
 .worktree
+
+tmp
+
