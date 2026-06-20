@@ -134,13 +134,16 @@ download_aab_from_build() {
   artifact_url="$(parse_json_field "$build_json" "build.artifacts?.buildUrl || build.artifacts?.applicationArchiveUrl || build.artifacts?.url")"
   mkdir -p "$(dirname "$dest")"
   echo "Downloading AAB to $dest"
-  curl -fsSL "$artifact_url" -o "$dest"
+  curl -fSL --progress-bar "$artifact_url" -o "$dest"
+  echo ""
 }
 
 run_eas_build() {
   local build_json build_id
 
   echo "Starting EAS Android build (profile: $PROFILE)..."
+  echo "Cloud build in progress — this usually takes several minutes."
+  echo "Waiting for EAS to finish (build logs below)..."
   cd "$MOBILE_DIR"
 
   local eas_args=(
@@ -155,8 +158,10 @@ run_eas_build() {
     eas_args+=(-m "$BUILD_MESSAGE")
   fi
 
-  build_json="$(pnpm exec eas "${eas_args[@]}" 2>/dev/null)"
+  # With --json, EAS prints progress to stderr and JSON to stdout.
+  build_json="$(pnpm exec eas "${eas_args[@]}")"
   build_id="$(parse_json_field "$build_json" "build.id")"
+  echo ""
   echo "EAS build finished: $build_id"
   BUILD_ID="$build_id"
 }
