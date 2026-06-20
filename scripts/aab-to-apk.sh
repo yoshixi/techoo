@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Convert an Android App Bundle (.aab) to an installable universal APK (.apk).
 #
-# Requires the Nix dev shell (bundletool + JDK are provided by flake.nix):
+# Requires the Nix dev shell (bundletool, JDK 17, and adb are provided by flake.nix):
 #   nix develop --command ./scripts/aab-to-apk.sh path/to/app.aab
 #   nix develop --command ./scripts/aab-to-apk.sh path/to/app.aab -o path/to/app.apk
 #

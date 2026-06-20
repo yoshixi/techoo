@@ -96,7 +96,9 @@ Auth required before running:
 - **EAS:** `eas login` (or set `EXPO_TOKEN` for CI)
 - **R2:** `wrangler login` (or set `CLOUDFLARE_API_TOKEN` for CI)
 
-Defaults: EAS `production` profile, artifacts in `tmp/techoo-latest.{aab,apk}`, R2 key `sandbox/techoo-latest.apk`.
+Defaults: EAS `production` profile (must produce an AAB), artifacts in `tmp/techoo-latest.{aab,apk}`, R2 key `sandbox/techoo-latest.apk`.
+
+The `preview` profile builds an APK directly — use that for sideloading instead of this pipeline.
 
 Partial runs:
 
@@ -130,6 +132,8 @@ Or install an existing APK:
 ```bash
 nix develop --command adb install -r path/to/app.apk
 ```
+
+If you already have a Play Store or production-signed install of Techoo, uninstall it first. APKs re-signed with the debug keystore cannot upgrade an existing production-signed app (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`).
 
 **Option B — without USB**
 

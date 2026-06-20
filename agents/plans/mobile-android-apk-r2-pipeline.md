@@ -30,9 +30,11 @@ nix develop --command ./scripts/release-android-apk.sh
 
 ## Defaults
 
-- EAS profile: `production`
+- EAS profile: `production` (must output an AAB; `preview` builds an APK — sideload that directly)
+- EAS config: `apps/mobile/eas.json` and `apps/mobile/app.json`
 - Artifacts: `tmp/techoo-latest.{aab,apk}`
 - R2 bucket/key: `sandbox` / `techoo-latest.apk` (override with `--r2-bucket`, `--r2-key`, or env)
+- APK signing: debug keystore via `aab-to-apk.sh` (fine for sandbox sideloading; not the EAS production key)
 
 ## Partial runs
 

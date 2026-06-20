@@ -34,7 +34,7 @@ Usage: release-android-apk.sh [options]
 Pipeline: EAS Android build -> AAB -> universal APK -> Cloudflare R2 upload.
 
 Options:
-  -e, --profile NAME      EAS build profile (default: production)
+  -e, --profile NAME      EAS build profile (default: production; must produce an AAB)
   -m, --message TEXT      EAS build message
       --build-id ID       Skip build; download this finished EAS build instead
       --aab PATH          Skip build/download; convert and upload this .aab file
@@ -113,7 +113,17 @@ ensure_wrangler_auth() {
 fetch_build_json() {
   local id="$1"
   cd "$MOBILE_DIR"
-  pnpm exec eas build:view "$id" --json 2>/dev/null
+  pnpm exec eas build:view "$id" --json
+}
+
+verify_aab() {
+  local file="$1"
+
+  if ! unzip -l "$file" 2>/dev/null | grep -q 'BundleConfig.pb'; then
+    echo "Error: artifact is not an AAB (missing BundleConfig.pb)." >&2
+    echo "Use the production profile, or sideload a preview APK directly without conversion." >&2
+    exit 1
+  fi
 }
 
 download_aab_from_build() {
@@ -136,6 +146,7 @@ download_aab_from_build() {
   echo "Downloading AAB to $dest"
   curl -fSL --progress-bar "$artifact_url" -o "$dest"
   echo ""
+  verify_aab "$dest"
 }
 
 run_eas_build() {
