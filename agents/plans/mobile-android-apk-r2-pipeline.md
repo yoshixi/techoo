@@ -16,7 +16,7 @@ nix develop --command ./scripts/release-android-apk.sh
 
 ## Steps
 
-1. **EAS build** — `eas build -p android -e production --wait --json --non-interactive` from `apps/mobile`
+1. **EAS build** — `eas build -p android --profile production --wait --json --non-interactive` from `apps/mobile`
 2. **Download AAB** — artifact URL from `eas build:view <id> --json`
 3. **Convert** — existing `scripts/aab-to-apk.sh` (debug keystore by default)
 4. **Upload** — `wrangler r2 object put sandbox/techoo-latest.apk --remote`

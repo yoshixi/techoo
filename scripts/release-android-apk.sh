@@ -54,7 +54,7 @@ Examples:
   nix develop --command ./scripts/release-android-apk.sh
   nix develop --command ./scripts/release-android-apk.sh --build-id 00000000-0000-0000-0000-000000000000
   nix develop --command ./scripts/release-android-apk.sh --aab tmp/app.aab --skip-upload
-  nix develop --command ./scripts/release-android-apk.sh -e preview --install
+  nix develop --command ./scripts/release-android-apk.sh --profile preview --install
 EOF
 }
 
@@ -160,7 +160,7 @@ run_eas_build() {
   local eas_args=(
     build
     -p android
-    -e "$PROFILE"
+    --profile "$PROFILE"
     --wait
     --json
     --non-interactive

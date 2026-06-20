@@ -167,7 +167,7 @@ esac
 require_cmd bundletool
 require_cmd unzip
 
-APKS_FILE="$(mktemp "${TMPDIR:-/tmp}/aab-to-apk.XXXXXX.apks")"
+APKS_FILE="$(mktemp "${TMPDIR:-/tmp}/aab-to-apk.XXXXXX")"
 cleanup() {
   if [[ "$KEEP_APKS" == false ]]; then
     rm -f "$APKS_FILE"
