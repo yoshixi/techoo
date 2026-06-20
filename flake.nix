@@ -18,6 +18,10 @@
             pkgs.git
             pkgs.pnpm
             pkgs.turso-cli
+            pkgs.bundletool
+            pkgs.android-tools
+            pkgs.jdk17
+            pkgs.wrangler
             python
           ];
 
