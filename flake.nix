@@ -20,6 +20,7 @@
             pkgs.turso-cli
             pkgs.bundletool
             pkgs.android-tools
+            pkgs.wrangler
             python
           ];
 

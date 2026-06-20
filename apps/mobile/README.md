@@ -81,6 +81,38 @@ nix develop --command ./scripts/aab-to-apk.sh path/to/app.aab \
 
 See `./scripts/aab-to-apk.sh --help` for all options.
 
+## Release pipeline: EAS → APK → R2
+
+For a full cloud build, conversion, and upload to the `sandbox` R2 bucket:
+
+```bash
+nix develop --command ./scripts/release-android-apk.sh
+# or
+nix develop --command pnpm run release:android-apk
+```
+
+Auth required before running:
+
+- **EAS:** `eas login` (or set `EXPO_TOKEN` for CI)
+- **R2:** `wrangler login` (or set `CLOUDFLARE_API_TOKEN` for CI)
+
+Defaults: EAS `production` profile, artifacts in `tmp/techoo-latest.{aab,apk}`, R2 key `sandbox/techoo-latest.apk`.
+
+Partial runs:
+
+```bash
+# Reuse a finished EAS build
+nix develop --command ./scripts/release-android-apk.sh --build-id <build-id>
+
+# Convert and upload an existing AAB only
+nix develop --command ./scripts/release-android-apk.sh --aab path/to/app.aab
+
+# Build + convert locally without uploading
+nix develop --command ./scripts/release-android-apk.sh --skip-upload
+```
+
+See `./scripts/release-android-apk.sh --help` and `agents/plans/mobile-android-apk-r2-pipeline.md`.
+
 ### Install the APK on your phone
 
 **Option A — USB (adb)**

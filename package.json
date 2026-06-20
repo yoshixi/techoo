@@ -10,6 +10,7 @@
     "check:dup-deps": "node scripts/check-duplicate-dependency-versions.mjs",
     "test": "pnpm run check:dup-deps && turbo run test",
     "release:electron": "./scripts/release-electron.sh",
+    "release:android-apk": "./scripts/release-android-apk.sh",
     "aab-to-apk": "./scripts/aab-to-apk.sh"
   },
   "devDependencies": {
