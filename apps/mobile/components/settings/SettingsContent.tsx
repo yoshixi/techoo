@@ -267,12 +267,12 @@ export function SettingsContent() {
         </View>
       </View>
 
-      {/* Daily timeline hours */}
+      {/* Daily schedule hours */}
       <View className="border border-border rounded-lg px-5 py-4">
         <View className="mb-3">
-          <Text className="text-sm font-medium">Daily timeline hours</Text>
+          <Text className="text-sm font-medium">Daily schedule hours</Text>
           <Text className="text-xs text-muted-foreground">
-            Controls which hours appear on the ToDos timeline.
+            Controls which hours appear on the ToDos schedule.
           </Text>
         </View>
 

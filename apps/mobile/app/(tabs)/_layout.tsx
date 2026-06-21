@@ -4,6 +4,7 @@ import { CheckSquare, MessageSquare } from 'lucide-react-native';
 import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { NAV_THEME, THEME } from '@/lib/theme';
 import { useAuth } from '@/hooks/useAuth';
+import { renderAppTabHeader } from '@/components/navigation/renderAppTabHeader';
 
 export default function TabLayout() {
   const { colorScheme } = useColorScheme();
@@ -55,7 +56,8 @@ export default function TabLayout() {
           shadowColor: 'transparent',
           ...(Platform.OS === 'android' ? { borderTopWidth: 1 } : {}),
         },
-        headerShown: false,
+        headerShown: true,
+        header: renderAppTabHeader,
       }}
     >
       <Tabs.Screen
@@ -72,11 +74,11 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <MessageSquare color={color} size={size} />,
         }}
       />
-      <Tabs.Screen name="library" options={{ href: null }} />
-      <Tabs.Screen name="calendar" options={{ href: null }} />
-      <Tabs.Screen name="todos" options={{ href: null }} />
-      <Tabs.Screen name="notes" options={{ href: null }} />
-      <Tabs.Screen name="settings" options={{ href: null }} />
+      <Tabs.Screen name="library" options={{ href: null, title: 'Library' }} />
+      <Tabs.Screen name="calendar" options={{ href: null, title: 'Calendar' }} />
+      <Tabs.Screen name="todos" options={{ href: null, title: 'To-do' }} />
+      <Tabs.Screen name="notes" options={{ href: null, title: 'Notes' }} />
+      <Tabs.Screen name="settings" options={{ href: null, title: 'Settings' }} />
     </Tabs>
   );
 }

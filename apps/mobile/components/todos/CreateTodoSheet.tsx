@@ -6,13 +6,14 @@ import { Text } from '@/components/ui/text';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { formatDateTime } from '@/lib/time';
+import type { Todo } from '@/gen/api/schemas';
 
 export interface CreateTodoSheetProps {
   visible: boolean;
   onClose: () => void;
   initialStartAt?: Date | null;
   initialEndAt?: Date | null;
-  onCreate: (title: string, startsAt?: Date, endsAt?: Date) => Promise<void>;
+  onCreate: (title: string, startsAt?: Date, endsAt?: Date) => Promise<Todo>;
 }
 
 export function CreateTodoSheet({

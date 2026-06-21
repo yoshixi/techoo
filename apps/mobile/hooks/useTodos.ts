@@ -7,6 +7,7 @@ import {
   deleteApiV1TodosId,
 } from '@/gen/api/endpoints/techooAPI.gen'
 import type { ErrorResponse, GetApiV1TodosParams, Todo, UpdateTodo } from '@/gen/api/schemas'
+import { revalidateAllTodoLists } from '@/lib/revalidateTodoLists'
 import { toRfc3339 } from '@/lib/time'
 
 const TODO_LIST_LIMIT = 500
@@ -45,12 +46,13 @@ export function useTodos(options?: {
   to?: Date
   showAll?: boolean
   includeCompletedInRange?: boolean
+  includeDone?: boolean
   fetchAll?: boolean
 }): {
   todos: Todo[]
   isLoading: boolean
   error: ErrorResponse | undefined
-  createTodo: (title: string, startsAt?: Date, endsAt?: Date, isAllDay?: number) => Promise<void>
+  createTodo: (title: string, startsAt?: Date, endsAt?: Date, isAllDay?: number) => Promise<Todo>
   updateTodo: (
     id: number,
     updates: {
@@ -72,10 +74,15 @@ export function useTodos(options?: {
     if (options?.from != null && options?.to != null) {
       const from = toRfc3339(options.from)
       const to = toRfc3339(options.to)
-      const includeCompleted = options.includeCompletedInRange !== false
-      if (includeCompleted) return { from, to, limit: TODO_LIST_LIMIT }
-      return { from, to, done: 'false' as const, limit: TODO_LIST_LIMIT }
+      if (options.includeDone) {
+        return { from, to, limit: TODO_LIST_LIMIT }
+      }
+      if (options.includeCompletedInRange === false) {
+        return { from, to, done: 'false' as const, limit: TODO_LIST_LIMIT }
+      }
+      return { from, to, limit: TODO_LIST_LIMIT }
     }
+    if (options?.includeDone) return { limit: TODO_LIST_LIMIT }
     return { done: 'false' as const, limit: TODO_LIST_LIMIT }
   }, [
     options?.from?.getTime(),
@@ -83,6 +90,7 @@ export function useTodos(options?: {
     options?.showAll,
     options?.fetchAll,
     options?.includeCompletedInRange,
+    options?.includeDone,
   ])
 
   /** Primitive tuple so SWR cache always tracks range/filters (avoids stale lists when the day changes). */
@@ -106,7 +114,7 @@ export function useTodos(options?: {
   const listOpenOnly = params?.done === 'false'
 
   const createTodo = useCallback(
-    async (title: string, startsAt?: Date, endsAt?: Date, isAllDay?: number) => {
+    async (title: string, startsAt?: Date, endsAt?: Date, isAllDay?: number): Promise<Todo> => {
       const nowIso = toRfc3339(new Date())
       const allDay = isAllDay ?? 0
       const tempId = -Math.abs(Date.now())
@@ -135,15 +143,10 @@ export function useTodos(options?: {
           ends_at: endsAt != null ? toRfc3339(endsAt) : undefined,
           is_all_day: allDay,
         })
-        mutate(
-          (current) => {
-            if (!current) return { data: [res.data] }
-            return { data: current.data.map((t) => (t.id === tempId ? res.data : t)) }
-          },
-          { revalidate: false }
-        )
+        await revalidateAllTodoLists()
+        return res.data
       } catch (err) {
-        await mutate()
+        await revalidateAllTodoLists()
         throw err
       }
     },
@@ -171,20 +174,10 @@ export function useTodos(options?: {
         { revalidate: false }
       )
       try {
-        const res = await patchApiV1TodosId(id, { done: newDone })
-        if (newDone === 1 && listOpenOnly) {
-          // Already dropped from cache; nothing to merge.
-        } else {
-          mutate(
-            (current) => {
-              if (!current) return current
-              return { data: current.data.map((t) => (t.id === id ? res.data : t)) }
-            },
-            { revalidate: false }
-          )
-        }
+        await patchApiV1TodosId(id, { done: newDone })
+        await revalidateAllTodoLists()
       } catch (err) {
-        await mutate()
+        await revalidateAllTodoLists()
         throw err
       }
     },
@@ -219,19 +212,10 @@ export function useTodos(options?: {
         { revalidate: false }
       )
       try {
-        const res = await patchApiV1TodosId(id, updatesToPatch(updates))
-        mutate(
-          (current) => {
-            if (!current) return current
-            if (listOpenOnly && res.data.done === 1) {
-              return { data: current.data.filter((t) => t.id !== id) }
-            }
-            return { data: current.data.map((t) => (t.id === id ? res.data : t)) }
-          },
-          { revalidate: false }
-        )
+        await patchApiV1TodosId(id, updatesToPatch(updates))
+        await revalidateAllTodoLists()
       } catch (err) {
-        await mutate()
+        await revalidateAllTodoLists()
         throw err
       }
     },
@@ -249,8 +233,9 @@ export function useTodos(options?: {
       )
       try {
         await deleteApiV1TodosId(id)
+        await revalidateAllTodoLists()
       } catch (err) {
-        await mutate()
+        await revalidateAllTodoLists()
         throw err
       }
     },

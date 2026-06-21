@@ -1,6 +1,5 @@
 import { useCallback, useState, useMemo } from 'react';
 import { View, FlatList, Pressable, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Check } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
@@ -64,7 +63,7 @@ export default function TodosScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
+    <View className="flex-1 bg-background">
       <View className="flex-1 px-4 pt-3">
         <Text className="mb-1 text-xl font-semibold">To-do</Text>
         <Text className="mb-3 text-sm text-muted-foreground">Open items across days. Tap to edit.</Text>
@@ -81,6 +80,6 @@ export default function TodosScreen() {
           contentContainerStyle={{ paddingBottom: 100 }}
         />
       </View>
-    </SafeAreaView>
+    </View>
   );
 }

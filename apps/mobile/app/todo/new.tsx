@@ -8,6 +8,7 @@ import { Text } from '@/components/ui/text';
 import { useTodos } from '@/hooks/useTodos';
 import { startOfLocalDay } from '@/lib/dayBounds';
 import { formatDateTime, formatTime } from '@/lib/time';
+import { postCreateIntentForTodo, setTodosPostCreateIntent } from '@/lib/todosScreenIntent';
 
 type ScheduleMode = 'later' | 'timed' | 'allDay';
 type DurationPreset = '15' | '30' | '60' | 'custom';
@@ -73,10 +74,14 @@ export default function NewTodoScreen() {
     try {
       if (mode === 'later') {
         await createTodo(trimmed);
+        setTodosPostCreateIntent(postCreateIntentForTodo({ mode: 'later' }));
       } else if (mode === 'allDay') {
-        await createTodo(trimmed, startOfLocalDay(date), undefined, 1);
+        const dayStart = startOfLocalDay(date);
+        await createTodo(trimmed, dayStart, undefined, 1);
+        setTodosPostCreateIntent(postCreateIntentForTodo({ mode: 'allDay', startsAt: dayStart }));
       } else {
         await createTodo(trimmed, startAt, endAt, 0);
+        setTodosPostCreateIntent(postCreateIntentForTodo({ mode: 'timed', startsAt: startAt }));
       }
       void notes; // reserved for future API support
       router.back();
@@ -134,7 +139,7 @@ export default function NewTodoScreen() {
 
         {mode === 'later' ? (
           <Text className="mb-4 text-sm text-muted-foreground">
-            No start time. This item appears in the Later section.
+            No start time. Opens the List tab after saving.
           </Text>
         ) : null}
 
@@ -155,6 +160,14 @@ export default function NewTodoScreen() {
 
         {mode === 'timed' ? (
           <View className="mb-4">
+            <Text className="mb-1 text-xs text-muted-foreground">Date</Text>
+            <Pressable
+              onPress={() => setPickerTarget('date')}
+              className="mb-3 rounded-xl border border-border/40 bg-card/70 px-3 py-3"
+            >
+              <Text className="text-sm text-foreground">{date.toLocaleDateString()}</Text>
+            </Pressable>
+
             <Text className="mb-1 text-xs text-muted-foreground">Start time</Text>
             <Pressable
               onPress={() => setPickerTarget('time')}
@@ -201,6 +214,9 @@ export default function NewTodoScreen() {
             ) : null}
             <Text className="text-sm text-muted-foreground">
               Ends at: {durationMin > 0 ? formatDateTime(endAt) : 'Enter valid duration'}
+            </Text>
+            <Text className="mt-2 text-sm text-muted-foreground">
+              Opens Schedule on this date after saving.
             </Text>
           </View>
         ) : null}
