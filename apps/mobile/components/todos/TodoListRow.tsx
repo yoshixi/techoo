@@ -27,22 +27,31 @@ export function TodoListRow({
   todo,
   onPress,
   onToggleDone,
+  completing = false,
 }: {
   todo: Todo;
   onPress: () => void;
   onToggleDone: () => void;
+  completing?: boolean;
 }) {
   const isDone = todo.done === 1;
+  const showCheck = isDone || completing;
   const checkSize = todo.is_all_day === 1 ? 'h-9 w-9' : 'h-8 w-8';
   const checkIcon = todo.is_all_day === 1 ? 18 : 16;
+  const circleClass = completing
+    ? `${checkSize} items-center justify-center rounded-full border border-amber-700/30 bg-amber-600`
+    : `${checkSize} items-center justify-center rounded-full bg-muted/70`;
 
   return (
     <View className="mb-2 flex-row items-center gap-2 rounded-xl bg-card/60 px-3 py-3 active:opacity-80">
-      <Pressable
-        onPress={onToggleDone}
-        className={`${checkSize} items-center justify-center rounded-full bg-muted/70`}
-      >
-        {isDone ? <Check size={checkIcon} className="text-green-600" /> : null}
+      <Pressable onPress={onToggleDone} className={circleClass}>
+        {showCheck ? (
+          completing ? (
+            <Check size={checkIcon} color="#FFF7ED" strokeWidth={2.25} />
+          ) : (
+            <Check size={checkIcon} className="text-green-600" />
+          )
+        ) : null}
       </Pressable>
       <Pressable onPress={onPress} className="min-w-0 flex-1">
         <Text className={`text-sm ${isDone ? 'text-muted-foreground line-through' : 'text-foreground'}`}>

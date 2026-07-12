@@ -1,35 +1,21 @@
 import { useMemo, useState, useCallback } from 'react';
-import { View, Pressable, TextInput, Modal, Platform, ActivityIndicator } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { View, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColorScheme } from 'nativewind';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { useTodos } from '@/hooks/useTodos';
 import { startOfLocalDay } from '@/lib/dayBounds';
-import { formatDateTime, formatTime } from '@/lib/time';
+import {
+  buildScheduleUpdate,
+  durationMinutes,
+  type DurationPreset,
+  type TodoScheduleMode,
+} from '@/lib/todoSchedule';
 import { postCreateIntentForTodo, setTodosPostCreateIntent } from '@/lib/todosScreenIntent';
-
-type ScheduleMode = 'later' | 'timed' | 'allDay';
-type DurationPreset = '15' | '30' | '60' | 'custom';
-type PickerTarget = 'date' | 'time';
-
-function mergeDateAndTime(date: Date, time: Date): Date {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    time.getHours(),
-    time.getMinutes(),
-    0,
-    0
-  );
-}
+import { TodoScheduleFields } from '@/components/todos/TodoScheduleFields';
 
 export default function NewTodoScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { colorScheme } = useColorScheme();
   const params = useLocalSearchParams<{ date?: string }>();
   const anchorDate = useMemo(() => {
     const parsed = params.date ? new Date(params.date) : new Date();
@@ -38,7 +24,7 @@ export default function NewTodoScreen() {
 
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
-  const [mode, setMode] = useState<ScheduleMode>('later');
+  const [mode, setMode] = useState<TodoScheduleMode>('later');
   const [date, setDate] = useState(() => startOfLocalDay(anchorDate));
   const [startTime, setStartTime] = useState(() => {
     const now = new Date();
@@ -47,50 +33,45 @@ export default function NewTodoScreen() {
   });
   const [durationPreset, setDurationPreset] = useState<DurationPreset>('30');
   const [customDurationMin, setCustomDurationMin] = useState('45');
-  const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const { createTodo } = useTodos();
 
-  const durationMin = useMemo(() => {
-    if (durationPreset !== 'custom') return Number(durationPreset);
-    const parsed = Number(customDurationMin);
-    if (!Number.isFinite(parsed)) return 0;
-    return Math.max(0, Math.floor(parsed));
-  }, [durationPreset, customDurationMin]);
-
-  const startAt = useMemo(() => mergeDateAndTime(date, startTime), [date, startTime]);
-  const endAt = useMemo(
-    () => new Date(startAt.getTime() + Math.max(durationMin, 0) * 60_000),
-    [startAt, durationMin]
+  const durationMin = useMemo(
+    () => durationMinutes(durationPreset, customDurationMin),
+    [durationPreset, customDurationMin]
   );
 
   const saveDisabled =
-    !title.trim() || submitting || (mode === 'timed' && (!Number.isFinite(durationMin) || durationMin <= 0));
+    !title.trim() || submitting || (mode === 'timed' && durationMin <= 0);
 
   const onSave = useCallback(async () => {
     const trimmed = title.trim();
     if (!trimmed) return;
     setSubmitting(true);
     try {
+      const schedule = buildScheduleUpdate(mode, date, startTime, durationMin);
       if (mode === 'later') {
         await createTodo(trimmed);
         setTodosPostCreateIntent(postCreateIntentForTodo({ mode: 'later' }));
       } else if (mode === 'allDay') {
-        const dayStart = startOfLocalDay(date);
-        await createTodo(trimmed, dayStart, undefined, 1);
-        setTodosPostCreateIntent(postCreateIntentForTodo({ mode: 'allDay', startsAt: dayStart }));
+        await createTodo(trimmed, schedule.starts_at ?? undefined, undefined, 1);
+        setTodosPostCreateIntent(
+          postCreateIntentForTodo({ mode: 'allDay', startsAt: schedule.starts_at ?? undefined })
+        );
       } else {
-        await createTodo(trimmed, startAt, endAt, 0);
-        setTodosPostCreateIntent(postCreateIntentForTodo({ mode: 'timed', startsAt: startAt }));
+        await createTodo(trimmed, schedule.starts_at ?? undefined, schedule.ends_at ?? undefined, 0);
+        setTodosPostCreateIntent(
+          postCreateIntentForTodo({ mode: 'timed', startsAt: schedule.starts_at ?? undefined })
+        );
       }
-      void notes; // reserved for future API support
+      void notes;
       router.back();
     } catch {
-      // API error is surfaced in customInstance; avoid unhandled promise rejection in UI event.
+      // API error is surfaced in customInstance.
     } finally {
       setSubmitting(false);
     }
-  }, [title, mode, createTodo, date, startAt, endAt, router, notes]);
+  }, [title, mode, createTodo, date, startTime, durationMin, router, notes]);
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
@@ -116,109 +97,23 @@ export default function NewTodoScreen() {
           className="mb-4 rounded-xl border border-border/40 bg-card/70 px-3 py-3 text-base text-foreground"
         />
 
-        <Text className="mb-2 text-xs text-muted-foreground">Schedule</Text>
-        <View className="mb-4 flex-row gap-2">
-          {([
-            ['later', 'Later'],
-            ['timed', 'Timed'],
-            ['allDay', 'All day'],
-          ] as const).map(([value, label]) => (
-            <Pressable
-              key={value}
-              onPress={() => setMode(value)}
-              className={`rounded-full border px-3 py-2 ${
-                mode === value ? 'border-primary/35 bg-primary/15' : 'border-border/35 bg-card/70'
-              }`}
-            >
-              <Text className={`text-xs font-semibold ${mode === value ? 'text-primary' : 'text-foreground'}`}>
-                {label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {mode === 'later' ? (
-          <Text className="mb-4 text-sm text-muted-foreground">
-            No start time. Opens the List tab after saving.
-          </Text>
-        ) : null}
-
-        {mode === 'allDay' ? (
-          <View className="mb-4">
-            <Text className="mb-1 text-xs text-muted-foreground">Date</Text>
-            <Pressable
-              onPress={() => setPickerTarget('date')}
-              className="mb-2 rounded-xl border border-border/40 bg-card/70 px-3 py-3"
-            >
-              <Text className="text-sm text-foreground">{date.toLocaleDateString()}</Text>
-            </Pressable>
-            <Text className="text-sm text-muted-foreground">
-              Runs all day on the selected date.
-            </Text>
-          </View>
-        ) : null}
+        <TodoScheduleFields
+          mode={mode}
+          onModeChange={setMode}
+          date={date}
+          onDateChange={setDate}
+          startTime={startTime}
+          onStartTimeChange={setStartTime}
+          durationPreset={durationPreset}
+          onDurationPresetChange={setDurationPreset}
+          customDurationMin={customDurationMin}
+          onCustomDurationMinChange={setCustomDurationMin}
+        />
 
         {mode === 'timed' ? (
-          <View className="mb-4">
-            <Text className="mb-1 text-xs text-muted-foreground">Date</Text>
-            <Pressable
-              onPress={() => setPickerTarget('date')}
-              className="mb-3 rounded-xl border border-border/40 bg-card/70 px-3 py-3"
-            >
-              <Text className="text-sm text-foreground">{date.toLocaleDateString()}</Text>
-            </Pressable>
-
-            <Text className="mb-1 text-xs text-muted-foreground">Start time</Text>
-            <Pressable
-              onPress={() => setPickerTarget('time')}
-              className="mb-3 rounded-xl border border-border/40 bg-card/70 px-3 py-3"
-            >
-              <Text className="text-sm text-foreground">{formatTime(startAt)}</Text>
-            </Pressable>
-
-            <Text className="mb-2 text-xs text-muted-foreground">Duration</Text>
-            <View className="mb-2 flex-row gap-2">
-              {([
-                ['15', '15m'],
-                ['30', '30m'],
-                ['60', '1h'],
-                ['custom', 'Custom'],
-              ] as const).map(([value, label]) => (
-                <Pressable
-                  key={value}
-                  onPress={() => setDurationPreset(value)}
-                  className={`rounded-full border px-3 py-2 ${
-                    durationPreset === value ? 'border-primary/35 bg-primary/15' : 'border-border/35 bg-card/70'
-                  }`}
-                >
-                  <Text
-                    className={`text-xs font-semibold ${
-                      durationPreset === value ? 'text-primary' : 'text-foreground'
-                    }`}
-                  >
-                    {label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            {durationPreset === 'custom' ? (
-              <TextInput
-                value={customDurationMin}
-                onChangeText={setCustomDurationMin}
-                keyboardType={Platform.OS === 'ios' ? 'number-pad' : 'numeric'}
-                placeholder="Minutes"
-                placeholderTextColor="#9ca3af"
-                className="mb-2 rounded-xl border border-border/40 bg-card/70 px-3 py-3 text-sm text-foreground"
-              />
-            ) : null}
-            <Text className="text-sm text-muted-foreground">
-              Ends at: {durationMin > 0 ? formatDateTime(endAt) : 'Enter valid duration'}
-            </Text>
-            <Text className="mt-2 text-sm text-muted-foreground">
-              Opens Schedule on this date after saving.
-            </Text>
-          </View>
+          <Text className="-mt-4 mb-4 text-sm text-muted-foreground">
+            Opens Schedule on this date after saving.
+          </Text>
         ) : null}
 
         <Text className="mb-1 text-xs text-muted-foreground">Notes (optional)</Text>
@@ -233,40 +128,7 @@ export default function NewTodoScreen() {
         />
       </View>
 
-      <Modal visible={pickerTarget !== null} transparent animationType="fade" onRequestClose={() => setPickerTarget(null)}>
-        <Pressable className="flex-1 justify-end bg-black/40" onPress={() => setPickerTarget(null)}>
-          <Pressable
-            className="rounded-t-3xl bg-card pb-4"
-            style={{ paddingBottom: Math.max(insets.bottom, 12) }}
-            onPress={(event) => event.stopPropagation()}
-          >
-            {pickerTarget ? (
-              <DateTimePicker
-                value={pickerTarget === 'date' ? date : startAt}
-                mode={pickerTarget}
-                display="spinner"
-                themeVariant={colorScheme === 'dark' ? 'dark' : 'light'}
-                onChange={(event, selected) => {
-                  if (Platform.OS === 'android' && event.type === 'dismissed') {
-                    setPickerTarget(null);
-                    return;
-                  }
-                  if (!selected) return;
-                  if (pickerTarget === 'date') {
-                    setDate(startOfLocalDay(selected));
-                  } else {
-                    setStartTime(selected);
-                  }
-                  if (Platform.OS === 'android') setPickerTarget(null);
-                }}
-              />
-            ) : null}
-            <Pressable onPress={() => setPickerTarget(null)} className="items-center pt-2">
-              <Text className="text-base font-semibold text-primary">Done</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      {submitting ? <ActivityIndicator className="py-2" /> : null}
     </SafeAreaView>
   );
 }

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
 import { Text } from '@/components/ui/text';
 import type { Todo } from '@/gen/api/schemas';
@@ -6,6 +6,8 @@ import { listEmptyMessage } from '@/lib/todoListFilters';
 import type { TodosListFilters } from '@/lib/todosScreenIntent';
 import { TodoFilterChips } from '@/components/todos/TodoFilterChips';
 import { TodoListRow } from '@/components/todos/TodoListRow';
+
+const COMPLETE_CHECKMARK_MS = 450;
 
 export function TodosListView({
   selectedDay,
@@ -26,23 +28,74 @@ export function TodosListView({
   isLoading: boolean;
   refreshing: boolean;
   onRefresh: () => void;
-  toggleDone: (id: number, done: number) => Promise<void>;
+  toggleDone: (
+    id: number,
+    done: number,
+    options?: { reinsert?: Todo; undoTitle?: string }
+  ) => Promise<void>;
   onOpenTodo: (todo: Todo) => void;
   bottomInset: number;
 }) {
+  const [completingIds, setCompletingIds] = useState<Set<number>>(() => new Set());
+  const completingIdsRef = useRef<Set<number>>(new Set());
+  const completeTimersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+
+  useEffect(() => {
+    const timers = completeTimersRef.current;
+    return () => {
+      for (const timer of timers.values()) clearTimeout(timer);
+      timers.clear();
+      completingIdsRef.current.clear();
+    };
+  }, []);
+
+  const handleToggleDone = useCallback(
+    (item: Todo) => {
+      if (completingIdsRef.current.has(item.id)) return;
+
+      if (item.done === 1) {
+        void toggleDone(item.id, item.done).catch(() => {
+          /* surfaced in customInstance */
+        });
+        return;
+      }
+
+      completingIdsRef.current.add(item.id);
+      setCompletingIds((prev) => {
+        const next = new Set(prev);
+        next.add(item.id);
+        return next;
+      });
+
+      const title = item.title;
+      const timer = setTimeout(() => {
+        completeTimersRef.current.delete(item.id);
+        completingIdsRef.current.delete(item.id);
+        setCompletingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(item.id);
+          return next;
+        });
+        void toggleDone(item.id, item.done, { undoTitle: title }).catch(() => {
+          /* surfaced in customInstance */
+        });
+      }, COMPLETE_CHECKMARK_MS);
+
+      completeTimersRef.current.set(item.id, timer);
+    },
+    [toggleDone]
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: Todo }) => (
       <TodoListRow
         todo={item}
+        completing={completingIds.has(item.id)}
         onPress={() => onOpenTodo(item)}
-        onToggleDone={() =>
-          void toggleDone(item.id, item.done).catch(() => {
-            /* surfaced in customInstance */
-          })
-        }
+        onToggleDone={() => handleToggleDone(item)}
       />
     ),
-    [onOpenTodo, toggleDone]
+    [completingIds, handleToggleDone, onOpenTodo]
   );
 
   return (

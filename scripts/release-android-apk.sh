@@ -119,7 +119,8 @@ fetch_build_json() {
 verify_aab() {
   local file="$1"
 
-  if ! unzip -l "$file" 2>/dev/null | grep -q 'BundleConfig.pb'; then
+  # Process substitution avoids SIGPIPE (141) under pipefail when grep -q exits early.
+  if ! grep -Fxq 'BundleConfig.pb' < <(unzip -Z1 "$file" 2>/dev/null); then
     echo "Error: artifact is not an AAB (missing BundleConfig.pb)." >&2
     echo "Use the production profile, or sideload a preview APK directly without conversion." >&2
     exit 1
@@ -237,6 +238,9 @@ while [[ $# -gt 0 ]]; do
     -h | --help)
       usage
       exit 0
+      ;;
+    --)
+      shift
       ;;
     -*)
       echo "Error: unknown option: $1" >&2

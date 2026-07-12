@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import type { Key } from 'swr'
+import { useSWRConfig } from 'swr'
 import {
   useGetApiV1Todos,
   postApiV1Todos,
@@ -7,7 +8,13 @@ import {
   deleteApiV1TodosId,
 } from '@/gen/api/endpoints/techooAPI.gen'
 import type { ErrorResponse, GetApiV1TodosParams, Todo, UpdateTodo } from '@/gen/api/schemas'
-import { revalidateAllTodoLists } from '@/lib/revalidateTodoLists'
+import {
+  revalidateAllTodoLists,
+  applyToggleDoneToCache,
+  mergeTodoInCache,
+  type TodoListCache,
+  TODOS_LIST_ROUTE,
+} from '@/lib/revalidateTodoLists'
 import { toRfc3339 } from '@/lib/time'
 
 const TODO_LIST_LIMIT = 500
@@ -64,10 +71,31 @@ export function useTodos(options?: {
       done?: number
     }
   ) => Promise<void>
-  toggleDone: (id: number, currentDone: number) => Promise<void>
+  toggleDone: (id: number, currentDone: number, options?: { reinsert?: Todo }) => Promise<void>
   deleteTodo: (id: number) => Promise<void>
   mutate: ReturnType<typeof useGetApiV1Todos>['mutate']
 } {
+  const { mutate: globalMutate, cache } = useSWRConfig()
+
+  const mutateAllTodoCaches = useCallback(
+    (
+      updater: (current: TodoListCache | undefined, key: unknown) => TodoListCache | undefined,
+      revalidate = false
+    ) => {
+      const updates: Promise<unknown>[] = []
+      for (const key of cache.keys()) {
+        if (!Array.isArray(key) || key[0] !== TODOS_LIST_ROUTE) continue
+        updates.push(
+          globalMutate(key, (current: TodoListCache | undefined) => updater(current, key), {
+            revalidate,
+          })
+        )
+      }
+      return Promise.all(updates)
+    },
+    [cache, globalMutate]
+  )
+
   const params: GetApiV1TodosParams | undefined = useMemo(() => {
     if (options?.fetchAll) return { limit: TODO_LIST_LIMIT }
     if (options?.showAll) return { done: 'false' as const, limit: TODO_LIST_LIMIT }
@@ -154,34 +182,37 @@ export function useTodos(options?: {
   )
 
   const toggleDone = useCallback(
-    async (id: number, currentDone: number) => {
+    async (id: number, currentDone: number, options?: { reinsert?: Todo }) => {
       const newDone = currentDone === 1 ? 0 : 1
       const nowIso = toRfc3339(new Date())
+      const reinsert = options?.reinsert
+
       mutate(
-        (current) => {
-          if (!current) return current
-          if (newDone === 1 && listOpenOnly) {
-            return { data: current.data.filter((t) => t.id !== id) }
-          }
-          return {
-            data: current.data.map((t) =>
-              t.id === id
-                ? { ...t, done: newDone, done_at: newDone === 1 ? nowIso : null }
-                : t
-            ),
-          }
-        },
+        (current) =>
+          applyToggleDoneToCache(current, swrKey, id, newDone, nowIso, reinsert),
         { revalidate: false }
       )
+      void mutateAllTodoCaches(
+        (current, key) => applyToggleDoneToCache(current, key, id, newDone, nowIso, reinsert),
+        false
+      )
+
       try {
-        await patchApiV1TodosId(id, { done: newDone })
-        await revalidateAllTodoLists()
+        const res = await patchApiV1TodosId(id, { done: newDone })
+        mutate(
+          (current) => mergeTodoInCache(current, swrKey, id, res.data),
+          { revalidate: false }
+        )
+        void mutateAllTodoCaches(
+          (current, key) => mergeTodoInCache(current, key, id, res.data),
+          false
+        )
       } catch (err) {
         await revalidateAllTodoLists()
         throw err
       }
     },
-    [mutate, listOpenOnly]
+    [mutate, swrKey, mutateAllTodoCaches]
   )
 
   const updateTodo = useCallback(

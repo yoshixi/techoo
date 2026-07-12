@@ -1,10 +1,11 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTodos } from '@/hooks/useTodos';
 import { useTodosListView } from '@/hooks/useTodosListView';
+import { useTodoUndoToast } from '@/hooks/useTodoUndoToast';
 import { useTodosScreenPrefs } from '@/hooks/useTodosScreenPrefs';
 import type { Todo } from '@/gen/api/schemas';
 import { dayBoundsLocal, startOfLocalDay } from '@/lib/dayBounds';
@@ -17,6 +18,7 @@ import { FloatingCreateButton } from '@/components/navigation/FloatingCreateButt
 import { TodosScreenHeader } from '@/components/todos/TodosScreenHeader';
 import { TodosTimelineView, type TimelineScrollTarget } from '@/components/todos/TodosTimelineView';
 import { TodosListView } from '@/components/todos/TodosListView';
+import { TodoUndoToast } from '@/components/todos/TodoUndoToast';
 
 export default function TodayScreen() {
   const router = useRouter();
@@ -46,6 +48,12 @@ export default function TodayScreen() {
     toggleDone: listToggleDone,
     mutate: mutateList,
   } = useTodosListView(selectedDay, listFilters);
+
+  const { toast: undoToast, showCompleteUndo, dismissUndo } = useTodoUndoToast();
+
+  useEffect(() => {
+    if (viewMode !== 'list') dismissUndo();
+  }, [viewMode, dismissUndo]);
 
   useFocusEffect(
     useCallback(() => {
@@ -86,6 +94,25 @@ export default function TodayScreen() {
     }
   }, [viewMode, mutateTimeline, mutateList]);
 
+  const handleListToggleDone = useCallback(
+    async (id: number, done: number, options?: { reinsert?: Todo; undoTitle?: string }) => {
+      const todo = listTodos.find((t) => t.id === id);
+      try {
+        if (done === 0 && todo) {
+          const title = options?.undoTitle ?? todo.title;
+          await listToggleDone(id, done);
+          showCompleteUndo(title, () => listToggleDone(id, 1, { reinsert: todo }));
+          return;
+        }
+        dismissUndo();
+        await listToggleDone(id, done, done === 1 && todo ? { reinsert: todo } : undefined);
+      } catch {
+        /* surfaced in customInstance */
+      }
+    },
+    [listTodos, listToggleDone, showCompleteUndo, dismissUndo]
+  );
+
   const openTodo = useCallback(
     (t: Todo) => {
       router.push(`/todo/${t.id}`);
@@ -93,7 +120,7 @@ export default function TodayScreen() {
     [router]
   );
 
-  const toggleDone = viewMode === 'timeline' ? timelineToggleDone : listToggleDone;
+  const toggleDone = viewMode === 'timeline' ? timelineToggleDone : handleListToggleDone;
 
   const headerSubtitle = useMemo(() => {
     if (viewMode === 'timeline') {
@@ -148,18 +175,27 @@ export default function TodayScreen() {
           onScrollTargetHandled={() => setScrollTarget(null)}
         />
       ) : (
-        <TodosListView
-          selectedDay={selectedDay}
-          filters={listFilters}
-          onFiltersChange={setListFilters}
-          todos={listTodos}
-          isLoading={listLoading}
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          toggleDone={toggleDone}
-          onOpenTodo={openTodo}
-          bottomInset={insets.bottom}
-        />
+        <>
+          <TodosListView
+            selectedDay={selectedDay}
+            filters={listFilters}
+            onFiltersChange={setListFilters}
+            todos={listTodos}
+            isLoading={listLoading}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            toggleDone={handleListToggleDone}
+            onOpenTodo={openTodo}
+            bottomInset={insets.bottom}
+          />
+          {undoToast ? (
+            <TodoUndoToast
+              title={undoToast.title}
+              onUndo={undoToast.onUndo}
+              bottomInset={insets.bottom}
+            />
+          ) : null}
+        </>
       )}
 
       <FloatingCreateButton

@@ -1,6 +1,7 @@
 import { Pressable, View } from 'react-native';
 import type { Post } from '@/gen/api/schemas';
 import { Text } from '@/components/ui/text';
+import { LinkifiedText } from '@/components/ui/LinkifiedText';
 import { formatTime } from '@/lib/time';
 
 export function PostRow({
@@ -15,7 +16,7 @@ export function PostRow({
       <View className="mb-1 flex-row items-start justify-between gap-2">
         <Text className="text-xs text-muted-foreground">{formatTime(post.posted_at)}</Text>
       </View>
-      <Text className="text-sm leading-snug text-foreground">{post.body}</Text>
+      <LinkifiedText text={post.body} className="text-sm leading-snug text-foreground" />
       {post.todos.length > 0 ? (
         <View className="mt-2 gap-1.5">
           <Text className="text-[11px] font-medium text-muted-foreground">Linked ToDo</Text>
