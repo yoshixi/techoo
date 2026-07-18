@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import type { RefObject } from 'react';
 import {
   View,
   TextInput,
@@ -17,32 +18,35 @@ import {
   pickNextTimedTodo,
   DEFAULT_TODO_DURATION_SEC,
 } from '@/lib/runningTodo';
-import { usePeriodicNowSec } from '@/hooks/usePeriodicNowSec';
+import { usePeriodicNow } from '@/hooks/usePeriodicNow';
 
-function formatTimeShort(ts: number): string {
-  return new Date(ts * 1000).toLocaleTimeString(undefined, {
+function formatTimeShort(d: Date): string {
+  return d.toLocaleTimeString(undefined, {
     hour: '2-digit',
     minute: '2-digit',
   });
 }
 
 function LogFocusStatusLine({ todos }: { todos: Todo[] }) {
-  const nowSec = usePeriodicNowSec();
-  const running = pickRunningTodo(todos, nowSec);
-  const next = pickNextTimedTodo(todos, nowSec);
+  const now = usePeriodicNow();
+  const running = pickRunningTodo(todos, now);
+  const next = pickNextTimedTodo(todos, now);
 
   let main: string;
   if (running) {
     if (running.is_all_day === 1) {
       main = `Now · ${running.title} · All day`;
     } else if (running.starts_at != null) {
-      const end = running.ends_at ?? running.starts_at + DEFAULT_TODO_DURATION_SEC;
+      const end =
+        running.ends_at != null
+          ? new Date(running.ends_at)
+          : new Date(new Date(running.starts_at).getTime() + DEFAULT_TODO_DURATION_SEC * 1000);
       main = `Now · ${running.title} · until ${formatTimeShort(end)}`;
     } else {
       main = `Now · ${running.title}`;
     }
   } else if (next && next.starts_at != null) {
-    main = `Next · ${next.title} · ${formatTimeShort(next.starts_at)}`;
+    main = `Next · ${next.title} · ${formatTimeShort(new Date(next.starts_at))}`;
   } else {
     main = 'No upcoming timed blocks';
   }
@@ -65,6 +69,7 @@ export function LogComposerPanel({
   showStatusLine,
   todosForStatus,
   bottomInset,
+  logInputRef,
 }: {
   draft: string;
   onDraftChange: (text: string) => void;
@@ -76,6 +81,8 @@ export function LogComposerPanel({
   showStatusLine?: boolean;
   todosForStatus?: Todo[];
   bottomInset: number;
+  /** Optional ref to blur after submit (iOS keyboard UX). */
+  logInputRef?: RefObject<TextInput | null>;
 }) {
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -176,6 +183,7 @@ export function LogComposerPanel({
       </View>
 
       <TextInput
+        ref={logInputRef}
         value={draft}
         onChangeText={handleDraftChange}
         onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}

@@ -1,5 +1,4 @@
 import { View, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   CalendarDays,
@@ -61,10 +60,9 @@ export default function LibraryScreen() {
   const router = useRouter();
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
+    <View className="flex-1 bg-background">
       <View className="px-4 pt-2 pb-4">
-        <Text className="text-2xl font-semibold text-foreground">Library</Text>
-        <Text className="mt-1 text-sm text-muted-foreground">
+        <Text className="text-sm text-muted-foreground">
           Deeper views and tools — the day stays on Today.
         </Text>
       </View>
@@ -86,6 +84,6 @@ export default function LibraryScreen() {
           </Pressable>
         ))}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }

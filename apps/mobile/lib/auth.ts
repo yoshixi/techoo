@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store'
-import { API_BASE_URL } from './api/mutator'
+import { API_BASE_URL } from './api/baseUrl'
+import { notifySessionInvalidated } from './sessionEvents'
 
 const SESSION_TOKEN_KEY = 'session_token'
 
@@ -41,7 +42,8 @@ export async function getJwt(): Promise<string | null> {
     jwtExpiresAt = Date.now() + 14 * 60 * 1000 // ~14 min (conservative)
     return jwtToken
   } catch {
-    clearAuthState()
+    await clearAuthState()
+    notifySessionInvalidated()
     return null
   }
 }

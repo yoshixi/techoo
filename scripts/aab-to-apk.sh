@@ -114,6 +114,9 @@ while [[ $# -gt 0 ]]; do
       usage
       exit 0
       ;;
+    --)
+      shift
+      ;;
     -*)
       echo "Error: unknown option: $1" >&2
       usage >&2
@@ -167,7 +170,7 @@ esac
 require_cmd bundletool
 require_cmd unzip
 
-APKS_FILE="$(mktemp "${TMPDIR:-/tmp}/aab-to-apk.XXXXXX")"
+APKS_FILE="$(mktemp "${TMPDIR:-/tmp}/aab-to-apk.XXXXXX.apks")"
 cleanup() {
   if [[ "$KEEP_APKS" == false ]]; then
     rm -f "$APKS_FILE"

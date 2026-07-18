@@ -1,73 +1,66 @@
-import { useMemo, useCallback, useState } from 'react';
-import { View, FlatList, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCallback, useRef, useState } from 'react';
+import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Text } from '@/components/ui/text';
-import { usePosts } from '@/hooks/usePosts';
-import { PostRow } from '@/components/posts/PostRow';
-import type { Post } from '@/gen/api/schemas';
-const RANGE_DAYS = 14;
+import { usePostsFeed } from '@/hooks/usePostsFeed';
+import { TimelinePostsList } from '@/components/posts/TimelinePostsList';
+import { FloatingCreateButton } from '@/components/navigation/FloatingCreateButton';
 
 export default function LogbookScreen() {
-  const range = useMemo(() => {
-    const end = Math.floor(Date.now() / 1000);
-    const start = end - RANGE_DAYS * 86400;
-    return { from: start, to: end };
-  }, []);
-
-  const { posts, isLoading, deletePost, mutate } = usePosts(range);
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { posts, initialLoading, loadingMore, hasMore, loadMore, mutate, refresh } = usePostsFeed();
   const [refreshing, setRefreshing] = useState(false);
+  const skipNextFocusRefresh = useRef(true);
 
-  const data = useMemo(() => [...posts].sort((a, b) => b.posted_at - a.posted_at), [posts]);
+  useFocusEffect(
+    useCallback(() => {
+      if (skipNextFocusRefresh.current) {
+        skipNextFocusRefresh.current = false;
+        return;
+      }
+      void refresh();
+    }, [refresh])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await mutate();
-    setRefreshing(false);
+    try {
+      await mutate();
+    } finally {
+      setRefreshing(false);
+    }
   }, [mutate]);
 
-  const renderItem = useCallback(
-    ({ item }: { item: Post }) => (
-      <View className="px-4">
-        <PostRow post={item} onDelete={deletePost} />
-      </View>
-    ),
-    [deletePost]
-  );
-
-  const ListHeaderComponent = useMemo(
-    () => (
-      <View className="px-4 pb-2">
-        <Text className="text-xs text-muted-foreground">
-          Last {RANGE_DAYS} days · Newest first
-        </Text>
-      </View>
-    ),
-    []
-  );
-
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
-      <View className="flex-1 pt-3">
-        <Text className="px-4 text-xl font-semibold">Logbook</Text>
-        <Text className="mb-3 px-4 text-sm text-muted-foreground">
-          Posts from your log, newest first. Today’s capture lives on Today → Log.
+    <View className="flex-1 bg-background">
+      <View className="px-4 pb-2 pt-1">
+        <Text className="text-xs text-muted-foreground">
+          Simple stream of notes and progress updates
         </Text>
-        <FlatList
-          data={data}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderItem}
-          ListHeaderComponent={ListHeaderComponent}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            isLoading ? null : (
-              <Text className="px-4 py-8 text-center text-sm text-muted-foreground">
-                No posts in this window.
-              </Text>
-            )
-          }
-          contentContainerStyle={{ paddingBottom: 100 }}
-        />
       </View>
-    </SafeAreaView>
+      <TimelinePostsList
+        posts={posts}
+        isLoading={initialLoading}
+        loadingMore={loadingMore}
+        hasMore={hasMore}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        onLoadMore={() => void loadMore()}
+        bottomInset={insets.bottom}
+      />
+      <FloatingCreateButton
+        bottomInset={insets.bottom}
+        accessibilityLabel="Create post"
+        onPress={() =>
+          router.push({
+            pathname: '/post/new',
+            params: { date: new Date().toISOString() },
+          })
+        }
+      />
+    </View>
   );
 }

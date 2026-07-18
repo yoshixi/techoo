@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { router } from 'expo-router'
 import { initAuth, getJwt, clearAuthState, getSessionToken } from '@/lib/auth'
-import { API_BASE_URL } from '@/lib/api/mutator'
+import { API_BASE_URL } from '@/lib/api/baseUrl'
+import { subscribeSessionInvalidated } from '@/lib/sessionEvents'
 
 export interface AuthUser {
   id: string
@@ -84,6 +86,13 @@ export function useAuthProvider(): AuthContextValue {
   useEffect(() => {
     checkAuth()
   }, [checkAuth])
+
+  useEffect(() => {
+    return subscribeSessionInvalidated(() => {
+      setUser(null)
+      router.replace('/auth')
+    })
+  }, [])
 
   const signOut = useCallback(async () => {
     await clearAuthState()

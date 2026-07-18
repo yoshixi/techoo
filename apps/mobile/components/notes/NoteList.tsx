@@ -25,7 +25,7 @@ export function NoteList() {
     () =>
       [...notes].sort((a, b) => {
         if (b.pinned !== a.pinned) return b.pinned - a.pinned;
-        return b.updated_at - a.updated_at;
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
       }),
     [notes]
   );
@@ -34,8 +34,11 @@ export function NoteList() {
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await refreshNotes();
-    setIsRefreshing(false);
+    try {
+      await refreshNotes();
+    } finally {
+      setIsRefreshing(false);
+    }
   }, [refreshNotes]);
 
   const handleNotePress = useCallback(

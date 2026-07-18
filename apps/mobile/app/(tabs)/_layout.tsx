@@ -1,13 +1,25 @@
 import { Tabs, Redirect } from 'expo-router';
 import { useColorScheme } from 'nativewind';
-import { Home, Library } from 'lucide-react-native';
-import { ActivityIndicator, View } from 'react-native';
-import { NAV_THEME } from '@/lib/theme';
+import { CheckSquare, MessageSquare } from 'lucide-react-native';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
+import { NAV_THEME, THEME } from '@/lib/theme';
 import { useAuth } from '@/hooks/useAuth';
+import { renderAppTabHeader } from '@/components/navigation/renderAppTabHeader';
 
 export default function TabLayout() {
   const { colorScheme } = useColorScheme();
-  const theme = NAV_THEME[colorScheme ?? 'light'];
+  const scheme = colorScheme ?? 'light';
+  const theme = NAV_THEME[scheme];
+  const palette = THEME[scheme];
+  /** Soft hairline: avoid iOS default shadow (reads as a harsh black line). */
+  const tabBarChrome =
+    scheme === 'dark'
+      ? {
+          borderTopColor: 'hsla(32, 12%, 92%, 0.12)',
+        }
+      : {
+          borderTopColor: 'hsla(36, 8%, 11%, 0.09)',
+        };
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
@@ -32,34 +44,41 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.text,
+        tabBarActiveTintColor: palette.primary,
+        tabBarInactiveTintColor: palette.mutedForeground,
         tabBarStyle: {
-          backgroundColor: theme.colors.card,
-          borderTopColor: theme.colors.border,
+          backgroundColor: palette.card,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          ...tabBarChrome,
+          elevation: 0,
+          shadowOpacity: 0,
+          shadowOffset: { width: 0, height: 0 },
+          shadowColor: 'transparent',
+          ...(Platform.OS === 'android' ? { borderTopWidth: 1 } : {}),
         },
-        headerShown: false,
+        headerShown: true,
+        header: renderAppTabHeader,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Today',
-          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
+          title: 'ToDos',
+          tabBarIcon: ({ color, size }) => <CheckSquare color={color} size={size} />,
         }}
       />
       <Tabs.Screen
-        name="library"
+        name="logbook"
         options={{
-          title: 'Library',
-          tabBarIcon: ({ color, size }) => <Library color={color} size={size} />,
+          title: 'Timeline',
+          tabBarIcon: ({ color, size }) => <MessageSquare color={color} size={size} />,
         }}
       />
-      <Tabs.Screen name="calendar" options={{ href: null }} />
-      <Tabs.Screen name="todos" options={{ href: null }} />
-      <Tabs.Screen name="logbook" options={{ href: null }} />
-      <Tabs.Screen name="notes" options={{ href: null }} />
-      <Tabs.Screen name="settings" options={{ href: null }} />
+      <Tabs.Screen name="library" options={{ href: null, title: 'Library' }} />
+      <Tabs.Screen name="calendar" options={{ href: null, title: 'Calendar' }} />
+      <Tabs.Screen name="todos" options={{ href: null, title: 'To-do' }} />
+      <Tabs.Screen name="notes" options={{ href: null, title: 'Notes' }} />
+      <Tabs.Screen name="settings" options={{ href: null, title: 'Settings' }} />
     </Tabs>
   );
 }

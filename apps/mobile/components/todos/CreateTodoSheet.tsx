@@ -6,13 +6,14 @@ import { Text } from '@/components/ui/text';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { formatDateTime } from '@/lib/time';
+import type { Todo } from '@/gen/api/schemas';
 
 export interface CreateTodoSheetProps {
   visible: boolean;
   onClose: () => void;
   initialStartAt?: Date | null;
   initialEndAt?: Date | null;
-  onCreate: (title: string, startsAt?: number, endsAt?: number) => Promise<void>;
+  onCreate: (title: string, startsAt?: Date, endsAt?: Date) => Promise<Todo>;
 }
 
 export function CreateTodoSheet({
@@ -42,24 +43,15 @@ export function CreateTodoSheet({
     if (!title.trim()) return;
     setSaving(true);
     try {
-      const starts = startAt ? Math.floor(startAt.getTime() / 1000) : undefined;
-      const ends =
-        endAt != null
-          ? Math.floor(endAt.getTime() / 1000)
-          : initialEndAt
-            ? Math.floor(initialEndAt.getTime() / 1000)
-            : undefined;
-      await onCreate(title.trim(), starts, ends);
+      await onCreate(title.trim(), startAt ?? undefined, endAt ?? initialEndAt ?? undefined);
       setTitle('');
       setStartAt(null);
       setEndAt(null);
       onClose();
-    } catch (e) {
-      console.error('Failed to create todo:', e);
     } finally {
       setSaving(false);
     }
-  }, [title, startAt, endAt, onCreate, onClose]);
+  }, [title, startAt, endAt, initialEndAt, onCreate, onClose]);
 
   const handleClose = useCallback(() => {
     setTitle('');
