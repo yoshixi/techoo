@@ -1,3 +1,9 @@
+**Date:** 2026-03-08
+**Status:** Accepted
+**Branch:** interrupt-task-ux
+
+---
+
 # Quick Switch Task UX
 
 ## Problem

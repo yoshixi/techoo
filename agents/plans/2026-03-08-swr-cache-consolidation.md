@@ -1,3 +1,9 @@
+**Date:** 2026-03-08
+**Status:** Accepted
+**Branch:** swr-cache-consolidation
+
+---
+
 # SWR Cache Consolidation Plan
 
 ## Problem

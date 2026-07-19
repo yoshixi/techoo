@@ -1,10 +1,18 @@
 import { eq, and, sql, desc, inArray } from 'drizzle-orm'
-import { postsTable, postEventsTable, postTodosTable, calendarEventsTable, calendarsTable, todosTable, type SelectPost } from '../db/schema/schema'
+import {
+  postsTable, postEventsTable, postTodosTable, postFavoritesTable, postListItemsTable, postListsTable,
+  calendarEventsTable, calendarsTable, todosTable, type SelectPost,
+} from '../db/schema/schema'
 import { type DB } from './common.db'
 import { unixToIso } from './common.core'
 import type { Post, CreatePost, UpdatePost } from './posts.core'
 import { MAX_POSTS_PAGINATED_LIMIT } from './list-limits'
 import { type Result, Ok, Err } from './types'
+
+export interface PostsFilter {
+  favorite?: boolean
+  listIds?: number[]
+}
 
 interface LinkedEvent { id: number; title: string }
 interface LinkedTodo { id: number; title: string }
@@ -74,19 +82,86 @@ async function loadPostRelationsBatch(
   return { events, todos }
 }
 
-function convertDbPostToApiSync(row: SelectPost, events: LinkedEvent[], todos: LinkedTodo[]): Post {
+async function loadFavoritesBatch(db: DB, userId: number, postIds: number[]): Promise<Set<number>> {
+  if (postIds.length === 0) return new Set()
+  const rows = await db
+    .select({ postId: postFavoritesTable.postId })
+    .from(postFavoritesTable)
+    .where(and(eq(postFavoritesTable.userId, userId), inArray(postFavoritesTable.postId, postIds)))
+  return new Set(rows.map(r => r.postId))
+}
+
+async function loadListMembershipsBatch(db: DB, userId: number, postIds: number[]): Promise<Map<number, number[]>> {
+  if (postIds.length === 0) return new Map()
+  const rows = await db
+    .select({ postId: postListItemsTable.postId, listId: postListItemsTable.listId })
+    .from(postListItemsTable)
+    .innerJoin(postListsTable, eq(postListItemsTable.listId, postListsTable.id))
+    .where(and(eq(postListsTable.userId, userId), inArray(postListItemsTable.postId, postIds)))
+  const result = new Map<number, number[]>()
+  for (const row of rows) {
+    const ids = result.get(row.postId) ?? []
+    ids.push(row.listId)
+    result.set(row.postId, ids)
+  }
+  return result
+}
+
+function convertDbPostToApiSync(
+  row: SelectPost,
+  events: LinkedEvent[],
+  todos: LinkedTodo[],
+  isFavorited: boolean,
+  listIds: number[],
+): Post {
   return {
     id: row.id,
     body: row.body,
     posted_at: unixToIso(row.postedAt),
     events,
     todos,
+    is_favorited: isFavorited,
+    list_ids: listIds,
   }
 }
 
-async function convertDbPostToApi(db: DB, row: SelectPost): Promise<Post> {
-  const { events, todos } = await loadPostRelations(db, row.id)
-  return convertDbPostToApiSync(row, events, todos)
+async function convertDbPostToApi(db: DB, userId: number, row: SelectPost): Promise<Post> {
+  const [{ events, todos }, favorited, listMemberships] = await Promise.all([
+    loadPostRelations(db, row.id),
+    loadFavoritesBatch(db, userId, [row.id]),
+    loadListMembershipsBatch(db, userId, [row.id]),
+  ])
+  return convertDbPostToApiSync(row, events, todos, favorited.has(row.id), listMemberships.get(row.id) ?? [])
+}
+
+function buildFilterConditions(userId: number, filter?: PostsFilter) {
+  const extra = []
+  if (filter?.favorite) {
+    extra.push(sql`${postsTable.id} IN (SELECT post_id FROM post_favorites WHERE user_id = ${userId})`)
+  }
+  if (filter?.listIds && filter.listIds.length > 0) {
+    const ids = filter.listIds.join(',')
+    extra.push(sql`${postsTable.id} IN (SELECT post_id FROM post_list_items WHERE list_id IN (${sql.raw(ids)}))`)
+  }
+  return extra
+}
+
+async function enrichPostsBatch(db: DB, userId: number, rows: SelectPost[]): Promise<Post[]> {
+  const ids = rows.map(r => r.id)
+  const [{ events, todos }, favorited, listMemberships] = await Promise.all([
+    loadPostRelationsBatch(db, ids),
+    loadFavoritesBatch(db, userId, ids),
+    loadListMembershipsBatch(db, userId, ids),
+  ])
+  return rows.map(row =>
+    convertDbPostToApiSync(
+      row,
+      events.get(row.id) ?? [],
+      todos.get(row.id) ?? [],
+      favorited.has(row.id),
+      listMemberships.get(row.id) ?? [],
+    )
+  )
 }
 
 export async function getPostsByRange(
@@ -94,8 +169,10 @@ export async function getPostsByRange(
   userId: number,
   from: number,
   to: number,
-  limitRows: number
+  limitRows: number,
+  filter?: PostsFilter,
 ): Promise<Post[]> {
+  const filterConditions = buildFilterConditions(userId, filter)
   const rows = await db
     .select()
     .from(postsTable)
@@ -103,28 +180,29 @@ export async function getPostsByRange(
       eq(postsTable.userId, userId),
       sql`${postsTable.postedAt} >= ${from}`,
       sql`${postsTable.postedAt} < ${to}`,
+      ...filterConditions,
     ))
     .orderBy(postsTable.postedAt)
     .limit(limitRows)
 
   if (rows.length === 0) return []
-  const { events, todos } = await loadPostRelationsBatch(db, rows.map(r => r.id))
-  return rows.map(row => convertDbPostToApiSync(row, events.get(row.id) ?? [], todos.get(row.id) ?? []))
+  return enrichPostsBatch(db, userId, rows)
 }
 
 /** All posts for the user, newest first, with offset pagination. */
 export async function getPostsPaginated(
   db: DB,
   userId: number,
-  opts: { limit: number; offset: number }
+  opts: { limit: number; offset: number; filter?: PostsFilter },
 ): Promise<{ posts: Post[]; has_more: boolean }> {
   const cap = Math.min(opts.limit, MAX_POSTS_PAGINATED_LIMIT)
   const take = cap + 1
 
+  const filterConditions = buildFilterConditions(userId, opts.filter)
   const rows = await db
     .select()
     .from(postsTable)
-    .where(eq(postsTable.userId, userId))
+    .where(and(eq(postsTable.userId, userId), ...filterConditions))
     .orderBy(desc(postsTable.postedAt), desc(postsTable.id))
     .limit(take)
     .offset(opts.offset)
@@ -132,8 +210,7 @@ export async function getPostsPaginated(
   const hasMore = rows.length > cap
   const slice = hasMore ? rows.slice(0, cap) : rows
   if (slice.length === 0) return { posts: [], has_more: false }
-  const { events, todos } = await loadPostRelationsBatch(db, slice.map(r => r.id))
-  const posts = slice.map(row => convertDbPostToApiSync(row, events.get(row.id) ?? [], todos.get(row.id) ?? []))
+  const posts = await enrichPostsBatch(db, userId, slice)
   return { posts, has_more: hasMore }
 }
 
@@ -143,7 +220,7 @@ export async function getPostById(db: DB, userId: number, postId: number): Promi
     .from(postsTable)
     .where(and(eq(postsTable.id, postId), eq(postsTable.userId, userId)))
 
-  return row ? convertDbPostToApi(db, row) : null
+  return row ? convertDbPostToApi(db, userId, row) : null
 }
 
 export async function createPost(db: DB, userId: number, data: CreatePost): Promise<Result<Post>> {

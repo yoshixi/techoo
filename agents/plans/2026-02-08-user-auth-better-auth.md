@@ -1,3 +1,9 @@
+**Date:** 2026-02-08
+**Status:** Accepted
+**Branch:** user-auth-better-auth
+
+---
+
 # Plan: User Authentication with better-auth
 
 ## Context

@@ -19,6 +19,14 @@ import {
   createPostRoute,
   updatePostRoute,
   deletePostRoute,
+  // Post favorite + list routes
+  favoritePostRoute,
+  unfavoritePostRoute,
+  listPostListsRoute,
+  createPostListRoute,
+  deletePostListRoute,
+  addPostToListRoute,
+  removePostFromListRoute,
   // Note routes
   listNotesRoute,
   getNoteRoute,
@@ -68,6 +76,14 @@ import {
   createPostHandler,
   updatePostHandler,
   deletePostHandler,
+  // Post favorite + list handlers
+  favoritePostHandler,
+  unfavoritePostHandler,
+  listPostListsHandler,
+  createPostListHandler,
+  deletePostListHandler,
+  addPostToListHandler,
+  removePostFromListHandler,
   // Note handlers
   listNotesHandler,
   getNoteHandler,
@@ -244,6 +260,17 @@ export function createApp(deps?: AppDeps): CreateAppResult {
   app.openapi(createPostRoute, createPostHandler)
   app.openapi(updatePostRoute, updatePostHandler)
   app.openapi(deletePostRoute, deletePostHandler)
+
+  // Post favorite routes
+  app.openapi(favoritePostRoute, favoritePostHandler)
+  app.openapi(unfavoritePostRoute, unfavoritePostHandler)
+
+  // Post list routes
+  app.openapi(listPostListsRoute, listPostListsHandler)
+  app.openapi(createPostListRoute, createPostListHandler)
+  app.openapi(deletePostListRoute, deletePostListHandler)
+  app.openapi(addPostToListRoute, addPostToListHandler)
+  app.openapi(removePostFromListRoute, removePostFromListHandler)
 
   // Note routes
   app.openapi(listNotesRoute, listNotesHandler)

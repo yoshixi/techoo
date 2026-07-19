@@ -2,6 +2,7 @@
 export * from './health'
 export * from './todos'
 export * from './posts'
+export * from './post-lists'
 export * from './notes'
 export * from './google-auth'
 export * from './calendars'

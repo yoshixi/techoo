@@ -1,3 +1,9 @@
+**Date:** 2026-03-14
+**Status:** Accepted
+**Branch:** mobile-ux-improvements-from-pr55
+
+---
+
 # Mobile UX Improvements (ported from PR #55)
 
 ## Features

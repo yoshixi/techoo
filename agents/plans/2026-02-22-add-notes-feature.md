@@ -1,3 +1,9 @@
+**Date:** 2026-02-22
+**Status:** Accepted
+**Branch:** add-notes-feature
+
+---
+
 # Plan: Add Notes Feature
 
 ## Context

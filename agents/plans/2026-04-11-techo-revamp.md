@@ -1,3 +1,9 @@
+**Date:** 2026-04-11
+**Status:** Accepted
+**Branch:** techo-revamp
+
+---
+
 # Techo Product Revamp Plan
 
 ## Context

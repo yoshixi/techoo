@@ -18,6 +18,8 @@ export const PostModel = z.object({
   posted_at: Rfc3339Schema,
   events: z.array(LinkedEventModel),
   todos: z.array(LinkedTodoModel),
+  is_favorited: z.boolean(),
+  list_ids: z.array(z.number().int()),
 }).openapi('Post')
 
 export const CreatePostModel = z.object({
@@ -47,6 +49,16 @@ export const PostQueryParamsModel = z
     }),
     offset: z.coerce.number().int().min(0).optional().openapi({
       description: 'Skip this many posts (newest-first order) when not using from/to.',
+    }),
+    favorite: z.string().optional().transform(s => s === 'true' ? true : undefined).openapi({
+      description: 'When `true`, return only posts the user has favorited.',
+    }),
+    listIds: z.string().optional().transform(s => {
+      if (!s) return undefined
+      const ids = s.split(',').map(n => parseInt(n, 10)).filter(n => !isNaN(n) && n > 0)
+      return ids.length > 0 ? ids : undefined
+    }).openapi({
+      description: 'Comma-separated list IDs. Returns posts in any of the given lists (OR).',
     }),
   })
   .superRefine((q, ctx) => {

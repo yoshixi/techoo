@@ -73,6 +73,9 @@ export async function createSqliteLibsqlTestContext(): Promise<SqliteLibsqlTestC
   await migrateDB(db)
 
   const reset = async () => {
+    await db.delete(schema.postFavoritesTable)
+    await db.delete(schema.postListItemsTable)
+    await db.delete(schema.postListsTable)
     await db.delete(schema.postEventsTable)
     await db.delete(schema.postTodosTable)
     await db.delete(schema.postsTable)
