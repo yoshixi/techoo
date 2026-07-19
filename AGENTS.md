@@ -59,10 +59,12 @@ pnpm --filter mobile run dev          # Expo mobile
 
 **Schema change workflow:**
 1. Edit `src/app/db/schema/schema.ts`
-2. `pnpm --filter @apps/backend run drizzle:push:seed` — push to seed DB first
-3. `pnpm --filter @apps/backend run migrate-all` — push to all existing tenant DBs
+2. `pnpm --filter @apps/backend run drizzle:generate` — commit the new SQL under `migrations/`
+3. `pnpm --filter @apps/backend run migrate-all` — apply migrations to main, seed, and all tenant DBs (prod: GitHub Actions → **Migrate Production Databases**)
 4. Restart the dev server
 
+> Production uses `migrate-all.ts` (Drizzle migration files), not `drizzle:push`. Always generate a migration after schema edits or prod tenant DBs will miss new tables.
+>
 > The seed DB must always be updated first — new tenants are cloned from it.
 
 **Tests:** Vitest, files named `*.test.ts` alongside handlers.

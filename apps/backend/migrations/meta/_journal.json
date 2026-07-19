@@ -15,6 +15,13 @@
       "when": 1776724865212,
       "tag": "0001_chunky_wendell_rand",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784466804301,
+      "tag": "0002_daffy_aqueduct",
+      "breakpoints": true
     }
   ]
 }
