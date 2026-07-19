@@ -35,6 +35,7 @@ export default function TodayScreen() {
     todos: timelineTodos,
     isLoading: timelineLoading,
     toggleDone: timelineToggleDone,
+    createTodo: timelineCreateTodo,
     mutate: mutateTimeline,
   } = useTodos({
     from: bounds.start,
@@ -168,8 +169,9 @@ export default function TodayScreen() {
           isLoading={timelineLoading}
           refreshing={refreshing}
           onRefresh={onRefresh}
-          toggleDone={toggleDone}
+          toggleDone={timelineToggleDone}
           onOpenTodo={openTodo}
+          onCreateTodo={timelineCreateTodo}
           bottomInset={insets.bottom}
           scrollTarget={scrollTarget}
           onScrollTargetHandled={() => setScrollTarget(null)}

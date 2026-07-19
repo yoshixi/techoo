@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Modal, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
-import { X, Calendar } from 'lucide-react-native';
+import { X, Calendar, Clock } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Text } from '@/components/ui/text';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { formatDateTime } from '@/lib/time';
+import { formatDate, formatTodoClockTime } from '@/lib/time';
 import type { Todo } from '@/gen/api/schemas';
 
 export interface CreateTodoSheetProps {
@@ -14,6 +14,13 @@ export interface CreateTodoSheetProps {
   initialStartAt?: Date | null;
   initialEndAt?: Date | null;
   onCreate: (title: string, startsAt?: Date, endsAt?: Date) => Promise<Todo>;
+}
+
+function formatTimeRange(startAt: Date | null, endAt: Date | null): string {
+  if (!startAt) return 'Set start time';
+  const start = formatTodoClockTime(startAt);
+  if (!endAt) return start;
+  return `${start} – ${formatTodoClockTime(endAt)}`;
 }
 
 export function CreateTodoSheet({
@@ -62,8 +69,14 @@ export function CreateTodoSheet({
 
   const handleDateChange = useCallback((_event: unknown, selectedDate?: Date) => {
     setShowDatePicker(false);
-    if (selectedDate) setStartAt(selectedDate);
-  }, []);
+    if (!selectedDate) return;
+    setStartAt(selectedDate);
+    if (endAt && selectedDate >= endAt) {
+      setEndAt(new Date(selectedDate.getTime() + 30 * 60 * 1000));
+    }
+  }, [endAt]);
+
+  const scheduledDay = startAt ?? initialStartAt;
 
   return (
     <Modal
@@ -80,7 +93,14 @@ export function CreateTodoSheet({
           <Pressable onPress={handleClose} hitSlop={10}>
             <X size={24} className="text-muted-foreground" />
           </Pressable>
-          <Text className="text-lg font-semibold">New to-do</Text>
+          <View className="items-center">
+            <Text className="text-lg font-semibold">New to-do</Text>
+            {scheduledDay ? (
+              <Text className="text-xs text-muted-foreground">
+                {formatDate(scheduledDay)} · {formatTimeRange(startAt, endAt)}
+              </Text>
+            ) : null}
+          </View>
           <View className="w-6" />
         </View>
 
@@ -98,23 +118,38 @@ export function CreateTodoSheet({
           </View>
 
           <View className="mb-4">
-            <Text className="mb-2 text-sm text-muted-foreground">Start</Text>
-            <View className="flex-row items-center justify-between">
-              <Pressable
-                onPress={() => setShowDatePicker(true)}
-                className="flex-row items-center gap-2 rounded bg-muted px-3 py-2"
-              >
-                <Calendar size={14} className="text-muted-foreground" />
-                <Text className="text-sm">
-                  {startAt ? formatDateTime(startAt.toISOString()) : 'Set start time'}
+            <Text className="mb-2 text-sm text-muted-foreground">When</Text>
+            <Pressable
+              onPress={() => setShowDatePicker(true)}
+              className="flex-row items-center gap-2 rounded-xl border border-border/40 bg-muted/40 px-3 py-3"
+            >
+              <Calendar size={16} className="text-muted-foreground" />
+              <View className="min-w-0 flex-1">
+                <Text className="text-sm text-foreground">
+                  {scheduledDay ? formatDate(scheduledDay) : 'Pick a day'}
                 </Text>
-              </Pressable>
+                {startAt ? (
+                  <View className="mt-0.5 flex-row items-center gap-1">
+                    <Clock size={12} className="text-muted-foreground" />
+                    <Text className="text-xs text-muted-foreground">
+                      {formatTimeRange(startAt, endAt)}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
               {startAt ? (
-                <Pressable onPress={() => setStartAt(null)} hitSlop={8}>
+                <Pressable
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    setStartAt(null);
+                    setEndAt(null);
+                  }}
+                  hitSlop={8}
+                >
                   <X size={16} className="text-muted-foreground" />
                 </Pressable>
               ) : null}
-            </View>
+            </Pressable>
           </View>
         </View>
 
@@ -126,7 +161,7 @@ export function CreateTodoSheet({
 
         {showDatePicker ? (
           <DateTimePicker
-            value={startAt || new Date()}
+            value={startAt || initialStartAt || new Date()}
             mode="datetime"
             display="spinner"
             onChange={handleDateChange}

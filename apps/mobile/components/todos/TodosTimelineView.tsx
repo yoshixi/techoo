@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
-  ScrollView,
   Pressable,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { ScrollView, Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import { Check, Clock } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
@@ -14,6 +15,7 @@ import { dayBoundsLocal, isSameLocalDay } from '@/lib/dayBounds';
 import { formatTodoClockTime } from '@/lib/time';
 import { useDailyHourWindow } from '@/hooks/useDailyHourWindow';
 import { usePeriodicNow } from '@/hooks/usePeriodicNow';
+import { CreateTodoSheet } from '@/components/todos/CreateTodoSheet';
 
 /** Pixels per hour on the schedule grid (matches calendar scale). */
 export const HOUR_ROW_MIN_HEIGHT = 64;
@@ -25,6 +27,13 @@ const TODO_AREA_LEFT = TIME_LABEL_WIDTH + RAIL_WIDTH + 8;
 const MIN_TODO_BLOCK_HEIGHT = 22;
 const DEFAULT_TODO_DURATION_MIN = 30;
 const COMPACT_TODO_BLOCK_HEIGHT = 36;
+const SLOT_MINUTES = 15;
+const LONG_PRESS_MS = 400;
+
+export type TimelineCreateRange = {
+  startAt: Date;
+  endAt: Date;
+};
 
 const HOUR_DOT_SIZE = 8;
 const HOUR_DOT_MARGIN_TOP = 4;
@@ -114,6 +123,7 @@ export function TodosTimelineView({
   onRefresh,
   toggleDone,
   onOpenTodo,
+  onCreateTodo,
   bottomInset,
   scrollTarget,
   onScrollTargetHandled,
@@ -125,10 +135,16 @@ export function TodosTimelineView({
   onRefresh: () => void;
   toggleDone: (id: number, done: number) => Promise<void>;
   onOpenTodo: (todo: Todo) => void;
+  onCreateTodo: (title: string, startsAt?: Date, endsAt?: Date) => Promise<Todo>;
   bottomInset: number;
   scrollTarget: TimelineScrollTarget;
   onScrollTargetHandled?: () => void;
 }) {
+  const [showCreateSheet, setShowCreateSheet] = useState(false);
+  const [createTimeRange, setCreateTimeRange] = useState<TimelineCreateRange | null>(null);
+  const selectionTop = useSharedValue(0);
+  const selectionHeight = useSharedValue(0);
+  const selectionVisible = useSharedValue(0);
   const now = usePeriodicNow(60_000);
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollViewportHeight = useRef(0);
@@ -208,7 +224,88 @@ export function TodosTimelineView({
     return () => clearTimeout(timer);
   }, [scrollTarget, isLoading, scrollToY, onScrollTargetHandled]);
 
+  const yToStartDate = useCallback(
+    (y: number) => {
+      const relativeMinutes = (y / HOUR_ROW_MIN_HEIGHT) * 60;
+      let totalMinutes = wakeHour * 60 + relativeMinutes;
+      totalMinutes = Math.round(totalMinutes / SLOT_MINUTES) * SLOT_MINUTES;
+      const minMinutes = wakeHour * 60;
+      const maxMinutes = (bedHour + 1) * 60 - DEFAULT_TODO_DURATION_MIN;
+      totalMinutes = Math.max(minMinutes, Math.min(maxMinutes, totalMinutes));
+
+      const result = new Date(selectedDay);
+      result.setHours(0, 0, 0, 0);
+      result.setMinutes(totalMinutes);
+      return result;
+    },
+    [bedHour, selectedDay, wakeHour]
+  );
+
+  const showSelectionPreview = useCallback(
+    (y: number) => {
+      const startAt = yToStartDate(y);
+      const startMinutes = startAt.getHours() * 60 + startAt.getMinutes();
+      const relativeTop = ((startMinutes - wakeHour * 60) / 60) * HOUR_ROW_MIN_HEIGHT;
+      selectionTop.value = relativeTop;
+      selectionHeight.value = (DEFAULT_TODO_DURATION_MIN / 60) * HOUR_ROW_MIN_HEIGHT;
+      selectionVisible.value = 1;
+    },
+    [selectionHeight, selectionTop, selectionVisible, wakeHour, yToStartDate]
+  );
+
+  const hideSelectionPreview = useCallback(() => {
+    selectionVisible.value = 0;
+  }, [selectionVisible]);
+
+  const openCreateSheetAt = useCallback(
+    (y: number) => {
+      const startAt = yToStartDate(y);
+      const endAt = new Date(startAt.getTime() + DEFAULT_TODO_DURATION_MIN * 60_000);
+      setCreateTimeRange({ startAt, endAt });
+      setShowCreateSheet(true);
+    },
+    [yToStartDate]
+  );
+
+  const handleCloseCreateSheet = useCallback(() => {
+    setShowCreateSheet(false);
+    setCreateTimeRange(null);
+  }, []);
+
+  const longPressGesture = Gesture.LongPress()
+    .minDuration(LONG_PRESS_MS)
+    .maxDistance(16)
+    .shouldCancelWhenOutside(false)
+    .onStart((event) => {
+      'worklet';
+      runOnJS(showSelectionPreview)(event.y);
+    })
+    .onEnd((event, success) => {
+      'worklet';
+      runOnJS(hideSelectionPreview)();
+      if (!success) return;
+      runOnJS(openCreateSheetAt)(event.y);
+    })
+    .onFinalize(() => {
+      'worklet';
+      runOnJS(hideSelectionPreview)();
+    });
+
+  const selectionAnimatedStyle = useAnimatedStyle(() => ({
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: selectionTop.value,
+    height: selectionHeight.value,
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.5)',
+    opacity: selectionVisible.value,
+  }));
+
   return (
+    <>
     <ScrollView
       ref={scrollViewRef}
       className="flex-1 px-4"
@@ -311,6 +408,21 @@ export function TodosTimelineView({
             />
           ))}
 
+          <GestureDetector gesture={longPressGesture}>
+            <Animated.View
+              style={{
+                position: 'absolute',
+                left: TODO_AREA_LEFT,
+                right: 0,
+                top: 0,
+                height: gridHeight,
+                zIndex: 3,
+              }}
+            >
+              <Animated.View style={selectionAnimatedStyle} pointerEvents="none" />
+            </Animated.View>
+          </GestureDetector>
+
           {timedTodos.map((t) => {
             const { top, height } = todoBlockLayout(t, wakeHour, bedHour, HOUR_ROW_MIN_HEIGHT);
             const compact = height < COMPACT_TODO_BLOCK_HEIGHT;
@@ -383,5 +495,14 @@ export function TodosTimelineView({
         </View>
       ) : null}
     </ScrollView>
+
+    <CreateTodoSheet
+      visible={showCreateSheet}
+      onClose={handleCloseCreateSheet}
+      initialStartAt={createTimeRange?.startAt}
+      initialEndAt={createTimeRange?.endAt}
+      onCreate={onCreateTodo}
+    />
+    </>
   );
 }

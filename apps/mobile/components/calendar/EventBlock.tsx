@@ -23,6 +23,7 @@ export function EventBlock({
 
   return (
     <View
+      pointerEvents="none"
       style={{
         position: 'absolute',
         top,
