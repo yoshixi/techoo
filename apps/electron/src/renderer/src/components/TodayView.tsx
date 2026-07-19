@@ -8,13 +8,19 @@ import { Label } from './ui/label'
 import { Switch } from './ui/switch'
 import { TodoDetailDialog } from './TodoView'
 import { CalendarViewInner, apiTodoToCalendar } from './CalendarView'
-import { PostComposer, type PostComposerContext } from './PostComposer'
+import { PostComposer } from './PostComposer'
+import {
+  emptyPostComposerAssociations,
+  submitComposerPost,
+  type PostComposerAssociations
+} from '../lib/post-composer-associations'
 import { PostRow } from './PostRow'
 import { useTodos } from '../hooks/useTodos'
 import { usePosts } from '../hooks/usePosts'
+import { usePostLists } from '../hooks/usePostLists'
 import { useLocalDayBounds } from '../hooks/useLocalDayBounds'
 import { useTodayFocusMode } from '../hooks/useTodayFocusMode'
-import type { Post, Todo } from '../gen/api/schemas'
+import type { Post, PostList, Todo } from '../gen/api/schemas'
 import { isMacPlatform } from '../lib/platform'
 
 /* ------------------------------------------------------------------ */
@@ -435,11 +441,13 @@ function TodayLogPanel({
   posts,
   isLoading,
   createPost,
+  refetchPosts,
   updatePost,
   deletePost,
   todosForHashSuggest,
-  composerContext,
-  onComposerContextChange,
+  listsForSuggestion,
+  composerAssociations,
+  onComposerAssociationsChange,
   layout,
   showStatusLine,
   todosForStatus,
@@ -448,11 +456,13 @@ function TodayLogPanel({
   posts: Post[]
   isLoading: boolean
   createPost: (body: string, eventIds: number[], todoIds: number[]) => Promise<void>
+  refetchPosts: () => Promise<void>
   updatePost: (id: number, body: string) => Promise<void>
   deletePost: (id: number) => Promise<void>
   todosForHashSuggest: Todo[]
-  composerContext: PostComposerContext
-  onComposerContextChange: (ctx: PostComposerContext) => void
+  listsForSuggestion: PostList[]
+  composerAssociations: PostComposerAssociations
+  onComposerAssociationsChange: (next: PostComposerAssociations) => void
   layout: 'compact' | 'comfortable'
   showStatusLine?: boolean
   todosForStatus?: Todo[]
@@ -461,12 +471,16 @@ function TodayLogPanel({
 }): React.JSX.Element {
   const nowSec = usePeriodicNow()
   const handleSubmit = useCallback(
-    (body: string) => {
-      const eventIds: number[] = composerContext?.type === 'event' ? [composerContext.id] : []
-      const todoIds: number[] = composerContext?.type === 'todo' ? [composerContext.id] : []
-      void createPost(body, eventIds, todoIds)
+    async (body: string) => {
+      const hasCollection =
+        composerAssociations.favorite || composerAssociations.lists.length > 0
+      await submitComposerPost(body, composerAssociations, {
+        simpleCreate: createPost,
+        refresh: hasCollection ? refetchPosts : undefined
+      })
+      onComposerAssociationsChange(emptyPostComposerAssociations())
     },
-    [composerContext, createPost]
+    [composerAssociations, createPost, onComposerAssociationsChange, refetchPosts]
   )
 
   const sorted = useMemo(
@@ -485,11 +499,11 @@ function TodayLogPanel({
       <PostComposer
         compact={!comfortable}
         draftStorageKey={postDraftStorageKey}
-        currentContext={composerContext}
-        onClearContext={() => onComposerContextChange(null)}
+        associations={composerAssociations}
+        onAssociationsChange={onComposerAssociationsChange}
         onSubmit={handleSubmit}
-        onSelectContext={onComposerContextChange}
         todosForSuggestion={todosForHashSuggest}
+        listsForSuggestion={listsForSuggestion}
       />
 
       <div
@@ -556,15 +570,18 @@ export function TodayView(): React.JSX.Element {
     from: dayStart,
     to: dayEnd
   })
-  const { posts, isLoading: postsLoading, createPost, updatePost, deletePost } = usePosts({
+  const { posts, isLoading: postsLoading, refetch: refetchPosts, createPost, updatePost, deletePost } = usePosts({
     from: dayStart,
     to: dayEnd
   })
+  const { lists } = usePostLists()
 
   const { focusMode, setFocusMode, toggleFocusMode } = useTodayFocusMode()
 
   const [railTab, setRailTab] = useState<'todo' | 'log'>('todo')
-  const [logComposerContext, setLogComposerContext] = useState<PostComposerContext>(null)
+  const [logComposerAssociations, setLogComposerAssociations] = useState<PostComposerAssociations>(
+    emptyPostComposerAssociations()
+  )
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
   const prevRailTab = useRef(railTab)
   const prevFocusMode = useRef(focusMode)
@@ -576,7 +593,10 @@ export function TodayView(): React.JSX.Element {
     const nowSec = Math.floor(Date.now() / 1000)
     const running = pickRunningTodo(todos, nowSec)
     if (running) {
-      setLogComposerContext({ type: 'todo', id: running.id, title: running.title })
+      setLogComposerAssociations((prev) => ({
+        ...prev,
+        todo: { id: running.id, title: running.title }
+      }))
     }
   }, [todos])
 
@@ -729,11 +749,13 @@ export function TodayView(): React.JSX.Element {
                     posts={posts}
                     isLoading={postsLoading}
                     createPost={createPost}
+                    refetchPosts={refetchPosts}
                     updatePost={updatePost}
                     deletePost={deletePost}
                     todosForHashSuggest={todosForPostHash}
-                    composerContext={logComposerContext}
-                    onComposerContextChange={setLogComposerContext}
+                    listsForSuggestion={lists}
+                    composerAssociations={logComposerAssociations}
+                    onComposerAssociationsChange={setLogComposerAssociations}
                     postDraftStorageKey={postDraftStorageKey}
                   />
                 )}
@@ -760,11 +782,13 @@ export function TodayView(): React.JSX.Element {
                 posts={posts}
                 isLoading={postsLoading}
                 createPost={createPost}
+                refetchPosts={refetchPosts}
                 updatePost={updatePost}
                 deletePost={deletePost}
                 todosForHashSuggest={todosForPostHash}
-                composerContext={logComposerContext}
-                onComposerContextChange={setLogComposerContext}
+                listsForSuggestion={lists}
+                composerAssociations={logComposerAssociations}
+                onComposerAssociationsChange={setLogComposerAssociations}
                 postDraftStorageKey={postDraftStorageKey}
               />
             </main>

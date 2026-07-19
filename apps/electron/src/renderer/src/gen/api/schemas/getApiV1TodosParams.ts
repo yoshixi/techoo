@@ -22,7 +22,7 @@ export type GetApiV1TodosParams = {
    */
   done?: GetApiV1TodosDone
   /**
-   * When true, include unscheduled todos (null starts_at) even when a range is set
+   * When true, include unscheduled todos (null starts_at) even when a range is set; defaults to false when range is given
    */
   unscheduled?: GetApiV1TodosUnscheduled
   /**

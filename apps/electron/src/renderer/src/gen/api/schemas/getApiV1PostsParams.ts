@@ -27,4 +27,12 @@ export type GetApiV1PostsParams = {
    * @nullable
    */
   offset?: number | null
+  /**
+   * When `true`, return only posts the user has favorited.
+   */
+  favorite?: string
+  /**
+   * Comma-separated list IDs. Returns posts in any of the given lists (OR).
+   */
+  listIds?: string
 }

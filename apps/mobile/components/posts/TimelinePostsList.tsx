@@ -27,6 +27,7 @@ export function TimelinePostsList({
   onRefresh,
   onLoadMore,
   bottomInset,
+  emptyMessage = 'No posts yet.',
 }: {
   posts: Post[];
   isLoading: boolean;
@@ -36,6 +37,7 @@ export function TimelinePostsList({
   onRefresh: () => void;
   onLoadMore: () => void;
   bottomInset: number;
+  emptyMessage?: string;
 }) {
   const router = useRouter();
 
@@ -96,7 +98,7 @@ export function TimelinePostsList({
 
   if (!isLoading && posts.length === 0) {
     return (
-      <Text className="px-4 py-8 text-center text-sm text-muted-foreground">No posts yet.</Text>
+      <Text className="px-4 py-8 text-center text-sm text-muted-foreground">{emptyMessage}</Text>
     );
   }
 

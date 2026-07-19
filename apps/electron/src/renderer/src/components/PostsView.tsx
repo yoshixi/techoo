@@ -1,10 +1,16 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import { PostComposer, type PostComposerContext } from './PostComposer'
+import { PostComposer } from './PostComposer'
 import { PostRow } from './PostRow'
 import { usePostsFeed } from '../hooks/usePostsFeed'
 import { useTodos } from '../hooks/useTodos'
+import { usePostLists } from '../hooks/usePostLists'
 import { useLocalDayBounds } from '../hooks/useLocalDayBounds'
 import { groupPostsByLocalDay } from '../lib/post-day-groups'
+import {
+  emptyPostComposerAssociations,
+  submitComposerPost,
+  type PostComposerAssociations
+} from '../lib/post-composer-associations'
 import { Button } from './ui/button'
 
 export function PostsView(): React.JSX.Element {
@@ -23,22 +29,24 @@ export function PostsView(): React.JSX.Element {
   } = usePostsFeed()
 
   const { todos: todayTodos } = useTodos({ from, to })
+  const { lists } = usePostLists()
 
   const dayGroups = useMemo(() => groupPostsByLocalDay(posts), [posts])
 
-  const [currentContext, setCurrentContext] = useState<PostComposerContext>(null)
-
-  const handleClearContext = useCallback(() => {
-    setCurrentContext(null)
-  }, [])
+  const [postAssociations, setPostAssociations] = useState<PostComposerAssociations>(
+    emptyPostComposerAssociations()
+  )
 
   const handleSubmit = useCallback(
-    (body: string) => {
-      const eventIds: number[] = currentContext?.type === 'event' ? [currentContext.id] : []
-      const todoIds: number[] = currentContext?.type === 'todo' ? [currentContext.id] : []
-      void createPost(body, eventIds, todoIds)
+    async (body: string) => {
+      const hasCollection = postAssociations.favorite || postAssociations.lists.length > 0
+      await submitComposerPost(body, postAssociations, {
+        simpleCreate: createPost,
+        refresh: hasCollection ? refetch : undefined
+      })
+      setPostAssociations(emptyPostComposerAssociations())
     },
-    [currentContext, createPost]
+    [createPost, postAssociations, refetch]
   )
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -80,11 +88,11 @@ export function PostsView(): React.JSX.Element {
 
         <PostComposer
           draftStorageKey={`techoo.posts.postDraft.v1.${from}`}
-          currentContext={currentContext}
-          onClearContext={handleClearContext}
+          associations={postAssociations}
+          onAssociationsChange={setPostAssociations}
           onSubmit={handleSubmit}
-          onSelectContext={setCurrentContext}
-          todosForSuggestion={todayTodos}
+          todosForSuggestion={todayTodos.filter((t) => t.done === 0)}
+          listsForSuggestion={lists}
         />
 
         {error && (

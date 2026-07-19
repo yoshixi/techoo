@@ -1,11 +1,10 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Pressable,
   TextInput,
   Modal,
   Platform,
-  FlatList,
   ActivityIndicator,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -14,11 +13,26 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useColorScheme } from 'nativewind';
 import { Text } from '@/components/ui/text';
 import { useTodos } from '@/hooks/useTodos';
+import { usePostLists } from '@/hooks/usePostLists';
 import { startOfLocalDay } from '@/lib/dayBounds';
 import { formatTime } from '@/lib/time';
-import type { Todo } from '@/gen/api/schemas';
-import { postApiV1Posts } from '@/gen/api/endpoints/techooAPI.gen';
-import { revalidateAllPostLists } from '@/lib/revalidatePostLists';
+import { PostComposerAssociationsBar } from '@/components/posts/PostComposerAssociationsBar';
+import {
+  PostHashSuggestions,
+  applyHashSuggestion,
+  buildHashSuggestions,
+  getHashQuery,
+  removeHashToken,
+} from '@/components/posts/PostHashSuggestions';
+import {
+  associationsFromTimelineTab,
+  createPostWithAssociations,
+  emptyPostComposerAssociations,
+  parseAssociationsParam,
+  type PostComposerAssociations,
+} from '@/lib/postComposerAssociations';
+import { parseTimelineTabParam } from '@/lib/timelineTab';
+import { showApiError } from '@/lib/showApiError';
 
 type PickerTarget = 'date' | 'time';
 
@@ -38,47 +52,70 @@ export default function NewPostScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
-  const params = useLocalSearchParams<{ date?: string }>();
+  const params = useLocalSearchParams<{ date?: string; tab?: string; associations?: string }>();
   const anchorDate = useMemo(() => {
     const parsed = params.date ? new Date(params.date) : new Date();
     return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
   }, [params.date]);
 
+  const { lists } = usePostLists();
+  const { todos } = useTodos({ showAll: true });
+
+  const initialAssociations = useMemo((): PostComposerAssociations => {
+    const fromParam = parseAssociationsParam(params.associations);
+    if (fromParam) return fromParam;
+    const tab = parseTimelineTabParam(params.tab);
+    if (tab) return associationsFromTimelineTab(tab, lists);
+    return emptyPostComposerAssociations();
+  }, [lists, params.associations, params.tab]);
+
   const [date, setDate] = useState(() => startOfLocalDay(anchorDate));
   const [time, setTime] = useState(() => new Date());
   const [body, setBody] = useState('');
+  const [selection, setSelection] = useState({ start: 0, end: 0 });
+  const [associations, setAssociations] = useState<PostComposerAssociations>(initialAssociations);
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
-  const [todoPickerOpen, setTodoPickerOpen] = useState(false);
-  const [todoQuery, setTodoQuery] = useState('');
-  const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const { todos } = useTodos({ showAll: true });
 
-  const filteredTodos = useMemo(() => {
-    const q = todoQuery.trim().toLowerCase();
-    if (!q) return todos;
-    return todos.filter((t) => t.title.toLowerCase().includes(q));
-  }, [todos, todoQuery]);
+  useEffect(() => {
+    if (params.associations) return;
+    const tab = parseTimelineTabParam(params.tab);
+    if (!tab) return;
+    setAssociations(associationsFromTimelineTab(tab, lists));
+  }, [lists, params.associations, params.tab]);
+
+  const hashState = useMemo(
+    () => getHashQuery(body, selection.start),
+    [body, selection.start]
+  );
+  const hashSuggestions = useMemo(() => {
+    if (!hashState.active) return [];
+    return buildHashSuggestions(hashState.query, associations, lists, todos);
+  }, [associations, hashState.active, hashState.query, lists, todos]);
+
+  const onSelectHashSuggestion = useCallback(
+    (item: Parameters<typeof applyHashSuggestion>[1]) => {
+      setAssociations((current) => applyHashSuggestion(current, item));
+      if (hashState.active) {
+        setBody(removeHashToken(body, hashState.start, selection.start));
+      }
+    },
+    [body, hashState.active, hashState.start, selection.start]
+  );
 
   const onPost = useCallback(async () => {
     const text = body.trim();
     if (!text) return;
     setSubmitting(true);
     try {
-      // API posts at server "now"; keep UI date/time fields as capture intent.
-      await postApiV1Posts({
-        body: text,
-        event_ids: [],
-        todo_ids: selectedTodo ? [selectedTodo.id] : [],
-      });
-      await revalidateAllPostLists();
+      await createPostWithAssociations(text, associations);
       router.back();
-    } catch {
-      // API error is surfaced in customInstance; avoid unhandled promise rejection in UI event.
+    } catch (err) {
+      showApiError(err, 'Couldn’t create post');
     } finally {
       setSubmitting(false);
     }
-  }, [body, selectedTodo, router]);
+  }, [associations, body, router]);
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
@@ -115,26 +152,23 @@ export default function NewPostScreen() {
           <Text className="text-sm text-foreground">{formatTime(mergeDateAndTime(date, time))}</Text>
         </Pressable>
 
+        <PostComposerAssociationsBar associations={associations} onChange={setAssociations} />
+
+        {hashState.active ? (
+          <PostHashSuggestions suggestions={hashSuggestions} onSelect={onSelectHashSuggestion} />
+        ) : null}
+
         <Text className="mb-1 text-xs text-muted-foreground">Content</Text>
         <TextInput
           value={body}
           onChangeText={setBody}
-          placeholder="What's happening?"
+          onSelectionChange={(event) => setSelection(event.nativeEvent.selection)}
+          placeholder="What's happening? Type # to link to-dos, lists, or favorites"
           placeholderTextColor="#9ca3af"
           multiline
           className="mb-3 min-h-[130px] rounded-xl border border-border/40 bg-card/70 px-3 py-3 text-sm text-foreground"
           textAlignVertical="top"
         />
-
-        <Text className="mb-1 text-xs text-muted-foreground">Link ToDo (optional)</Text>
-        <Pressable
-          onPress={() => setTodoPickerOpen(true)}
-          className="rounded-xl border border-border/40 bg-card/70 px-3 py-3"
-        >
-          <Text className="text-sm text-foreground">
-            {selectedTodo ? selectedTodo.title : 'Select to-do'}
-          </Text>
-        </Pressable>
       </View>
 
       <Modal visible={pickerTarget !== null} transparent animationType="fade" onRequestClose={() => setPickerTarget(null)}>
@@ -170,57 +204,6 @@ export default function NewPostScreen() {
             </Pressable>
           </Pressable>
         </Pressable>
-      </Modal>
-
-      <Modal
-        visible={todoPickerOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setTodoPickerOpen(false)}
-      >
-        <View className="flex-1 justify-end bg-black/35">
-          <Pressable className="flex-1" onPress={() => setTodoPickerOpen(false)} />
-          <View className="max-h-[70%] rounded-t-2xl border-t border-border/35 bg-background px-4 pb-5 pt-3">
-            <Text className="mb-2 text-center text-sm font-semibold text-foreground">Select to-do</Text>
-            <TextInput
-              value={todoQuery}
-              onChangeText={setTodoQuery}
-              placeholder="Search..."
-              placeholderTextColor="#9ca3af"
-              className="mb-2 rounded-xl border border-border/40 bg-card/70 px-3 py-2 text-sm text-foreground"
-            />
-            <FlatList
-              keyboardShouldPersistTaps="handled"
-              data={filteredTodos}
-              keyExtractor={(item) => String(item.id)}
-              ListEmptyComponent={
-                <Text className="py-4 text-center text-sm text-muted-foreground">No open to-dos</Text>
-              }
-              renderItem={({ item }) => (
-                <Pressable
-                  onPress={() => {
-                    setSelectedTodo(item);
-                    setTodoPickerOpen(false);
-                    setTodoQuery('');
-                  }}
-                  className="border-b border-border/25 py-3 active:bg-muted/50"
-                >
-                  <Text className="text-sm text-foreground">{item.title}</Text>
-                </Pressable>
-              )}
-            />
-            <Pressable
-              onPress={() => {
-                setSelectedTodo(null);
-                setTodoPickerOpen(false);
-                setTodoQuery('');
-              }}
-              className="mt-2 items-center py-2"
-            >
-              <Text className="text-sm text-muted-foreground">Clear selection</Text>
-            </Pressable>
-          </View>
-        </View>
       </Modal>
       {submitting ? <ActivityIndicator className="pb-4" /> : null}
     </SafeAreaView>

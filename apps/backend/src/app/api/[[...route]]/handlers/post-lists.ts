@@ -5,6 +5,7 @@ import {
   unfavoritePostRoute,
   listPostListsRoute,
   createPostListRoute,
+  updatePostListRoute,
   deletePostListRoute,
   addPostToListRoute,
   removePostFromListRoute,
@@ -14,6 +15,7 @@ import {
   unfavoritePost,
   getPostLists,
   createPostList,
+  updatePostList,
   deletePostList,
   addPostToList,
   removePostFromList,
@@ -82,6 +84,21 @@ export const deletePostListHandler: RouteHandler<typeof deletePostListRoute, App
   } catch (error) {
     c.get('logger').error({ err: error }, 'failed to delete post list')
     return c.json({ error: 'Failed to delete post list' }, 500)
+  }
+}
+
+export const updatePostListHandler: RouteHandler<typeof updatePostListRoute, AppBindings> = async (c) => {
+  try {
+    const db = c.get('db')
+    const user = c.get('user')
+    const { id } = c.req.valid('param')
+    const { name } = c.req.valid('json')
+    const result = await updatePostList(db, user.id, id, name)
+    if (!result.ok) return c.json({ error: result.error }, 404)
+    return c.json({ data: result.value }, 200)
+  } catch (error) {
+    c.get('logger').error({ err: error }, 'failed to update post list')
+    return c.json({ error: 'Failed to update post list' }, 500)
   }
 }
 

@@ -20,4 +20,6 @@ export interface Post {
   posted_at: string;
   events: PostEventsItem[];
   todos: PostTodosItem[];
+  is_favorited: boolean;
+  list_ids: number[];
 }

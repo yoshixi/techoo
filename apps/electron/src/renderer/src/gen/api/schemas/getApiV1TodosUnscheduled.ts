@@ -6,7 +6,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type GetApiV1TodosUnscheduled = (typeof GetApiV1TodosUnscheduled)[keyof typeof GetApiV1TodosUnscheduled]
+export type GetApiV1TodosUnscheduled =
+  (typeof GetApiV1TodosUnscheduled)[keyof typeof GetApiV1TodosUnscheduled]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const GetApiV1TodosUnscheduled = {

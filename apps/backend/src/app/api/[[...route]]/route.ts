@@ -24,6 +24,7 @@ import {
   unfavoritePostRoute,
   listPostListsRoute,
   createPostListRoute,
+  updatePostListRoute,
   deletePostListRoute,
   addPostToListRoute,
   removePostFromListRoute,
@@ -81,6 +82,7 @@ import {
   unfavoritePostHandler,
   listPostListsHandler,
   createPostListHandler,
+  updatePostListHandler,
   deletePostListHandler,
   addPostToListHandler,
   removePostFromListHandler,
@@ -268,6 +270,7 @@ export function createApp(deps?: AppDeps): CreateAppResult {
   // Post list routes
   app.openapi(listPostListsRoute, listPostListsHandler)
   app.openapi(createPostListRoute, createPostListHandler)
+  app.openapi(updatePostListRoute, updatePostListHandler)
   app.openapi(deletePostListRoute, deletePostListHandler)
   app.openapi(addPostToListRoute, addPostToListHandler)
   app.openapi(removePostFromListRoute, removePostFromListHandler)

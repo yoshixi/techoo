@@ -51,6 +51,24 @@ export async function createPostList(db: DB, userId: number, name: string): Prom
   return rowToPostList(row)
 }
 
+export async function updatePostList(
+  db: DB,
+  userId: number,
+  listId: number,
+  name: string
+): Promise<Result<PostList>> {
+  const [existing] = await db.select({ id: postListsTable.id }).from(postListsTable)
+    .where(and(eq(postListsTable.id, listId), eq(postListsTable.userId, userId)))
+  if (!existing) return Err('List not found')
+
+  const [row] = await db.update(postListsTable)
+    .set({ name: name.trim() })
+    .where(and(eq(postListsTable.id, listId), eq(postListsTable.userId, userId)))
+    .returning()
+  if (!row) return Err('List not found')
+  return Ok(rowToPostList(row))
+}
+
 export async function deletePostList(db: DB, userId: number, listId: number): Promise<Result> {
   const [existing] = await db.select({ id: postListsTable.id }).from(postListsTable)
     .where(and(eq(postListsTable.id, listId), eq(postListsTable.userId, userId)))

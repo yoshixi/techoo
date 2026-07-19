@@ -4,8 +4,10 @@ import {
   CalendarDays,
   CheckSquare,
   ChevronRight,
+  List,
   MessageSquare,
   Settings,
+  Star,
   StickyNote,
 } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
@@ -41,6 +43,20 @@ const ROWS: Row[] = [
     Icon: MessageSquare,
   },
   {
+    key: 'favorites',
+    title: 'Favorites',
+    subtitle: 'Starred log entries',
+    href: '/logbook',
+    Icon: Star,
+  },
+  {
+    key: 'lists',
+    title: 'Post lists',
+    subtitle: 'Manage lists from Logbook tabs',
+    href: '/logbook',
+    Icon: List,
+  },
+  {
     key: 'notes',
     title: 'Notes',
     subtitle: 'Off the day timeline',
@@ -70,7 +86,13 @@ export default function LibraryScreen() {
         {ROWS.map((row) => (
           <Pressable
             key={row.key}
-            onPress={() => router.push(row.href)}
+            onPress={() =>
+              router.push(
+                row.key === 'favorites'
+                  ? { pathname: '/logbook', params: { tab: 'favorites' } }
+                  : row.href
+              )
+            }
             className="mb-2 flex-row items-center rounded-xl border border-border bg-card px-4 py-3.5 active:opacity-80"
           >
             <View className="mr-3 rounded-lg bg-muted p-2">

@@ -21,6 +21,7 @@ export function usePosts(options?: { from: number; to: number; limit?: number })
   posts: Post[]
   isLoading: boolean
   error: ErrorResponse | undefined
+  refetch: () => Promise<void>
   createPost: (body: string, eventIds: number[], todoIds: number[]) => Promise<void>
   updatePost: (id: number, body: string) => Promise<void>
   deletePost: (id: number) => Promise<void>
@@ -45,7 +46,9 @@ export function usePosts(options?: { from: number; to: number; limit?: number })
         body,
         posted_at: new Date().toISOString(),
         events: [],
-        todos: []
+        todos: [],
+        is_favorited: false,
+        list_ids: []
       }
 
       mutate(
@@ -110,5 +113,9 @@ export function usePosts(options?: { from: number; to: number; limit?: number })
     [mutate]
   )
 
-  return { posts, isLoading, error, createPost, updatePost, deletePost }
+  const refetch = useCallback(async () => {
+    await mutate()
+  }, [mutate])
+
+  return { posts, isLoading, error, refetch, createPost, updatePost, deletePost }
 }

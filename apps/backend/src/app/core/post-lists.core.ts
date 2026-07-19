@@ -11,6 +11,10 @@ export const CreatePostListModel = z.object({
   name: z.string().min(1).max(100),
 }).openapi('CreatePostList')
 
+export const UpdatePostListModel = z.object({
+  name: z.string().min(1).max(100),
+}).openapi('UpdatePostList')
+
 export const PostListIdParamModel = z.object({
   id: IdSchema.openapi({ param: { name: 'id', in: 'path' } }),
 }).openapi('PostListIdParam')
@@ -34,4 +38,5 @@ export const PostListsResponseModel = z.object({
 
 export type PostList = z.infer<typeof PostListModel>
 export type CreatePostList = z.infer<typeof CreatePostListModel>
+export type UpdatePostList = z.infer<typeof UpdatePostListModel>
 export type AddPostToList = z.infer<typeof AddPostToListModel>

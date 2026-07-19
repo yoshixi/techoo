@@ -5,6 +5,7 @@ import {
   PostListIdParamModel,
   PostListItemParamModel,
   CreatePostListModel,
+  UpdatePostListModel,
   AddPostToListModel,
 } from '../../../core/post-lists.core'
 import { PostIdParamModel } from '../../../core/posts.core'
@@ -61,6 +62,21 @@ export const deletePostListRoute = createRoute({
   request: { params: PostListIdParamModel },
   responses: {
     204: { description: 'List deleted' },
+    404: { content: { 'application/json': { schema: ErrorResponseModel } }, description: 'Not found' },
+    500: { content: { 'application/json': { schema: ErrorResponseModel } }, description: 'Internal error' },
+  },
+})
+
+export const updatePostListRoute = createRoute({
+  method: 'patch',
+  path: '/v1/post-lists/{id}',
+  summary: 'Update a post list',
+  request: {
+    params: PostListIdParamModel,
+    body: { content: { 'application/json': { schema: UpdatePostListModel } } },
+  },
+  responses: {
+    200: { content: { 'application/json': { schema: PostListResponseModel } }, description: 'List updated' },
     404: { content: { 'application/json': { schema: ErrorResponseModel } }, description: 'Not found' },
     500: { content: { 'application/json': { schema: ErrorResponseModel } }, description: 'Internal error' },
   },

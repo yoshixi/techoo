@@ -12,6 +12,7 @@ import useSWRMutation from 'swr/mutation'
 import type { SWRMutationConfiguration } from 'swr/mutation'
 
 import type {
+  AddPostToList,
   AvailableCalendarsResponse,
   CalendarEventListResponse,
   CalendarEventResponse,
@@ -21,6 +22,7 @@ import type {
   CreateCalendar,
   CreateNote,
   CreatePost,
+  CreatePostList,
   CreateTodo,
   DeleteAccountResponse,
   DeleteApiOauthGoogleParams,
@@ -37,7 +39,9 @@ import type {
   OAuthAccountsResponse,
   OAuthDisconnectResponse,
   OAuthStatusResponse,
+  PostApiV1PostLists201,
   PostListResponse,
+  PostListsResponse,
   PostResponse,
   SessionCodeResponse,
   SessionResponse,
@@ -585,6 +589,338 @@ export const useDeleteApiV1PostsId = <TError = ErrorResponse | ErrorResponse>(
 
   const swrKey = swrOptions?.swrKey ?? getDeleteApiV1PostsIdMutationKey(id)
   const swrFn = getDeleteApiV1PostsIdMutationFetcher(id)
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * @summary Favorite a post
+ */
+export const postApiV1PostsIdFavorite = (id: number) => {
+  return customInstance<void>({ url: `/api/v1/posts/${id}/favorite`, method: 'POST' })
+}
+
+export const getPostApiV1PostsIdFavoriteMutationFetcher = (id: number) => {
+  return (_: Key, __: { arg: Arguments }) => {
+    return postApiV1PostsIdFavorite(id)
+  }
+}
+export const getPostApiV1PostsIdFavoriteMutationKey = (id: number) =>
+  [`/api/v1/posts/${id}/favorite`] as const
+
+export type PostApiV1PostsIdFavoriteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof postApiV1PostsIdFavorite>>
+>
+export type PostApiV1PostsIdFavoriteMutationError = ErrorResponse | ErrorResponse
+
+/**
+ * @summary Favorite a post
+ */
+export const usePostApiV1PostsIdFavorite = <TError = ErrorResponse | ErrorResponse>(
+  id: number,
+  options?: {
+    swr?: SWRMutationConfiguration<
+      Awaited<ReturnType<typeof postApiV1PostsIdFavorite>>,
+      TError,
+      Key,
+      Arguments,
+      Awaited<ReturnType<typeof postApiV1PostsIdFavorite>>
+    > & { swrKey?: string }
+  }
+) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getPostApiV1PostsIdFavoriteMutationKey(id)
+  const swrFn = getPostApiV1PostsIdFavoriteMutationFetcher(id)
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * @summary Unfavorite a post
+ */
+export const deleteApiV1PostsIdFavorite = (id: number) => {
+  return customInstance<void>({ url: `/api/v1/posts/${id}/favorite`, method: 'DELETE' })
+}
+
+export const getDeleteApiV1PostsIdFavoriteMutationFetcher = (id: number) => {
+  return (_: Key, __: { arg: Arguments }) => {
+    return deleteApiV1PostsIdFavorite(id)
+  }
+}
+export const getDeleteApiV1PostsIdFavoriteMutationKey = (id: number) =>
+  [`/api/v1/posts/${id}/favorite`] as const
+
+export type DeleteApiV1PostsIdFavoriteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteApiV1PostsIdFavorite>>
+>
+export type DeleteApiV1PostsIdFavoriteMutationError = ErrorResponse
+
+/**
+ * @summary Unfavorite a post
+ */
+export const useDeleteApiV1PostsIdFavorite = <TError = ErrorResponse>(
+  id: number,
+  options?: {
+    swr?: SWRMutationConfiguration<
+      Awaited<ReturnType<typeof deleteApiV1PostsIdFavorite>>,
+      TError,
+      Key,
+      Arguments,
+      Awaited<ReturnType<typeof deleteApiV1PostsIdFavorite>>
+    > & { swrKey?: string }
+  }
+) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getDeleteApiV1PostsIdFavoriteMutationKey(id)
+  const swrFn = getDeleteApiV1PostsIdFavoriteMutationFetcher(id)
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * @summary List all post lists for the user
+ */
+export const getApiV1PostLists = () => {
+  return customInstance<PostListsResponse>({ url: `/api/v1/post-lists`, method: 'GET' })
+}
+
+export const getGetApiV1PostListsKey = () => [`/api/v1/post-lists`] as const
+
+export type GetApiV1PostListsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getApiV1PostLists>>
+>
+export type GetApiV1PostListsQueryError = ErrorResponse
+
+/**
+ * @summary List all post lists for the user
+ */
+export const useGetApiV1PostLists = <TError = ErrorResponse>(options?: {
+  swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiV1PostLists>>, TError> & {
+    swrKey?: Key
+    enabled?: boolean
+  }
+}) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const isEnabled = swrOptions?.enabled !== false
+  const swrKey = swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiV1PostListsKey() : null))
+  const swrFn = () => getApiV1PostLists()
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * @summary Create a post list
+ */
+export const postApiV1PostLists = (createPostList: CreatePostList) => {
+  return customInstance<PostApiV1PostLists201>({
+    url: `/api/v1/post-lists`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createPostList
+  })
+}
+
+export const getPostApiV1PostListsMutationFetcher = () => {
+  return (_: Key, { arg }: { arg: CreatePostList }) => {
+    return postApiV1PostLists(arg)
+  }
+}
+export const getPostApiV1PostListsMutationKey = () => [`/api/v1/post-lists`] as const
+
+export type PostApiV1PostListsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof postApiV1PostLists>>
+>
+export type PostApiV1PostListsMutationError = ErrorResponse
+
+/**
+ * @summary Create a post list
+ */
+export const usePostApiV1PostLists = <TError = ErrorResponse>(options?: {
+  swr?: SWRMutationConfiguration<
+    Awaited<ReturnType<typeof postApiV1PostLists>>,
+    TError,
+    Key,
+    CreatePostList,
+    Awaited<ReturnType<typeof postApiV1PostLists>>
+  > & { swrKey?: string }
+}) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getPostApiV1PostListsMutationKey()
+  const swrFn = getPostApiV1PostListsMutationFetcher()
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * @summary Delete a post list
+ */
+export const deleteApiV1PostListsId = (id: number) => {
+  return customInstance<void>({ url: `/api/v1/post-lists/${id}`, method: 'DELETE' })
+}
+
+export const getDeleteApiV1PostListsIdMutationFetcher = (id: number) => {
+  return (_: Key, __: { arg: Arguments }) => {
+    return deleteApiV1PostListsId(id)
+  }
+}
+export const getDeleteApiV1PostListsIdMutationKey = (id: number) =>
+  [`/api/v1/post-lists/${id}`] as const
+
+export type DeleteApiV1PostListsIdMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteApiV1PostListsId>>
+>
+export type DeleteApiV1PostListsIdMutationError = ErrorResponse | ErrorResponse
+
+/**
+ * @summary Delete a post list
+ */
+export const useDeleteApiV1PostListsId = <TError = ErrorResponse | ErrorResponse>(
+  id: number,
+  options?: {
+    swr?: SWRMutationConfiguration<
+      Awaited<ReturnType<typeof deleteApiV1PostListsId>>,
+      TError,
+      Key,
+      Arguments,
+      Awaited<ReturnType<typeof deleteApiV1PostListsId>>
+    > & { swrKey?: string }
+  }
+) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getDeleteApiV1PostListsIdMutationKey(id)
+  const swrFn = getDeleteApiV1PostListsIdMutationFetcher(id)
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * @summary Add a post to a list
+ */
+export const postApiV1PostListsIdPosts = (id: number, addPostToList: AddPostToList) => {
+  return customInstance<void>({
+    url: `/api/v1/post-lists/${id}/posts`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: addPostToList
+  })
+}
+
+export const getPostApiV1PostListsIdPostsMutationFetcher = (id: number) => {
+  return (_: Key, { arg }: { arg: AddPostToList }) => {
+    return postApiV1PostListsIdPosts(id, arg)
+  }
+}
+export const getPostApiV1PostListsIdPostsMutationKey = (id: number) =>
+  [`/api/v1/post-lists/${id}/posts`] as const
+
+export type PostApiV1PostListsIdPostsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof postApiV1PostListsIdPosts>>
+>
+export type PostApiV1PostListsIdPostsMutationError = ErrorResponse | ErrorResponse
+
+/**
+ * @summary Add a post to a list
+ */
+export const usePostApiV1PostListsIdPosts = <TError = ErrorResponse | ErrorResponse>(
+  id: number,
+  options?: {
+    swr?: SWRMutationConfiguration<
+      Awaited<ReturnType<typeof postApiV1PostListsIdPosts>>,
+      TError,
+      Key,
+      AddPostToList,
+      Awaited<ReturnType<typeof postApiV1PostListsIdPosts>>
+    > & { swrKey?: string }
+  }
+) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getPostApiV1PostListsIdPostsMutationKey(id)
+  const swrFn = getPostApiV1PostListsIdPostsMutationFetcher(id)
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * @summary Remove a post from a list
+ */
+export const deleteApiV1PostListsIdPostsPostId = (id: number, postId: number) => {
+  return customInstance<void>({ url: `/api/v1/post-lists/${id}/posts/${postId}`, method: 'DELETE' })
+}
+
+export const getDeleteApiV1PostListsIdPostsPostIdMutationFetcher = (id: number, postId: number) => {
+  return (_: Key, __: { arg: Arguments }) => {
+    return deleteApiV1PostListsIdPostsPostId(id, postId)
+  }
+}
+export const getDeleteApiV1PostListsIdPostsPostIdMutationKey = (id: number, postId: number) =>
+  [`/api/v1/post-lists/${id}/posts/${postId}`] as const
+
+export type DeleteApiV1PostListsIdPostsPostIdMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteApiV1PostListsIdPostsPostId>>
+>
+export type DeleteApiV1PostListsIdPostsPostIdMutationError = ErrorResponse | ErrorResponse
+
+/**
+ * @summary Remove a post from a list
+ */
+export const useDeleteApiV1PostListsIdPostsPostId = <TError = ErrorResponse | ErrorResponse>(
+  id: number,
+  postId: number,
+  options?: {
+    swr?: SWRMutationConfiguration<
+      Awaited<ReturnType<typeof deleteApiV1PostListsIdPostsPostId>>,
+      TError,
+      Key,
+      Arguments,
+      Awaited<ReturnType<typeof deleteApiV1PostListsIdPostsPostId>>
+    > & { swrKey?: string }
+  }
+) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getDeleteApiV1PostListsIdPostsPostIdMutationKey(id, postId)
+  const swrFn = getDeleteApiV1PostListsIdPostsPostIdMutationFetcher(id, postId)
 
   const query = useSWRMutation(swrKey, swrFn, swrOptions)
 
