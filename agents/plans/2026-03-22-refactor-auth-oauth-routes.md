@@ -1,3 +1,9 @@
+**Date:** 2026-03-22
+**Status:** Accepted
+**Branch:** refactor-auth-oauth-routes
+
+---
+
 # Refactor Auth/OAuth/Middleware from route.ts
 
 ## Problem

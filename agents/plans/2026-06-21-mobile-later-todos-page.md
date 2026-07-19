@@ -1,3 +1,9 @@
+**Date:** 2026-06-21
+**Status:** Accepted
+**Branch:** mobile-later-todos-page
+
+---
+
 # Mobile: Later & Completed to-dos pages
 
 ## Problem

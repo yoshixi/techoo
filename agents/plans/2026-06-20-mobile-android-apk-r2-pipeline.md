@@ -1,3 +1,9 @@
+**Date:** 2026-06-20
+**Status:** Accepted
+**Branch:** mobile-android-apk-r2-pipeline
+
+---
+
 # Mobile Android APK R2 pipeline
 
 ## Goal

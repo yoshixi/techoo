@@ -1,3 +1,9 @@
+**Date:** 2026-02-21
+**Status:** Accepted
+**Branch:** google-calendar-import-mobile
+
+---
+
 # Google Calendar Import for Mobile
 
 ## Overview

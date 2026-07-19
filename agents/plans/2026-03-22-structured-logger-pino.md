@@ -1,3 +1,9 @@
+**Date:** 2026-03-22
+**Status:** Accepted
+**Branch:** structured-logger-pino
+
+---
+
 # Introduce Pino Structured Logger
 
 ## Context

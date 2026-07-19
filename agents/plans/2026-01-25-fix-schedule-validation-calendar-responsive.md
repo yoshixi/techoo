@@ -1,3 +1,9 @@
+**Date:** 2026-01-25
+**Status:** Accepted
+**Branch:** fix-schedule-validation-calendar-responsive
+
+---
+
 # Fix Plan: Schedule Validation, Calendar Popup, and Responsive Table
 
 ## Overview

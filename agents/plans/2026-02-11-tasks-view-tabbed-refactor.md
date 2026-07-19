@@ -1,3 +1,9 @@
+**Date:** 2026-02-11
+**Status:** Accepted
+**Branch:** tasks-view-tabbed-refactor
+
+---
+
 # Plan: Refactor Tasks View into 3 Tabbed Sub-Views (Now, Upcoming, Review)
 
 ## Context

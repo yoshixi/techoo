@@ -1,3 +1,9 @@
+**Date:** 2026-03-20
+**Status:** Accepted
+**Branch:** multi-tenancy-per-user-db
+
+---
+
 ---
 title: "Multi-Tenancy: Per-User Database with Tenanso"
 brief_description: "Separate the database into per-user databases using Turso and the tenanso library for complete data isolation."

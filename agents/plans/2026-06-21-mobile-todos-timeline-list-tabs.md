@@ -1,3 +1,9 @@
+**Date:** 2026-06-21
+**Status:** Accepted
+**Branch:** mobile-todos-timeline-list-tabs
+
+---
+
 # Mobile: ToDos — Timeline + List tabs (revised UX)
 
 ## Direction change
