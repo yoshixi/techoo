@@ -1,3 +1,9 @@
+**Date:** 2026-03-08
+**Status:** Accepted
+**Branch:** today-task-planning-ux
+
+---
+
 # Today Task Planning UX
 
 ## Problem
