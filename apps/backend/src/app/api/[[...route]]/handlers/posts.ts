@@ -9,14 +9,15 @@ export const listPostsHandler: RouteHandler<typeof listPostsRoute, AppBindings> 
     const db = c.get('db')
     const user = c.get('user')
     const q = c.req.valid('query')
+    const filter = { favorite: q.favorite, listIds: q.listIds }
     if (q.from != null && q.to != null) {
       const rangeLimit = clampPostsRangeLimit(q.limit)
-      const posts = await getPostsByRange(db, user.id, q.from, q.to, rangeLimit)
+      const posts = await getPostsByRange(db, user.id, q.from, q.to, rangeLimit, filter)
       return c.json({ data: posts }, 200)
     }
     const limit = clampPostsPaginatedLimit(q.limit ?? undefined)
     const offset = q.offset ?? 0
-    const { posts, has_more } = await getPostsPaginated(db, user.id, { limit, offset })
+    const { posts, has_more } = await getPostsPaginated(db, user.id, { limit, offset, filter })
     return c.json({ data: posts, has_more }, 200)
   } catch (error) {
     c.get('logger').error({ err: error }, 'failed to fetch posts')

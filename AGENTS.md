@@ -2,54 +2,102 @@
 
 ## Development environment (read this first)
 
-The repo defines its toolchain with **Nix flakes** (`flake.nix`). **Agents and scripted terminals should run pnpm and other project commands inside that environment** so tool versions match the project and host shell plugins (e.g. `cd` hooks) do not break automation.
+The repo defines its toolchain with **Nix flakes** (`flake.nix`). Run all project commands inside that environment so tool versions match and host shell hooks do not interfere.
 
 - Interactive shell: `nix develop` (from the repo root)
 - One-shot command: `nix develop --command pnpm run check-types`
-- If you use [direnv](https://direnv.net/) with `use flake`, an interactive shell may already be in the dev environment; for **non-interactive** runs, still prefer `nix develop --command …`.
+- With [direnv](https://direnv.net/) + `use flake`, interactive shells are already in the dev env; for **non-interactive / agent runs**, still prefer `nix develop --command …`.
 
-Human-oriented setup details may also appear in `docs/DEV_ENVIROMENT.md` or `README.md`; when those disagree with `flake.nix`, **trust the flake** for what is actually installed.
+## Project structure
 
-## Project Structure & Module Organization
-- `apps/web`: Next.js web app and API routes. Core logic in `apps/web/app/core`, DB schema in `apps/web/app/db`, and tests under `apps/web/**/**/*.test.ts`.
-- `apps/electron`: Electron + React app (main, preload, renderer). Renderer UI lives in `apps/electron/src/renderer/src`.
-- `apps/docs`: Next.js docs site.
-- `packages/ui`: Shared UI components.
-- `packages/eslint-config` and `packages/typescript-config`: Shared lint/TS configs.
-- `scripts/openapischema-generator`: OpenAPI schema generator.
-- `ai-docs`: Planning docs and project notes.
+| Path | Purpose |
+|---|---|
+| `apps/backend` | Hono API (Cloudflare Workers + Drizzle ORM) |
+| `apps/web` | Next.js frontend |
+| `apps/mobile` | React Native / Expo app |
+| `apps/electron` | Electron desktop app |
+| `apps/docs` | Documentation site |
+| `packages/ui` | Shared React components (shadcn/ui) |
+| `packages/eslint-config` | Shared ESLint config |
+| `packages/typescript-config` | Shared TypeScript configs |
 
-## Build, Test, and Development Commands
+## Common commands
 
-Prefix these with `nix develop --command` when not already inside `nix develop` (see **Development environment** above).
+Prefix with `nix develop --command` when not already inside `nix develop`.
 
-- `pnpm run dev`: Run all apps via Turbo from the repo root.
-- `pnpm run build`: Build all apps/packages via Turbo.
-- `pnpm run lint`: Lint all apps/packages via Turbo.
-- `pnpm run test`: Run all tests via Turbo.
-- `pnpm --filter web dev`: Run only the web app (port 3000). `--filter docs` uses port 3001.
-- `pnpm --filter electron dev`: Run the Electron app locally.
-- `pnpm --filter mobile run dev`: Run the mobile app locally (Expo dev server).
+```sh
+pnpm run dev          # Start all apps (Turbo)
+pnpm run build        # Build all apps/packages
+pnpm run lint         # Lint all
+pnpm run check-types  # Type-check all — run after every edit
+pnpm run test         # Run all tests
+pnpm run format       # Format with Prettier
+```
 
-## Coding Style & Naming Conventions
-- TypeScript-first, React/Next for web/docs, Electron + Vite for desktop.
-- Use 2-space indentation (Prettier default). Run `pnpm run format` at the root or `pnpm --filter electron format`.
-- ESLint is enforced per app; prefer shared configs under `packages/eslint-config`.
-- Naming: React components in `PascalCase.tsx`, utilities in `camelCase.ts`, tests end with `.test.ts`.
+Per-app:
+```sh
+pnpm --filter @apps/backend run dev   # API server (wrangler)
+pnpm --filter web run dev             # Next.js frontend
+pnpm --filter electron run dev        # Electron desktop
+pnpm --filter mobile run dev          # Expo mobile
+```
 
-## Testing Guidelines
-- Web app tests use Vitest (`apps/web/vitest.config.ts`).
-- Naming: `*.test.ts` in `apps/web` (e.g., `apps/web/app/api/**/tasks.test.ts`).
-- Run web tests: `pnpm --filter web test` or `pnpm --filter web test:watch`.
-- No formal coverage threshold is configured; keep coverage meaningful when adding features.
+## Backend (apps/backend)
 
-## Commit & Pull Request Guidelines
-- Recent history shows short, descriptive messages (no strict convention). Prefer imperative summaries like “Add timer API validation”.
-- PRs should describe scope, link related issues, and include screenshots for UI changes (web/docs/electron).
+**Architecture:** Hono + `@hono/zod-openapi`, multi-tenant Turso/libSQL databases.
 
-## Configuration & Data
-- Example env files: `apps/web/.env.local.example` and `apps/web/.env.production.example`.
-- Drizzle migrations live under `apps/web/drizzle/migrations`. Use `pnpm --filter web drizzle:push` for local schema updates.
+- **Main DB**: auth tables (users, sessions, accounts)
+- **Tenant DBs** (per-user): domain data (todos, posts, notes, calendars)
+- **Seed DB**: template cloned when provisioning new tenant DBs
 
-## Agent Notes
-- Place planning documents in `ai-docs/` as requested in `README.md`.
+**API pattern:**
+- `src/app/api/[[...route]]/routes/` — OpenAPI route definitions
+- `src/app/api/[[...route]]/handlers/` — route handlers
+- `src/app/core/*.core.ts` — Zod models and business logic
+- `src/app/core/*.db.ts` — database access layer
+- `src/app/db/schema/schema.ts` — Drizzle schema
+
+**Schema change workflow:**
+1. Edit `src/app/db/schema/schema.ts`
+2. `pnpm --filter @apps/backend run drizzle:push:seed` — push to seed DB first
+3. `pnpm --filter @apps/backend run migrate-all` — push to all existing tenant DBs
+4. Restart the dev server
+
+> The seed DB must always be updated first — new tenants are cloned from it.
+
+**Tests:** Vitest, files named `*.test.ts` alongside handlers.
+```sh
+nix develop --command bash -c "cd apps/backend && npx vitest run"
+```
+
+**After API changes:** regenerate the Electron client:
+```sh
+pnpm --filter electron run api:generate
+```
+
+## Agent workflow
+
+- **Always run `pnpm run check-types` after edits** to keep the repo type-safe.
+- Use `nix develop --command …` for all shell commands in non-interactive contexts.
+
+## Planning docs (`agents/plans/`)
+
+Place ADR-style planning documents in `agents/plans/`.
+
+**File naming:** `YYYY-MM-DD-<kebab-slug>.md` (e.g. `2026-07-19-favorite-list-posts.md`)
+
+**Required sections:**
+- **Date / Status / Branch** — frontmatter
+- **Context** — why this change is needed, constraints
+- **Decision** — what was decided (schema, API, file structure)
+- **Consequences** — trade-offs, rejected alternatives
+
+Docs in `docs/` are for new-developer guides and should stay high-level. For implementation specifics, link to the relevant `agents/plans/` ADR and source code.
+
+## Environment variables
+
+Required for production database operations:
+- `TURSO_CONNECTION_URL`
+- `TURSO_AUTH_TOKEN`
+- `TURSO_ORG_SLUG`, `TURSO_GROUP`, `TURSO_GROUP_AUTH_TOKEN`
+- `TURSO_SEED_DB_NAME`, `TURSO_TENANT_DB_URL`

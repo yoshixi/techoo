@@ -106,6 +106,32 @@ export const postTodosTable = sqliteTable('post_todos', {
   pk: unique().on(table.postId, table.todoId),
 }));
 
+// Post Favorites table (per-user star toggle)
+export const postFavoritesTable = sqliteTable('post_favorites', {
+  userId: integer('user_id', { mode: 'number' }).notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
+  postId: integer('post_id', { mode: 'number' }).notNull().references(() => postsTable.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+}, (table) => ({
+  pk: unique().on(table.userId, table.postId),
+}));
+
+// Post Lists table (named collections owned by a user)
+export const postListsTable = sqliteTable('post_lists', {
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  userId: integer('user_id', { mode: 'number' }).notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+});
+
+// Post List Items junction table (many-to-many: lists ↔ posts)
+export const postListItemsTable = sqliteTable('post_list_items', {
+  listId: integer('list_id', { mode: 'number' }).notNull().references(() => postListsTable.id, { onDelete: 'cascade' }),
+  postId: integer('post_id', { mode: 'number' }).notNull().references(() => postsTable.id, { onDelete: 'cascade' }),
+  addedAt: integer('added_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+}, (table) => ({
+  pk: unique().on(table.listId, table.postId),
+}));
+
 // Calendars table (provider-agnostic)
 export const calendarsTable = sqliteTable('calendars', {
   id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
@@ -224,3 +250,9 @@ export type InsertPostTodo = typeof postTodosTable.$inferInsert;
 export type SelectPostTodo = typeof postTodosTable.$inferSelect;
 export type InsertNote = typeof notesTable.$inferInsert;
 export type SelectNote = typeof notesTable.$inferSelect;
+export type InsertPostFavorite = typeof postFavoritesTable.$inferInsert;
+export type SelectPostFavorite = typeof postFavoritesTable.$inferSelect;
+export type InsertPostList = typeof postListsTable.$inferInsert;
+export type SelectPostList = typeof postListsTable.$inferSelect;
+export type InsertPostListItem = typeof postListItemsTable.$inferInsert;
+export type SelectPostListItem = typeof postListItemsTable.$inferSelect;

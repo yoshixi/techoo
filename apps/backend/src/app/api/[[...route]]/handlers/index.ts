@@ -5,6 +5,7 @@ import type { AppBindings } from '../types'
 // Re-export all handlers for convenient importing
 export * from './todos'
 export * from './posts'
+export * from './post-lists'
 export * from './notes'
 export * from './google-auth'
 export * from './calendars'
