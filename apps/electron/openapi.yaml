@@ -247,12 +247,20 @@ components:
             required:
               - id
               - title
+        is_favorited:
+          type: boolean
+        list_ids:
+          type: array
+          items:
+            type: integer
       required:
         - id
         - body
         - posted_at
         - events
         - todos
+        - is_favorited
+        - list_ids
     PostListResponse:
       type: object
       properties:
@@ -315,6 +323,52 @@ components:
             exclusiveMinimum: true
             description: Numeric ID
             example: 1
+    PostList:
+      type: object
+      properties:
+        id:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+          description: Numeric ID
+          example: 1
+        name:
+          type: string
+        created_at:
+          type: integer
+      required:
+        - id
+        - name
+        - created_at
+    PostListsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/PostList"
+      required:
+        - data
+    CreatePostList:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+      required:
+        - name
+    AddPostToList:
+      type: object
+      properties:
+        post_id:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+          description: Numeric ID
+          example: 1
+      required:
+        - post_id
     Note:
       type: object
       properties:
@@ -958,6 +1012,18 @@ paths:
           name: done
           in: query
         - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+            description: When true, include unscheduled todos (null starts_at) even when a
+              range is set; defaults to false when range is given
+          required: false
+          description: When true, include unscheduled todos (null starts_at) even when a
+            range is set; defaults to false when range is given
+          name: unscheduled
+          in: query
+        - schema:
             type: integer
             minimum: 1
             maximum: 500
@@ -1117,6 +1183,22 @@ paths:
           description: Skip this many posts (newest-first order) when not using from/to.
           name: offset
           in: query
+        - schema:
+            type: string
+            description: When `true`, return only posts the user has favorited.
+          required: false
+          description: When `true`, return only posts the user has favorited.
+          name: favorite
+          in: query
+        - schema:
+            type: string
+            description: Comma-separated list IDs. Returns posts in any of the given lists
+              (OR).
+          required: false
+          description: Comma-separated list IDs. Returns posts in any of the given lists
+            (OR).
+          name: listIds
+          in: query
       responses:
         "200":
           description: Posts retrieved
@@ -1220,6 +1302,199 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PostResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/posts/{id}/favorite:
+    post:
+      summary: Favorite a post
+      parameters:
+        - schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            description: Numeric ID
+            example: 1
+          required: true
+          description: Numeric ID
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Favorited
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Unfavorite a post
+      parameters:
+        - schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            description: Numeric ID
+            example: 1
+          required: true
+          description: Numeric ID
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Unfavorited
+        "500":
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/post-lists:
+    get:
+      summary: List all post lists for the user
+      responses:
+        "200":
+          description: Lists retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostListsResponse"
+        "500":
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create a post list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePostList"
+      responses:
+        "201":
+          description: List created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PostListResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/PostList"
+        "500":
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/post-lists/{id}:
+    delete:
+      summary: Delete a post list
+      parameters:
+        - schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            description: Numeric ID
+            example: 1
+          required: true
+          description: Numeric ID
+          name: id
+          in: path
+      responses:
+        "204":
+          description: List deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/post-lists/{id}/posts:
+    post:
+      summary: Add a post to a list
+      parameters:
+        - schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            description: Numeric ID
+            example: 1
+          required: true
+          description: Numeric ID
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddPostToList"
+      responses:
+        "204":
+          description: Post added to list
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/post-lists/{id}/posts/{postId}:
+    delete:
+      summary: Remove a post from a list
+      parameters:
+        - schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            description: Numeric ID
+            example: 1
+          required: true
+          description: Numeric ID
+          name: id
+          in: path
+        - schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            description: Numeric ID
+            example: 1
+          required: true
+          description: Numeric ID
+          name: postId
+          in: path
+      responses:
+        "204":
+          description: Post removed from list
         "404":
           description: Not found
           content:

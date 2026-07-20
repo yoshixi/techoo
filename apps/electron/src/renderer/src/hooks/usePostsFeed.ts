@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback } from 'react'
 import {
-  getApiV1Posts,
   postApiV1Posts,
   patchApiV1PostsId,
   deleteApiV1PostsId
 } from '../gen/api/endpoints/techooAPI.gen'
-import type { ErrorResponse, Post } from '../gen/api/schemas'
+import type { Post } from '../gen/api/schemas'
+import { usePaginatedPostsFeed } from './usePaginatedPostsFeed'
 
 const DEFAULT_PAGE_SIZE = 30
 
@@ -18,80 +18,25 @@ export function usePostsFeed(pageSize = DEFAULT_PAGE_SIZE): {
   hasMore: boolean
   initialLoading: boolean
   loadingMore: boolean
-  error: ErrorResponse | undefined
+  error: ReturnType<typeof usePaginatedPostsFeed>['error']
   loadMore: () => Promise<void>
   createPost: (body: string, eventIds: number[], todoIds: number[]) => Promise<void>
   updatePost: (id: number, body: string) => Promise<void>
   deletePost: (id: number) => Promise<void>
   refetch: () => Promise<void>
 } {
-  const [posts, setPosts] = useState<Post[]>([])
-  const [nextOffset, setNextOffset] = useState(0)
-  const [hasMore, setHasMore] = useState(true)
-  const [initialLoading, setInitialLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [error, setError] = useState<ErrorResponse | undefined>()
-
-  const fetchInitial = useCallback(async () => {
-    setError(undefined)
-    try {
-      const res = await getApiV1Posts({ limit: pageSize, offset: 0 })
-      setPosts(res.data)
-      setNextOffset(res.data.length)
-      setHasMore(res.has_more ?? false)
-    } catch (e) {
-      // Stop pagination triggers (e.g. IntersectionObserver) while in error state — otherwise
-      // empty feed + hasMore stays true causes repeated load-more requests (401 loops).
-      setHasMore(false)
-      throw e
-    }
-  }, [pageSize])
-
-  const refetch = useCallback(async () => {
-    setError(undefined)
-    setInitialLoading(true)
-    try {
-      await fetchInitial()
-    } catch (e) {
-      setError(e as ErrorResponse)
-    } finally {
-      setInitialLoading(false)
-    }
-  }, [fetchInitial])
-
-  useEffect(() => {
-    let cancelled = false
-    setInitialLoading(true)
-    void (async () => {
-      try {
-        await fetchInitial()
-      } catch (e) {
-        if (!cancelled) setError(e as ErrorResponse)
-      } finally {
-        if (!cancelled) setInitialLoading(false)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [fetchInitial])
-
-  const loadMore = useCallback(async () => {
-    if (!hasMore || loadingMore || initialLoading) return
-    setLoadingMore(true)
-    setError(undefined)
-    try {
-      const res = await getApiV1Posts({ limit: pageSize, offset: nextOffset })
-      setPosts((prev) => [...prev, ...res.data])
-      setNextOffset((o) => o + res.data.length)
-      setHasMore(res.has_more ?? false)
-    } catch (e) {
-      setHasMore(false)
-      setError(e as ErrorResponse)
-    } finally {
-      setLoadingMore(false)
-    }
-  }, [hasMore, loadingMore, initialLoading, nextOffset, pageSize])
+  const {
+    posts,
+    hasMore,
+    initialLoading,
+    loadingMore,
+    error,
+    loadMore,
+    refetch,
+    prependPost,
+    patchPost,
+    removePost
+  } = usePaginatedPostsFeed({ limit: pageSize, offset: 0 })
 
   const createPost = useCallback(
     async (body: string, eventIds: number[], todoIds: number[]) => {
@@ -100,55 +45,54 @@ export function usePostsFeed(pageSize = DEFAULT_PAGE_SIZE): {
         body,
         posted_at: new Date().toISOString(),
         events: [],
-        todos: []
+        todos: [],
+        is_favorited: false,
+        list_ids: []
       }
-      setPosts((prev) => [optimistic, ...prev])
+      prependPost(optimistic)
       try {
         const res = await postApiV1Posts({
           body,
           event_ids: eventIds,
           todo_ids: todoIds
         })
-        setPosts((prev) => [res.data, ...prev.filter((p) => p.id > 0)])
+        removePost(optimistic.id)
+        prependPost(res.data)
       } catch {
-        setPosts((prev) => prev.filter((p) => p.id > 0))
+        removePost(optimistic.id)
       }
     },
-    []
+    [prependPost, removePost]
   )
 
-  const updatePost = useCallback(async (id: number, body: string) => {
-    const trimmed = body.trim()
-    if (!trimmed) return
+  const updatePost = useCallback(
+    async (id: number, body: string) => {
+      const trimmed = body.trim()
+      if (!trimmed) return
 
-    setPosts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, body: trimmed } : p))
-    )
+      patchPost(id, (post) => ({ ...post, body: trimmed }))
 
-    try {
-      const res = await patchApiV1PostsId(id, { body: trimmed })
-      setPosts((prev) => prev.map((p) => (p.id === id ? res.data : p)))
-    } catch {
       try {
-        await fetchInitial()
+        const res = await patchApiV1PostsId(id, { body: trimmed })
+        patchPost(id, () => res.data)
       } catch {
-        /* ignore */
+        await refetch()
       }
-    }
-  }, [fetchInitial])
+    },
+    [patchPost, refetch]
+  )
 
-  const deletePost = useCallback(async (id: number) => {
-    setPosts((prev) => prev.filter((p) => p.id !== id))
-    try {
-      await deleteApiV1PostsId(id)
-    } catch {
+  const deletePost = useCallback(
+    async (id: number) => {
+      removePost(id)
       try {
-        await fetchInitial()
+        await deleteApiV1PostsId(id)
       } catch {
-        /* ignore */
+        await refetch()
       }
-    }
-  }, [fetchInitial])
+    },
+    [removePost, refetch]
+  )
 
   return {
     posts,

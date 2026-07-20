@@ -50,9 +50,11 @@ export default function RootLayout() {
         <SwallowTrackedApiRejections />
         <SWRConfig
           value={{
-            revalidateOnFocus: true,
+            revalidateOnFocus: false,
             revalidateOnReconnect: true,
-            dedupingInterval: 2000,
+            dedupingInterval: 10_000,
+            shouldRetryOnError: false,
+            errorRetryCount: 0,
           }}
         >
           <ThemeProvider value={NAV_THEME[colorScheme ?? 'light']}>
@@ -92,6 +94,24 @@ export default function RootLayout() {
                 name="note/[id]"
                 options={{
                   presentation: 'modal',
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="posts/favorites"
+                options={{
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="posts/lists/index"
+                options={{
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="posts/lists/[id]"
+                options={{
                   headerShown: false,
                 }}
               />

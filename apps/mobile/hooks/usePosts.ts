@@ -6,6 +6,7 @@ import {
 } from '@/gen/api/endpoints/techooAPI.gen'
 import type { ErrorResponse, GetApiV1PostsParams, Post } from '@/gen/api/schemas'
 import { revalidateAllPostLists } from '@/lib/revalidatePostLists'
+import { getPostsFeedSwrKey, POSTS_FEED_SWR_OPTIONS } from '@/lib/postsFeedSwrKey'
 import { toRfc3339 } from '@/lib/time'
 
 function todayBoundaries(): { from: Date; to: Date } {
@@ -32,7 +33,12 @@ export function usePosts(options?: { from: Date; to: Date; limit?: number }): {
       ...(options?.limit !== undefined ? { limit: options.limit } : {})
     }
   }, [options?.from?.getTime(), options?.to?.getTime(), options?.limit])
-  const { data, error, isLoading, mutate } = useGetApiV1Posts(params)
+  const { data, error, isLoading, mutate } = useGetApiV1Posts(params, {
+    swr: {
+      swrKey: getPostsFeedSwrKey(params),
+      ...POSTS_FEED_SWR_OPTIONS,
+    },
+  })
   const posts: Post[] = data?.data ?? []
 
   const createPost = useCallback(
@@ -44,6 +50,8 @@ export function usePosts(options?: { from: Date; to: Date; limit?: number }): {
         posted_at: nowIso,
         events: [],
         todos: [],
+        is_favorited: false,
+        list_ids: [],
       }
       mutate(
         (current) => ({

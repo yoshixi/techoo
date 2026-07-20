@@ -1,16 +1,26 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Check, Clock, SquarePen } from 'lucide-react'
-import { PostComposer, type PostComposerContext } from './PostComposer'
+import { PostComposer } from './PostComposer'
+import {
+  associationsFromTimelineTab,
+  emptyPostComposerAssociations,
+  submitComposerPost,
+  type PostComposerAssociations
+} from '../lib/post-composer-associations'
 import { PostRow } from './PostRow'
 import { TodoDetailDialog } from './TodoView'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog'
+import { Input } from './ui/input'
 import { usePostsFeed } from '../hooks/usePostsFeed'
 import { useTodos } from '../hooks/useTodos'
 import { useLocalDayBounds } from '../hooks/useLocalDayBounds'
+import { usePostLists } from '../hooks/usePostLists'
 import { groupPostsByLocalDay } from '../lib/post-day-groups'
-import type { Todo } from '../gen/api/schemas'
+import { PostCollectionFeed } from './PostCollectionFeed'
+import { TimelineTabs, type TimelineTab } from './TimelineTabs'
+import type { PostList, Todo } from '../gen/api/schemas'
 
 const DEFAULT_TODO_DURATION_SEC = 30 * 60
 const TIMELINE_RAIL_LEFT_PX = 12
@@ -230,35 +240,133 @@ export function TimelineView(): React.JSX.Element {
     deletePost
   } = usePostsFeed()
 
+  const { lists, createList, renameList, deleteList } = usePostLists()
+
   const { todos: todayTodos, toggleDone, updateTodo, deleteTodo } = useTodos({
     from,
     to
   })
 
   const dayGroups = useMemo(() => groupPostsByLocalDay(posts), [posts])
-  const [currentContext, setCurrentContext] = useState<PostComposerContext>(null)
+  const [activeTab, setActiveTab] = useState<TimelineTab>({ type: 'all' })
+  const [feedRefreshKey, setFeedRefreshKey] = useState(0)
+  const [postAssociations, setPostAssociations] = useState<PostComposerAssociations>(
+    emptyPostComposerAssociations
+  )
   const [isCreatePostDialogOpen, setIsCreatePostDialogOpen] = useState(false)
+  const [isNewListDialogOpen, setIsNewListDialogOpen] = useState(false)
+  const [newListName, setNewListName] = useState('')
+  const [creatingList, setCreatingList] = useState(false)
+  const [editingList, setEditingList] = useState<PostList | null>(null)
+  const [editListName, setEditListName] = useState('')
+  const [renamingList, setRenamingList] = useState(false)
+  const [deletingList, setDeletingList] = useState<PostList | null>(null)
+  const [deletingListInProgress, setDeletingListInProgress] = useState(false)
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
 
-  const handleClearContext = useCallback(() => {
-    setCurrentContext(null)
+  const activeList = useMemo(() => {
+    if (activeTab.type !== 'list') return null
+    return lists.find((list) => list.id === activeTab.listId) ?? null
+  }, [activeTab, lists])
+
+  useEffect(() => {
+    if (activeTab.type === 'list' && !activeList && lists.length > 0) {
+      setActiveTab({ type: 'all' })
+    }
+  }, [activeList, activeTab, lists.length])
+
+  const tabSubtitle = useMemo(() => {
+    if (activeTab.type === 'all') return 'Simple stream of notes and progress updates'
+    if (activeTab.type === 'favorites') return 'Posts you have starred'
+    return `Posts saved to “${activeList?.name ?? 'this list'}”`
+  }, [activeList?.name, activeTab.type])
+
+  const openCreatePostDialog = useCallback(() => {
+    setPostAssociations(associationsFromTimelineTab(activeTab, lists))
+    setIsCreatePostDialogOpen(true)
+  }, [activeTab, lists])
+
+  const bumpFeedRefresh = useCallback(() => {
+    setFeedRefreshKey((key) => key + 1)
   }, [])
 
   const handleSubmit = useCallback(
-    (body: string) => {
-      const eventIds: number[] = currentContext?.type === 'event' ? [currentContext.id] : []
-      const todoIds: number[] = currentContext?.type === 'todo' ? [currentContext.id] : []
-      void createPost(body, eventIds, todoIds)
+    async (body: string) => {
+      const hasCollection = postAssociations.favorite || postAssociations.lists.length > 0
+      await submitComposerPost(body, postAssociations, {
+        simpleCreate: createPost,
+        refresh: hasCollection
+          ? async () => {
+              if (activeTab.type !== 'all') bumpFeedRefresh()
+              else await refetch()
+            }
+          : undefined
+      })
+
       setIsCreatePostDialogOpen(false)
-      setCurrentContext(null)
+      setPostAssociations(emptyPostComposerAssociations())
     },
-    [currentContext, createPost]
+    [activeTab.type, bumpFeedRefresh, createPost, postAssociations, refetch]
   )
+
+  const handleCreateList = useCallback(async () => {
+    const trimmed = newListName.trim()
+    if (!trimmed || creatingList) return
+    setCreatingList(true)
+    try {
+      const list = await createList(trimmed)
+      setNewListName('')
+      setIsNewListDialogOpen(false)
+      setActiveTab({ type: 'list', listId: list.id })
+    } finally {
+      setCreatingList(false)
+    }
+  }, [createList, creatingList, newListName])
+
+  const handleRequestDeleteList = useCallback((list: PostList) => {
+    setDeletingList(list)
+  }, [])
+
+  const handleConfirmDeleteList = useCallback(async () => {
+    if (!deletingList || deletingListInProgress) return
+    setDeletingListInProgress(true)
+    try {
+      const listId = deletingList.id
+      await deleteList(listId)
+      setDeletingList(null)
+      if (activeTab.type === 'list' && activeTab.listId === listId) {
+        setActiveTab({ type: 'all' })
+        bumpFeedRefresh()
+      }
+    } finally {
+      setDeletingListInProgress(false)
+    }
+  }, [activeTab, bumpFeedRefresh, deleteList, deletingList, deletingListInProgress])
+
+  const handleEditList = useCallback((list: PostList) => {
+    setEditingList(list)
+    setEditListName(list.name)
+  }, [])
+
+  const handleSaveEditList = useCallback(async () => {
+    if (!editingList) return
+    const trimmed = editListName.trim()
+    if (!trimmed || renamingList) return
+    setRenamingList(true)
+    try {
+      await renameList(editingList.id, trimmed)
+      setEditingList(null)
+      setEditListName('')
+    } finally {
+      setRenamingList(false)
+    }
+  }, [editListName, editingList, renameList, renamingList])
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    if (activeTab.type !== 'all') return
     const root = scrollRef.current
     const sentinel = sentinelRef.current
     if (!root || !sentinel) return
@@ -274,18 +382,18 @@ export function TimelineView(): React.JSX.Element {
     )
     obs.observe(sentinel)
     return () => obs.disconnect()
-  }, [hasMore, loadingMore, initialLoading, loadMore, posts.length, error])
+  }, [activeTab.type, hasMore, loadingMore, initialLoading, loadMore, posts.length, error])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) return
       if (event.key.toLowerCase() !== 'n') return
       event.preventDefault()
-      setIsCreatePostDialogOpen(true)
+      openCreatePostDialog()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+  }, [openCreatePostDialog])
 
   return (
     <div className="flex flex-1 min-h-0 gap-3 px-3 pb-3">
@@ -296,90 +404,116 @@ export function TimelineView(): React.JSX.Element {
       >
         <div className="flex flex-col gap-4 flex-1 min-h-0">
           <div className="shrink-0 flex items-start justify-between gap-3">
-            <div>
+            <div className="min-w-0 flex-1">
               <h2 className="font-sans text-xl font-semibold tracking-tight" style={{ color: 'var(--text-dark)' }}>
                 Timeline
               </h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">Simple stream of notes and progress updates</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{tabSubtitle}</p>
+              <TimelineTabs
+                lists={lists}
+                activeTab={activeTab}
+                onSelect={setActiveTab}
+                onNewList={() => setIsNewListDialogOpen(true)}
+                onEditList={handleEditList}
+                onDeleteList={handleRequestDeleteList}
+              />
             </div>
             <Button
               type="button"
               size="sm"
               className="h-8 gap-1.5 rounded-full text-xs shrink-0"
               style={{ background: 'var(--amber)' }}
-              onClick={() => setIsCreatePostDialogOpen(true)}
+              onClick={openCreatePostDialog}
             >
               <SquarePen className="h-3.5 w-3.5" />
               Create post
             </Button>
           </div>
 
-          {error && (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm shrink-0">
-              <p className="text-destructive">Could not load posts.</p>
-              <Button type="button" variant="outline" size="sm" className="mt-2 h-8" onClick={() => void refetch()}>
-                Retry
-              </Button>
-            </div>
-          )}
-
-          <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto pr-1">
-            {initialLoading && posts.length === 0 ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                <p>Loading posts…</p>
-              </div>
-            ) : posts.length === 0 && !error ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                <p>No posts yet.</p>
-              </div>
-            ) : (
-              <>
-                <div className="relative shrink-0">
-                  {dayGroups.map((group) => (
-                    <section
-                      key={group.dayKey}
-                      className="relative pb-10 last:pb-3"
-                      aria-labelledby={`timeline-day-${group.dayKey}`}
-                    >
-                      <div
-                        className="absolute top-1.5 z-10 h-2 w-2 -translate-x-1/2 rounded-full border border-background bg-background"
-                        style={{
-                          left: `${TIMELINE_RAIL_LEFT_PX}px`,
-                          borderColor: 'color-mix(in srgb, var(--amber) 80%, white 20%)'
-                        }}
-                        aria-hidden
-                      />
-                      <div className="pl-5">
-                        <h3
-                          id={`timeline-day-${group.dayKey}`}
-                          className="font-sans mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
-                        >
-                          {group.label}
-                        </h3>
-                        <div className="space-y-2">
-                          {group.posts.map((post) => (
-                            <PostRow
-                              key={post.id}
-                              post={post}
-                              onUpdatePost={updatePost}
-                              onDelete={deletePost}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </section>
-                  ))}
+          {activeTab.type === 'favorites' ? (
+            <PostCollectionFeed
+              key="favorites"
+              filter={{ type: 'favorites' }}
+              emptyMessage="No favorites yet. Star posts or create one here."
+              refreshKey={feedRefreshKey}
+            />
+          ) : activeTab.type === 'list' && activeList ? (
+            <PostCollectionFeed
+              key={`list:${activeTab.listId}`}
+              filter={{ type: 'list', listId: activeTab.listId }}
+              emptyMessage="No posts in this list yet. Create one here."
+              refreshKey={feedRefreshKey}
+            />
+          ) : (
+            <>
+              {error && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm shrink-0">
+                  <p className="text-destructive">Could not load posts.</p>
+                  <Button type="button" variant="outline" size="sm" className="mt-2 h-8" onClick={() => void refetch()}>
+                    Retry
+                  </Button>
                 </div>
-                <div ref={sentinelRef} className="h-1 w-full shrink-0" aria-hidden />
-                {loadingMore && (
-                  <p className="py-3 text-center text-xs text-muted-foreground">Loading more…</p>
+              )}
+
+              <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto pr-1">
+                {initialLoading && posts.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    <p>Loading posts…</p>
+                  </div>
+                ) : posts.length === 0 && !error ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    <p>No posts yet.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="relative shrink-0">
+                      {dayGroups.map((group) => (
+                        <section
+                          key={group.dayKey}
+                          className="relative pb-10 last:pb-3"
+                          aria-labelledby={`timeline-day-${group.dayKey}`}
+                        >
+                          <div
+                            className="absolute top-1.5 z-10 h-2 w-2 -translate-x-1/2 rounded-full border border-background bg-background"
+                            style={{
+                              left: `${TIMELINE_RAIL_LEFT_PX}px`,
+                              borderColor: 'color-mix(in srgb, var(--amber) 80%, white 20%)'
+                            }}
+                            aria-hidden
+                          />
+                          <div className="pl-5">
+                            <h3
+                              id={`timeline-day-${group.dayKey}`}
+                              className="font-sans mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                            >
+                              {group.label}
+                            </h3>
+                            <div className="space-y-2">
+                              {group.posts.map((post) => (
+                                <PostRow
+                                  key={post.id}
+                                  post={post}
+                                  onUpdatePost={updatePost}
+                                  onDelete={deletePost}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </section>
+                      ))}
+                    </div>
+                    <div ref={sentinelRef} className="h-1 w-full shrink-0" aria-hidden />
+                    {loadingMore && (
+                      <p className="py-3 text-center text-xs text-muted-foreground">Loading more…</p>
+                    )}
+                    {!hasMore && posts.length > 0 && (
+                      <p className="py-2 text-center text-[11px] text-muted-foreground">End of log</p>
+                    )}
+                  </>
                 )}
-                {!hasMore && posts.length > 0 && (
-                  <p className="py-2 text-center text-[11px] text-muted-foreground">End of log</p>
-                )}
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </div>
       </main>
 
@@ -387,22 +521,126 @@ export function TimelineView(): React.JSX.Element {
         open={isCreatePostDialogOpen}
         onOpenChange={(open) => {
           setIsCreatePostDialogOpen(open)
-          if (!open) setCurrentContext(null)
+          if (!open) setPostAssociations(emptyPostComposerAssociations())
         }}
       >
         <DialogContent className="max-w-[min(100vw-2rem,42rem)]">
           <DialogHeader className="space-y-1 text-left">
-            <DialogTitle className="font-sans text-lg font-semibold tracking-tight">Create post</DialogTitle>
+            <DialogTitle className="font-sans text-lg font-semibold tracking-tight">
+              Create post
+            </DialogTitle>
           </DialogHeader>
           <PostComposer
             compact={false}
             draftStorageKey={postDraftStorageKey}
-            currentContext={currentContext}
-            onClearContext={handleClearContext}
+            associations={postAssociations}
+            onAssociationsChange={setPostAssociations}
             onSubmit={handleSubmit}
-            onSelectContext={setCurrentContext}
             todosForSuggestion={todayTodos.filter((t) => t.done === 0)}
+            listsForSuggestion={lists}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isNewListDialogOpen} onOpenChange={setIsNewListDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>New list</DialogTitle>
+          </DialogHeader>
+          <div className="flex gap-2 pt-1">
+            <Input
+              value={newListName}
+              onChange={(e) => setNewListName(e.target.value)}
+              placeholder="List name"
+              disabled={creatingList}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  void handleCreateList()
+                }
+              }}
+            />
+            <Button
+              type="button"
+              disabled={creatingList || !newListName.trim()}
+              onClick={() => void handleCreateList()}
+            >
+              Create
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(editingList)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingList(null)
+            setEditListName('')
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit list</DialogTitle>
+          </DialogHeader>
+          <div className="flex gap-2 pt-1">
+            <Input
+              value={editListName}
+              onChange={(e) => setEditListName(e.target.value)}
+              placeholder="List name"
+              disabled={renamingList}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  void handleSaveEditList()
+                }
+              }}
+            />
+            <Button
+              type="button"
+              disabled={renamingList || !editListName.trim()}
+              onClick={() => void handleSaveEditList()}
+            >
+              Save
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(deletingList)}
+        onOpenChange={(open) => {
+          if (!open && !deletingListInProgress) setDeletingList(null)
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete list?</DialogTitle>
+            <DialogDescription>
+              “{deletingList?.name}” will be removed. Posts in the list stay in your timeline.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={deletingListInProgress}
+              onClick={() => setDeletingList(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deletingListInProgress}
+              onClick={() => void handleConfirmDeleteList()}
+            >
+              Delete list
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

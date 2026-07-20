@@ -33,7 +33,9 @@ export interface DayColumnProps {
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const SLOT_MINUTES = 15; // 15-minute increments
+const SLOT_MINUTES = 15;
+const DEFAULT_DURATION_MINUTES = 30;
+const LONG_PRESS_MS = 400;
 
 export function DayColumn({
   date,
@@ -50,34 +52,19 @@ export function DayColumn({
   const today = isToday(date);
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  // Calculate task layouts with lane assignments for overlapping tasks
   const taskLayouts = useMemo(
     () => calculateTaskLayoutsForDay(tasks, date, SLOT_MINUTES),
     [tasks, date]
   );
 
-  // Calculate event layouts
   const eventLayouts = useMemo(
     () => calculateEventLayoutsForDay(events, date, SLOT_MINUTES),
     [events, date]
   );
 
-  // Shared values for drag selection
-  const isDragging = useSharedValue(false);
-  const startY = useSharedValue(0);
-  const currentY = useSharedValue(0);
   const selectionTop = useSharedValue(0);
   const selectionHeight = useSharedValue(0);
-
-  const yToMinutes = useCallback(
-    (y: number) => {
-      const minutesPerPixel = 60 / hourHeight;
-      const totalMinutes = y * minutesPerPixel;
-      // Snap to 15-minute increments
-      return Math.round(totalMinutes / SLOT_MINUTES) * SLOT_MINUTES;
-    },
-    [hourHeight]
-  );
+  const selectionVisible = useSharedValue(0);
 
   const minutesToDate = useCallback(
     (minutes: number) => {
@@ -89,94 +76,65 @@ export function DayColumn({
     [date]
   );
 
-  // Convert Y position to minutes (worklet-compatible version)
-  const yToMinutesWorklet = (y: number) => {
-    'worklet';
-    const minutesPerPixel = 60 / hourHeight;
-    const totalMinutes = y * minutesPerPixel;
-    return Math.round(totalMinutes / SLOT_MINUTES) * SLOT_MINUTES;
-  };
-
-  const handleCreateRange = useCallback(
-    (startMinutes: number, endMinutes: number) => {
-      if (!onCreateRange) return;
-
-      const minMinutes = Math.min(startMinutes, endMinutes);
-      const maxMinutes = Math.max(startMinutes, endMinutes);
-
-      // Ensure minimum duration of 30 minutes for better usability
-      const actualEnd = maxMinutes <= minMinutes ? minMinutes + 30 : maxMinutes;
-
-      onCreateRange({
-        startAt: minutesToDate(minMinutes),
-        endAt: minutesToDate(actualEnd),
-      });
+  const yToMinutes = useCallback(
+    (y: number) => {
+      const minutesPerPixel = 60 / hourHeight;
+      const totalMinutes = y * minutesPerPixel;
+      return Math.round(totalMinutes / SLOT_MINUTES) * SLOT_MINUTES;
     },
-    [onCreateRange, minutesToDate]
+    [hourHeight]
   );
 
-  // Long press initiates drag selection for custom time range
+  const showSelectionPreview = useCallback(
+    (y: number) => {
+      const startMinutes = Math.max(
+        0,
+        Math.min(24 * 60 - DEFAULT_DURATION_MINUTES, yToMinutes(y))
+      );
+      selectionTop.value = (startMinutes / 60) * hourHeight;
+      selectionHeight.value = (DEFAULT_DURATION_MINUTES / 60) * hourHeight;
+      selectionVisible.value = 1;
+    },
+    [hourHeight, selectionHeight, selectionTop, selectionVisible, yToMinutes]
+  );
+
+  const hideSelectionPreview = useCallback(() => {
+    selectionVisible.value = 0;
+  }, [selectionVisible]);
+
+  const handleCreateAt = useCallback(
+    (y: number) => {
+      if (!onCreateRange) return;
+      const startMinutes = Math.max(
+        0,
+        Math.min(24 * 60 - DEFAULT_DURATION_MINUTES, yToMinutes(y))
+      );
+      onCreateRange({
+        startAt: minutesToDate(startMinutes),
+        endAt: minutesToDate(startMinutes + DEFAULT_DURATION_MINUTES),
+      });
+    },
+    [minutesToDate, onCreateRange, yToMinutes]
+  );
+
   const longPressGesture = Gesture.LongPress()
-    .minDuration(300)
+    .minDuration(LONG_PRESS_MS)
+    .maxDistance(16)
+    .shouldCancelWhenOutside(false)
     .onStart((event) => {
       'worklet';
-      isDragging.value = true;
-      startY.value = event.y;
-      currentY.value = event.y;
-      const startMinutes = yToMinutesWorklet(event.y);
-      selectionTop.value = (startMinutes / 60) * hourHeight;
-      selectionHeight.value = (SLOT_MINUTES / 60) * hourHeight;
+      runOnJS(showSelectionPreview)(event.y);
     })
     .onEnd((event, success) => {
       'worklet';
-      // If long press completed without dragging, create a 30-min task
-      if (success && isDragging.value && Math.abs(startY.value - currentY.value) < 5) {
-        const startMinutes = yToMinutesWorklet(event.y);
-        runOnJS(handleCreateRange)(startMinutes, startMinutes + 30);
-      }
-      isDragging.value = false;
-      selectionHeight.value = 0;
-    });
-
-  // Pan gesture for drag selection (only active after long press)
-  const panGesture = Gesture.Pan()
-    .activateAfterLongPress(300)
-    .onUpdate((event) => {
-      'worklet';
-      if (!isDragging.value) return;
-      currentY.value = event.y;
-
-      const startMinutes = yToMinutesWorklet(startY.value);
-      const currentMinutes = yToMinutesWorklet(event.y);
-
-      const minMinutes = Math.min(startMinutes, currentMinutes);
-      const maxMinutes = Math.max(startMinutes, currentMinutes);
-
-      selectionTop.value = (minMinutes / 60) * hourHeight;
-      selectionHeight.value = Math.max(
-        ((maxMinutes - minMinutes + SLOT_MINUTES) / 60) * hourHeight,
-        (SLOT_MINUTES / 60) * hourHeight
-      );
-    })
-    .onEnd(() => {
-      'worklet';
-      if (isDragging.value) {
-        const startMinutes = yToMinutesWorklet(startY.value);
-        const endMinutes = yToMinutesWorklet(currentY.value);
-        runOnJS(handleCreateRange)(startMinutes, endMinutes);
-      }
-      isDragging.value = false;
-      selectionHeight.value = 0;
+      runOnJS(hideSelectionPreview)();
+      if (!success) return;
+      runOnJS(handleCreateAt)(event.y);
     })
     .onFinalize(() => {
       'worklet';
-      isDragging.value = false;
-      selectionHeight.value = 0;
+      runOnJS(hideSelectionPreview)();
     });
-
-  // Long press + optional drag for task creation
-  // Tapping on tasks will work normally since we're not using a Tap gesture
-  const composed = Gesture.Simultaneous(longPressGesture, panGesture);
 
   const selectionAnimatedStyle = useAnimatedStyle(() => ({
     position: 'absolute',
@@ -188,28 +146,26 @@ export function DayColumn({
     borderRadius: 4,
     borderWidth: 1,
     borderColor: 'rgba(59, 130, 246, 0.5)',
-    opacity: isDragging.value ? 1 : 0,
+    opacity: selectionVisible.value,
   }));
 
   return (
     <View style={{ width: columnWidth }} className="border-l border-border">
       {showDayLabel && (
         <View
-          className={`h-10 items-center justify-center border-b border-border ${today ? 'bg-primary/10' : ''
-            }`}
+          className={`h-10 items-center justify-center border-b border-border ${
+            today ? 'bg-primary/10' : ''
+          }`}
         >
           <Text className={`text-xs ${today ? 'font-bold text-primary' : 'text-muted-foreground'}`}>
             {dayNames[date.getDay()]}
           </Text>
-          <Text className={`text-sm ${today ? 'font-bold text-primary' : ''}`}>
-            {date.getDate()}
-          </Text>
+          <Text className={`text-sm ${today ? 'font-bold text-primary' : ''}`}>{date.getDate()}</Text>
         </View>
       )}
 
-      <GestureDetector gesture={composed}>
+      <GestureDetector gesture={longPressGesture}>
         <Animated.View className="relative">
-          {/* Hour grid lines */}
           {HOURS.map((hour) => (
             <View
               key={hour}
@@ -218,10 +174,8 @@ export function DayColumn({
             />
           ))}
 
-          {/* Selection preview */}
           <Animated.View style={selectionAnimatedStyle} pointerEvents="none" />
 
-          {/* Event blocks from Google Calendar */}
           {eventLayouts.map((layout) => {
             const { event, startDate: evStart, endDate: evEnd, lane, laneCount } = layout;
             const evStartMinutes = evStart.getHours() * 60 + evStart.getMinutes();
@@ -246,7 +200,6 @@ export function DayColumn({
             );
           })}
 
-          {/* Task blocks with lane-based layout for overlapping tasks */}
           {taskLayouts.map((layout) => {
             const { task, startDate, endDate, lane, laneCount } = layout;
             const startMinutes = startDate.getHours() * 60 + startDate.getMinutes();
@@ -256,8 +209,7 @@ export function DayColumn({
             const isActive = false;
             const isCompleted = task.done === 1;
 
-            // Calculate width and left position based on lane assignment
-            const availableWidth = columnWidth - 4; // 2px padding on each side
+            const availableWidth = columnWidth - 4;
             const laneWidth = availableWidth / laneCount;
             const left = 2 + lane * laneWidth;
 
@@ -267,7 +219,7 @@ export function DayColumn({
                 task={task}
                 top={top}
                 height={Math.max(height, 30)}
-                width={laneWidth - 2} // 2px gap between lanes
+                width={laneWidth - 2}
                 left={left}
                 hourHeight={hourHeight}
                 isActive={isActive}
