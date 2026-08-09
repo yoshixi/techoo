@@ -141,6 +141,8 @@ export const createAuth = () => {
               'https://www.googleapis.com/auth/calendar.events.readonly'
             ],
             accessType: 'offline', // Request refresh token
+            // Ensure refresh tokens on re-link / re-consent
+            prompt: 'select_account consent',
           },
         }
         : {}),

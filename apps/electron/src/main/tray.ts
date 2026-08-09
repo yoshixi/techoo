@@ -10,10 +10,10 @@ interface TimerState {
   startTime: string
 }
 
-interface ScheduledTask {
+interface ScheduledTodo {
   id: number
   title: string
-  startAt: string
+  starts_at: string
 }
 
 export class TrayManager {
@@ -21,7 +21,7 @@ export class TrayManager {
   private timerInterval: NodeJS.Timeout | null = null
   private nextTaskInterval: NodeJS.Timeout | null = null
   private activeTimers: TimerState[] = []
-  private nextTask: ScheduledTask | null = null
+  private nextTodo: ScheduledTodo | null = null
   private onShowTaskDetail: ((taskId: number) => void) | null = null
   private authToken: string | null = null
 
@@ -29,7 +29,7 @@ export class TrayManager {
 
   setAuthToken(token: string | null): void {
     this.authToken = token
-    void this.fetchNextTask()
+    void this.fetchNextTodo()
   }
 
   private getAuthHeaders(): Record<string, string> {
@@ -59,50 +59,54 @@ export class TrayManager {
       })
     }
 
-    // Start fetching next scheduled task
-    this.fetchNextTask()
+    // Start fetching next scheduled todo
+    this.fetchNextTodo()
     this.nextTaskInterval = setInterval(() => {
-      this.fetchNextTask()
+      this.fetchNextTodo()
     }, 60 * 1000) // Refresh every minute
   }
 
-  private async fetchNextTask(): Promise<void> {
+  private async fetchNextTodo(): Promise<void> {
     if (!this.authToken) {
-      this.nextTask = null
+      this.nextTodo = null
       this.updateDisplay()
       this.updateContextMenu()
       return
     }
 
     try {
-      const response = await fetch(
-        `${API_URL}/api/tasks?completed=false&scheduled=true&sortBy=startAt&order=asc`,
-        { headers: this.getAuthHeaders() }
-      )
+      const response = await fetch(`${API_URL}/api/v1/todos?done=false&limit=500`, {
+        headers: this.getAuthHeaders()
+      })
       if (!response.ok) {
-        this.nextTask = null
+        this.nextTodo = null
         return
       }
-      const data = (await response.json()) as { tasks: ScheduledTask[] }
-      const tasks = data.tasks || []
+      const body = (await response.json()) as {
+        data: Array<{ id: number; title: string; starts_at: string | null }>
+      }
+      const todos = body.data || []
 
-      // Find the next upcoming task (startAt in the future)
+      // Find the next upcoming scheduled todo (starts_at in the future)
       const now = Date.now()
       const activeTaskIds = new Set(this.activeTimers.map((t) => t.taskId))
 
-      const upcomingTask = tasks.find((task) => {
-        if (!task.startAt) return false
-        if (activeTaskIds.has(task.id)) return false // Skip tasks with active timers
-        const startTime = new Date(task.startAt).getTime()
-        return startTime > now
-      })
+      const upcoming = todos
+        .filter((todo): todo is ScheduledTodo => {
+          if (!todo.starts_at) return false
+          if (activeTaskIds.has(todo.id)) return false
+          return new Date(todo.starts_at).getTime() > now
+        })
+        .sort(
+          (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
+        )[0]
 
-      this.nextTask = upcomingTask || null
+      this.nextTodo = upcoming || null
       this.updateDisplay()
       this.updateContextMenu()
     } catch (error) {
-      console.error('Failed to fetch next task for tray:', error)
-      this.nextTask = null
+      console.error('Failed to fetch next todo for tray:', error)
+      this.nextTodo = null
     }
   }
 
@@ -162,20 +166,20 @@ export class TrayManager {
       menuItems.push({ type: 'separator' })
     }
 
-    // Show next scheduled task
-    if (this.nextTask) {
-      const startTime = new Date(this.nextTask.startAt)
+    // Show next scheduled todo
+    if (this.nextTodo) {
+      const startTime = new Date(this.nextTodo.starts_at)
       const timeString = startTime.toLocaleTimeString(undefined, {
         hour: '2-digit',
         minute: '2-digit'
       })
-      const title = this.truncateTitle(this.nextTask.title, 25)
+      const title = this.truncateTitle(this.nextTodo.title, 25)
 
       menuItems.push({
         label: `Next: ${title} at ${timeString}`,
         click: () => {
           this.showMainWindow()
-          this.onShowTaskDetail?.(this.nextTask!.id)
+          this.onShowTaskDetail?.(this.nextTodo!.id)
         }
       })
       menuItems.push({ type: 'separator' })
@@ -205,8 +209,8 @@ export class TrayManager {
       this.timerInterval = null
     }
 
-    // Refresh next task when timer states change
-    this.fetchNextTask()
+    // Refresh next todo when timer states change
+    this.fetchNextTodo()
 
     if (timers.length > 0) {
       this.updateDisplay()

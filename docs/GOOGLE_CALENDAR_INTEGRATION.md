@@ -29,13 +29,22 @@ Base URL: `/api`
 
 ## Authentication
 
-Google Calendar access is granted when users sign in with Google through better-auth. The OAuth configuration requests calendar scopes (`calendar.readonly` and `calendar.events.readonly`) during the sign-in flow, so users don't need a separate authorization step to connect their calendars.
+Google Calendar access is granted when users sign in with Google through better-auth. The OAuth configuration requests calendar scopes (`calendar.readonly` and `calendar.events.readonly`) during the sign-in flow.
+
+**OAuth ≠ import:** Granting Calendar permission does **not** import events by itself. Users must open Settings → Available Calendars → **Add**. Adding a calendar auto-syncs the next 30 days of events.
 
 **How it works:**
-1. User signs in with Google via better-auth (`/api/auth/callback/google`)
+1. User signs in / links Google via better-auth (`/api/auth/callback/google`)
 2. better-auth stores OAuth tokens (including calendar access) in the `accounts` table
-3. Calendar API calls use the tokens from the `accounts` table
-4. Tokens are automatically refreshed when expired
+3. Client lists available calendars via `GET /api/calendars/available?accountId=…`
+4. Client adds calendars via `POST /api/calendars` (server syncs events immediately)
+5. Calendar UI reads events via `GET /api/events`
+6. Tokens are refreshed on use; re-link if refresh fails or scopes are missing
+
+Related OAuth management routes (not `/auth/google/*`):
+- `GET /api/oauth/google/status`
+- `GET /api/oauth/google/accounts`
+- `DELETE /api/oauth/google`
 
 ## Environment Variables
 
@@ -44,7 +53,18 @@ Required environment variables for Google OAuth:
 ```bash
 GOOGLE_CLIENT_ID=your-client-id
 GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:8787/api/auth/callback/google
 ```
+
+### Google Cloud Console checklist
+
+1. Create (or reuse) an OAuth 2.0 Client ID for the backend
+2. Enable **Google Calendar API** for that project (APIs & Services → Library)
+3. OAuth consent screen includes Calendar read scopes:
+   - `https://www.googleapis.com/auth/calendar.readonly`
+   - `https://www.googleapis.com/auth/calendar.events.readonly`
+4. Authorized redirect URI matches `GOOGLE_REDIRECT_URI` / better-auth callback
+5. After enabling the API or changing scopes, **re-link** the Google account in the app so a fresh refresh token is stored
 
 For push notifications (webhooks), you also need:
 
@@ -52,7 +72,9 @@ For push notifications (webhooks), you also need:
 WEBHOOK_BASE_URL=https://your-public-domain.com
 ```
 
-> **Note:** The webhook URL must be publicly accessible and use HTTPS. For local development, you can use a service like ngrok to expose your local server.
+> **Note:** Webhooks are optional for listing and manual sync. The webhook URL must be publicly accessible and use HTTPS. For local development, you can use a service like ngrok to expose your local server.
+
+See also: [agents/plans/2026-08-05-calendar-sync-wrap-up.md](../agents/plans/2026-08-05-calendar-sync-wrap-up.md).
 
 ## Data Models
 
@@ -162,27 +184,30 @@ Watch channel for push notifications.
 
 ### OAuth Status
 
-#### GET /auth/google/status
+#### GET /oauth/google/status
 
-Check if user has a valid Google OAuth connection (via better-auth sign-in).
+Check if user has a valid Google OAuth connection (via better-auth sign-in). Attempts token refresh before reporting disconnected.
 
 **Response:**
 ```json
 {
   "connected": true,
   "providerType": "google",
-  "expiresAt": "2024-01-15T11:00:00.000Z"
+  "expiresAt": "2024-01-15T11:00:00.000Z",
+  "scope": "openid email profile https://www.googleapis.com/auth/calendar.readonly …",
+  "hasCalendarScope": true
 }
 ```
 
 Or if not connected:
 ```json
 {
-  "connected": false
+  "connected": false,
+  "hasCalendarScope": false
 }
 ```
 
-#### DELETE /auth/google
+#### DELETE /oauth/google
 
 Disconnect Google Calendar data (removes calendars and events).
 
@@ -231,11 +256,12 @@ List all integrated calendars.
 
 #### POST /calendars
 
-Add a calendar to sync.
+Add a calendar to sync. After insert, the server immediately imports events for the next 30 days (same as a manual sync). Manual `POST /calendars/{id}/sync` remains available for refresh.
 
 **Request Body:**
 ```json
 {
+  "providerAccountId": "google-oauth-sub",
   "providerCalendarId": "primary",
   "name": "My Work Calendar",  // Optional, defaults to provider name
   "isEnabled": true            // Optional, defaults to true
@@ -539,36 +565,41 @@ better-auth stores tokens in `accounts` table
 User is now authenticated AND has calendar access
 ```
 
-### Step 2: Add Calendars to Sync
+### Step 2: Add Calendars to Sync (includes initial import)
 
 ```
-GET /calendars/available
+GET /calendars/available?accountId=…
          ↓
 Fetches list of calendars from Google Calendar API
 (using tokens from accounts table)
          ↓
 User selects which calendars to sync
          ↓
-POST /calendars { providerCalendarId: "primary" }
+POST /calendars { providerAccountId, providerCalendarId }
          ↓
 Calendar record created in `calendars` table
+         ↓
+Server syncs next 30 days of events into `calendar_events`
 ```
 
-### Step 3: Initial Sync (Manual)
+Manual re-sync: `POST /calendars/{id}/sync` (full replace for the next 30 days).
 
-```
-POST /calendars/{id}/sync
-         ↓
-Fetch events from Google (next 30 days)
-         ↓
-Delete existing events for this calendar
-         ↓
-Insert all fetched events into `calendar_events` table
-         ↓
-Update lastSyncedAt timestamp
-```
+### Step 2b: Sync-if-stale on calendar use (automatic)
 
-### Step 4: Enable Real-time Updates (Push Notifications)
+Clients keep events fresh **only while the user is looking at a calendar surface** (cost-aware: inactive users do not sync).
+
+Policy:
+
+- When mobile Calendar, Electron Todo calendar, or Today plan calendar mounts (and again on app foreground / window focus), the client checks enabled calendars.
+- If any has `lastSyncedAt` null or older than **15 minutes**, call `POST /calendars/sync`.
+- Debounced to at most one attempt per **60 seconds**; fire-and-forget (does not block the timeline). Failures are silent; Settings still has manual Sync.
+- Hooks: `useCalendarAutoSync` on mobile and Electron.
+
+See [agents/plans/2026-08-08-calendar-sync-lifecycle.md](../agents/plans/2026-08-08-calendar-sync-lifecycle.md).
+
+### Step 3: Enable Real-time Updates (Push Notifications) — not auto-wired yet
+
+> Push watch is implemented in the API but **not** started automatically. Phase 2: auto-watch on add + Cron renewal. Until then, sync-if-stale is the refresh path.
 
 ```
 POST /calendars/{id}/watch
@@ -583,7 +614,7 @@ Store in `calendar_watch_channels` table
 Google will now notify us of changes
 ```
 
-### Step 5: Receiving Updates (Automatic)
+### Step 4: Receiving Updates (Automatic)
 
 ```
 User creates/updates/deletes event in Google Calendar
@@ -608,9 +639,9 @@ Returns 200 OK to Google
 ├─────────────────────────────────────────────────────────────────┤
 │  1. Sign in with Google → tokens stored in accounts table       │
 │  2. GET /calendars/available → see available calendars          │
-│  3. POST /calendars → add calendar to sync                      │
-│  4. POST /calendars/{id}/sync → initial event import            │
-│  5. POST /calendars/{id}/watch → enable push notifications      │
+│  3. POST /calendars → add calendar + initial event import       │
+│  4. POST /calendars/{id}/watch → enable push notifications      │
+│  5. POST /calendars/{id}/sync → manual refresh (optional)       │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐

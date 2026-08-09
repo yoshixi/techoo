@@ -6,10 +6,63 @@ import {
   listGoogleAccountsRoute
 } from '../routes/google-auth'
 import { deleteAllCalendarsForProvider } from '../../../core/calendars.db'
-import { googleCalendarProvider } from '../../../core/calendar-providers/google.service'
+import {
+  googleCalendarProvider,
+  getValidGoogleTokens
+} from '../../../core/calendar-providers/google.service'
+import { hasGoogleCalendarScope } from '../../../core/calendar-providers/google-errors'
 import { formatTimestamp } from '../../../core/common.core'
+import type { OAuthService } from '../../../core/oauth.service'
+import type { ProviderTokens } from '../../../core/calendar-providers/types'
 
-// GET /auth/google/status - Check if user has Google OAuth connected via better-auth
+async function refreshAccountTokensIfNeeded(
+  oauth: OAuthService,
+  providerAccountId: string,
+  account: {
+    accessToken: string | null
+    refreshToken: string | null
+    accessTokenExpiresAt: Date | null
+    scope: string | null
+  }
+): Promise<{
+  connected: boolean
+  expiresAt: Date | null
+  scope: string | null
+}> {
+  if (!account.accessToken) {
+    return { connected: false, expiresAt: null, scope: account.scope }
+  }
+
+  const providerTokens: ProviderTokens = {
+    accessToken: account.accessToken,
+    refreshToken: account.refreshToken || '',
+    expiresAt: account.accessTokenExpiresAt || new Date(0)
+  }
+
+  try {
+    const validTokens = await getValidGoogleTokens(providerTokens)
+    if (validTokens.accessToken !== account.accessToken) {
+      await oauth.updateToken('google', providerAccountId, {
+        accessToken: validTokens.accessToken,
+        refreshToken: validTokens.refreshToken,
+        expiresAt: validTokens.expiresAt
+      })
+    }
+    return {
+      connected: true,
+      expiresAt: validTokens.expiresAt,
+      scope: account.scope
+    }
+  } catch {
+    return {
+      connected: false,
+      expiresAt: account.accessTokenExpiresAt,
+      scope: account.scope
+    }
+  }
+}
+
+// GET /oauth/google/status - Check if user has Google OAuth connected via better-auth
 export const getGoogleAuthStatusHandler: RouteHandler<
   typeof getGoogleAuthStatusRoute,
   AppBindings
@@ -18,46 +71,66 @@ export const getGoogleAuthStatusHandler: RouteHandler<
     const oauth = c.get('oauth')
     const { accountId } = c.req.valid('query')
 
-    // Check accounts table (populated by better-auth when user signs in with Google)
     if (accountId) {
       const account = await oauth.getTokenForAccount('google', accountId)
 
       if (!account || !account.accessToken) {
-        return c.json({ connected: false }, 200)
+        return c.json(
+          {
+            connected: false,
+            scope: account?.scope ?? null,
+            hasCalendarScope: hasGoogleCalendarScope(account?.scope)
+          },
+          200
+        )
       }
 
-      // Check if token is expired (if expiry is set)
-      let isExpired = false
-      if (account.accessTokenExpiresAt) {
-        const now = Date.now()
-        isExpired = account.accessTokenExpiresAt.getTime() <= now
-      }
+      const refreshed = await refreshAccountTokensIfNeeded(
+        oauth,
+        accountId,
+        account
+      )
 
       return c.json(
         {
-          connected: !isExpired,
+          connected: refreshed.connected,
           providerType: 'google' as const,
-          expiresAt: account.accessTokenExpiresAt
-            ? formatTimestamp(account.accessTokenExpiresAt)
-            : null
+          expiresAt: refreshed.expiresAt
+            ? formatTimestamp(refreshed.expiresAt)
+            : null,
+          scope: refreshed.scope,
+          hasCalendarScope: hasGoogleCalendarScope(refreshed.scope)
         },
         200
       )
     }
 
     const accounts = await oauth.listAccountRecords('google')
-    const now = Date.now()
-    const hasValid = accounts.some((account) => {
-      if (!account.accessToken) return false
-      if (!account.accessTokenExpiresAt) return true
-      return account.accessTokenExpiresAt.getTime() > now
-    })
+    let connected = false
+    let scope: string | null = null
+
+    for (const account of accounts) {
+      if (!account.accessToken || !account.accountId) continue
+      const refreshed = await refreshAccountTokensIfNeeded(
+        oauth,
+        account.accountId,
+        account
+      )
+      if (!scope && refreshed.scope) scope = refreshed.scope
+      if (refreshed.connected) {
+        connected = true
+        scope = refreshed.scope
+        break
+      }
+    }
 
     return c.json(
       {
-        connected: hasValid,
+        connected,
         providerType: accounts.length ? ('google' as const) : undefined,
-        expiresAt: null
+        expiresAt: null,
+        scope,
+        hasCalendarScope: hasGoogleCalendarScope(scope)
       },
       200
     )
@@ -67,7 +140,7 @@ export const getGoogleAuthStatusHandler: RouteHandler<
   }
 }
 
-// DELETE /auth/google - Disconnect Google OAuth and remove calendar data
+// DELETE /oauth/google - Disconnect Google OAuth and remove calendar data
 // Note: This only removes calendar data. To fully unlink the account,
 // use better-auth's unlinkAccount method from the client.
 export const deleteGoogleAuthHandler: RouteHandler<

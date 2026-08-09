@@ -13,16 +13,11 @@ import {
   deleteApiCalendarsId,
   postApiCalendarsIdSync,
   getGetApiCalendarsKey,
-  getGetApiEventsKey,
-} from '@/gen/api/endpoints/techooAPI.gen'
-import type {
-  Calendar,
-  AvailableCalendar,
-  OAuthAccount,
-} from '@/gen/api/schemas'
-import { isApiRequestError } from '@/lib/api/ApiRequestError'
+  getGetApiEventsKey
+} from '../gen/api/endpoints/techooAPI.gen'
+import type { Calendar, AvailableCalendar, OAuthAccount } from '../gen/api/schemas'
 
-interface UseCalendarSettingsReturn {
+export interface UseCalendarSettingsReturn {
   isGoogleConnected: boolean
   hasCalendarScope: boolean | undefined
   isLoading: boolean
@@ -39,22 +34,26 @@ interface UseCalendarSettingsReturn {
 
 function messageFromAvailableError(error: unknown): string | null {
   if (!error) return null
-  if (isApiRequestError(error)) {
-    try {
-      const parsed = JSON.parse(error.body ?? '') as { error?: string }
-      if (parsed.error) return parsed.error
-    } catch {
-      // fall through
+  if (error instanceof Error) {
+    const match = /^HTTP (\d{3}):\s*(.*)$/s.exec(error.message)
+    if (match) {
+      const status = Number(match[1])
+      const body = match[2]
+      try {
+        const parsed = JSON.parse(body) as { error?: string }
+        if (parsed.error) return parsed.error
+      } catch {
+        // fall through
+      }
+      if (status === 401) {
+        return 'Google session expired; re-link your Google account.'
+      }
+      if (status === 403) {
+        return 'Calendar access was denied. Re-link Google, or enable the Calendar API in Google Cloud Console.'
+      }
     }
-    if (error.status === 401) {
-      return 'Google session expired; re-link your Google account.'
-    }
-    if (error.status === 403) {
-      return 'Calendar access was denied. Re-link Google, or enable the Calendar API in Google Cloud Console.'
-    }
-    return 'Failed to load available calendars.'
+    return error.message
   }
-  if (error instanceof Error) return error.message
   return 'Failed to load available calendars.'
 }
 
@@ -71,13 +70,12 @@ export function useCalendarSettings(
     [accountsData?.accounts]
   )
 
-  // Default to first account when none is explicitly selected
   const effectiveAccountId = providerAccountId ?? googleAccounts[0]?.accountId
 
   const { data: statusData, isLoading: isStatusLoading } = useGetApiOauthGoogleStatus(
     effectiveAccountId ? { accountId: effectiveAccountId } : undefined,
     {
-      swr: { enabled: Boolean(effectiveAccountId) },
+      swr: { enabled: Boolean(effectiveAccountId) }
     }
   )
 
@@ -93,14 +91,14 @@ export function useCalendarSettings(
   const {
     data: availableData,
     error: availableQueryError,
-    isLoading: isAvailableLoading,
+    isLoading: isAvailableLoading
   } = useGetApiCalendarsAvailable(
     { accountId: effectiveAccountId || '' },
     {
       swr: {
         enabled: Boolean(effectiveAccountId),
-        shouldRetryOnError: false,
-      },
+        shouldRetryOnError: false
+      }
     }
   )
 
@@ -129,7 +127,7 @@ export function useCalendarSettings(
         ? mutate(getGetApiCalendarsAvailableKey({ accountId: effectiveAccountId }))
         : Promise.resolve(),
       mutate(getGetApiCalendarsKey()),
-      mutate(getGetApiEventsKey()),
+      mutate(getGetApiEventsKey())
     ])
   }, [mutate, effectiveAccountId])
 
@@ -141,7 +139,7 @@ export function useCalendarSettings(
       await postApiCalendars({
         providerAccountId: effectiveAccountId,
         providerCalendarId,
-        name,
+        name
       })
       await refresh()
     },
@@ -185,6 +183,6 @@ export function useCalendarSettings(
     removeCalendar,
     toggleCalendarEnabled,
     syncCalendar,
-    refresh,
+    refresh
   }
 }

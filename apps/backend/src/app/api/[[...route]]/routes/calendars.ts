@@ -40,7 +40,15 @@ export const listAvailableCalendarsRoute = createRoute({
           schema: ErrorResponseModel
         }
       },
-      description: 'Google OAuth not connected'
+      description: 'Google OAuth not connected or token expired'
+    },
+    403: {
+      content: {
+        'application/json': {
+          schema: ErrorResponseModel
+        }
+      },
+      description: 'Calendar API disabled or missing calendar scopes'
     },
     500: {
       content: {
@@ -118,6 +126,14 @@ export const createCalendarRoute = createRoute({
         }
       },
       description: 'Google OAuth not connected'
+    },
+    403: {
+      content: {
+        'application/json': {
+          schema: ErrorResponseModel
+        }
+      },
+      description: 'Calendar API disabled or missing calendar scopes'
     },
     500: {
       content: {
@@ -273,6 +289,14 @@ export const syncCalendarRoute = createRoute({
         }
       },
       description: 'Google OAuth not connected or token expired'
+    },
+    403: {
+      content: {
+        'application/json': {
+          schema: ErrorResponseModel
+        }
+      },
+      description: 'Calendar API disabled or missing calendar scopes'
     },
     404: {
       content: {

@@ -8,16 +8,14 @@ import type {
   WatchChannelInfo
 } from './types'
 import { getEnv } from '../env'
+import { GOOGLE_CALENDAR_SCOPES } from './google-errors'
 
 const GOOGLE_OAUTH_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const GOOGLE_OAUTH_REVOKE_URL = 'https://oauth2.googleapis.com/revoke'
 const GOOGLE_CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3'
 
 // Google Calendar scopes
-const SCOPES = [
-  'https://www.googleapis.com/auth/calendar.readonly',
-  'https://www.googleapis.com/auth/calendar.events.readonly'
-]
+const SCOPES = [...GOOGLE_CALENDAR_SCOPES]
 
 // Get OAuth2 client configuration
 function getOAuth2Config() {

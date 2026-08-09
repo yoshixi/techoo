@@ -1,6 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import useSwr from 'swr'
-import { Button } from './ui/button'
+import React, { useCallback, useMemo, useState, useEffect } from 'react'
 import {
   Keyboard,
   Bell,
@@ -11,27 +9,19 @@ import {
   User,
   ChevronDown,
   ChevronRight,
-  Link
+  Link,
+  CalendarDays,
+  Plus,
+  RefreshCw,
+  Trash2
 } from 'lucide-react'
+import { Button } from './ui/button'
+import { Switch } from './ui/switch'
 import { useAuth } from '../hooks/useAuth'
-import { customInstance } from '../lib/api/mutator'
+import { useCalendarSettings } from '../hooks/useCalendarSettings'
 import { getSessionToken } from '../lib/auth'
 
 type NotificationPermissionStatus = 'granted' | 'denied' | 'not-determined'
-
-type OAuthAccount = {
-  id: string
-  userId: string
-  providerType: string
-  accountId: string
-  email?: string
-  createdAt: string
-  updatedAt: string
-}
-
-type OAuthAccountsResponse = {
-  accounts: OAuthAccount[]
-}
 
 const keyboardShortcuts = [
   { keys: ['⌘', 'N'], description: 'Create a new task' },
@@ -105,6 +95,15 @@ function CollapsibleSection({
   )
 }
 
+function CalendarColorDot({ color }: { color?: string | null }): React.JSX.Element {
+  return (
+    <span
+      className="inline-block h-3 w-3 shrink-0 rounded-full"
+      style={{ backgroundColor: color ?? '#6366f1' }}
+    />
+  )
+}
+
 export function AccountView(): React.JSX.Element {
   const { user, signOut } = useAuth()
   const [notificationStatus, setNotificationStatus] =
@@ -112,20 +111,41 @@ export function AccountView(): React.JSX.Element {
   const [isRequesting, setIsRequesting] = useState(false)
   const [isLinkingGoogle, setIsLinkingGoogle] = useState(false)
   const [linkStatus, setLinkStatus] = useState<'success' | 'error' | null>(null)
+  const [selectedAccountId, setSelectedAccountId] = useState<string | undefined>()
+  const [addingCalendarId, setAddingCalendarId] = useState<string | null>(null)
+  const [syncingCalendarId, setSyncingCalendarId] = useState<string | null>(null)
+  const [removingCalendarId, setRemovingCalendarId] = useState<string | null>(null)
+
   const {
-    data: googleAccountsData,
-    isLoading: isGoogleAccountsLoading,
-    mutate: refreshGoogleAccounts
-  } = useSwr(['/api/oauth/google/accounts'], () =>
-    customInstance<OAuthAccountsResponse>({
-      url: '/api/oauth/google/accounts',
-      method: 'GET'
-    })
+    isLoading: isCalendarLoading,
+    hasCalendarScope,
+    availableError,
+    googleAccounts,
+    availableCalendars,
+    syncedCalendars,
+    addCalendar,
+    removeCalendar,
+    toggleCalendarEnabled,
+    syncCalendar,
+    refresh
+  } = useCalendarSettings(selectedAccountId)
+
+  const effectiveAccountId = selectedAccountId ?? googleAccounts[0]?.accountId
+
+  const accountOptions = useMemo(
+    () =>
+      googleAccounts.map((account, index) => ({
+        id: account.accountId,
+        label: account.email ? account.email : `Account ${index + 1}`
+      })),
+    [googleAccounts]
   )
-  const googleAccounts = useMemo(
-    () => googleAccountsData?.accounts ?? [],
-    [googleAccountsData?.accounts]
-  )
+
+  const accountLabelById = useMemo(() => {
+    const map = new Map<string, string>()
+    accountOptions.forEach((o) => map.set(o.id, o.label))
+    return map
+  }, [accountOptions])
 
   useEffect(() => {
     window.api.getNotificationPermission().then(setNotificationStatus)
@@ -150,7 +170,7 @@ export function AccountView(): React.JSX.Element {
     window.location.reload()
   }
 
-  const handleLinkGoogleAccount = async (): Promise<void> => {
+  const handleLinkGoogleAccount = useCallback(async (): Promise<void> => {
     setLinkStatus(null)
     const sessionToken = await getSessionToken()
     if (!sessionToken) {
@@ -163,7 +183,7 @@ export function AccountView(): React.JSX.Element {
       const linked = await window.api.linkSocialAccount('google', sessionToken)
       setLinkStatus(linked ? 'success' : 'error')
       if (linked) {
-        await refreshGoogleAccounts()
+        await refresh()
       }
     } catch (error) {
       console.error('Failed to link Google account:', error)
@@ -171,7 +191,50 @@ export function AccountView(): React.JSX.Element {
     } finally {
       setIsLinkingGoogle(false)
     }
-  }
+  }, [refresh])
+
+  const handleAddCalendar = useCallback(
+    async (providerCalendarId: string, name: string, providerAccountId: string) => {
+      const key = `${providerAccountId}:${providerCalendarId}`
+      setAddingCalendarId(key)
+      try {
+        await addCalendar(providerCalendarId, name)
+      } catch (error) {
+        console.error('Failed to add calendar:', error)
+      } finally {
+        setAddingCalendarId(null)
+      }
+    },
+    [addCalendar]
+  )
+
+  const handleSyncCalendar = useCallback(
+    async (calendarId: string) => {
+      setSyncingCalendarId(calendarId)
+      try {
+        await syncCalendar(calendarId)
+      } catch (error) {
+        console.error('Failed to sync calendar:', error)
+      } finally {
+        setSyncingCalendarId(null)
+      }
+    },
+    [syncCalendar]
+  )
+
+  const handleRemoveCalendar = useCallback(
+    async (calendarId: string) => {
+      setRemovingCalendarId(calendarId)
+      try {
+        await removeCalendar(calendarId)
+      } catch (error) {
+        console.error('Failed to remove calendar:', error)
+      } finally {
+        setRemovingCalendarId(null)
+      }
+    },
+    [removeCalendar]
+  )
 
   return (
     <div className="p-8 overflow-auto flex-1 min-h-0">
@@ -231,13 +294,15 @@ export function AccountView(): React.JSX.Element {
         <CollapsibleSection
           title="Google Accounts"
           icon={<Link className="h-5 w-5 text-muted-foreground" />}
+          defaultOpen
         >
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Link additional Google accounts to import multiple calendars.
+              Link Google accounts to import calendars. Signing in with Google is not enough —
+              add calendars below after linking.
             </p>
             <div className="space-y-2">
-              {isGoogleAccountsLoading ? (
+              {isCalendarLoading && googleAccounts.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Loading linked accounts...</p>
               ) : googleAccounts.length === 0 ? (
                 <p className="text-xs text-muted-foreground">No Google accounts linked yet.</p>
@@ -257,13 +322,220 @@ export function AccountView(): React.JSX.Element {
               {isLinkingGoogle ? 'Linking...' : 'Link Google Account'}
             </Button>
             {linkStatus === 'success' && (
-              <p className="text-xs text-success">Account linked. Refresh Settings to select it.</p>
+              <p className="text-xs text-success">
+                Account linked. Add calendars below to import events.
+              </p>
             )}
             {linkStatus === 'error' && (
               <p className="text-xs text-destructive">Link failed. Please try again.</p>
             )}
           </div>
         </CollapsibleSection>
+
+        {/* Google Calendar status + account picker */}
+        <div className="border rounded-lg px-6 py-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <CalendarDays className="h-5 w-5 shrink-0 text-muted-foreground" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium">Google Calendar</p>
+                <p className="text-xs text-muted-foreground">
+                  {googleAccounts.length > 0
+                    ? `Connected (${googleAccounts.length} account${googleAccounts.length === 1 ? '' : 's'})`
+                    : 'Not connected'}
+                </p>
+              </div>
+            </div>
+            {googleAccounts.length > 0 ? (
+              <div className="flex items-center gap-1.5 text-success">
+                <CheckCircle className="h-4 w-4" />
+                <span className="text-sm font-medium">Connected</span>
+              </div>
+            ) : (
+              <span className="text-xs text-muted-foreground">Link a Google account above</span>
+            )}
+          </div>
+
+          {googleAccounts.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <p className="text-sm text-muted-foreground">Linked account</p>
+              <div className="flex flex-wrap gap-2">
+                {accountOptions.map((account) => (
+                  <button
+                    key={account.id}
+                    type="button"
+                    onClick={() => setSelectedAccountId(account.id)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${
+                      effectiveAccountId === account.id
+                        ? 'border-primary bg-primary/10 font-medium'
+                        : 'border-border hover:bg-muted/50'
+                    }`}
+                  >
+                    {account.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Available Calendars */}
+        {googleAccounts.length > 0 && effectiveAccountId && (
+          <CollapsibleSection
+            title="Available Calendars"
+            icon={<Plus className="h-5 w-5 text-muted-foreground" />}
+            defaultOpen={syncedCalendars.length === 0}
+          >
+            {hasCalendarScope === false && (
+              <div className="mb-3 space-y-2">
+                <p className="text-sm text-destructive">
+                  This Google account is missing Calendar permission. Re-link to grant access.
+                </p>
+                <Button
+                  size="sm"
+                  onClick={handleLinkGoogleAccount}
+                  disabled={isLinkingGoogle}
+                >
+                  Re-link Google Account
+                </Button>
+              </div>
+            )}
+            {availableError ? (
+              <div className="space-y-2">
+                <p className="text-sm text-destructive">{availableError}</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleLinkGoogleAccount}
+                  disabled={isLinkingGoogle}
+                >
+                  Re-link Google Account
+                </Button>
+              </div>
+            ) : isCalendarLoading ? (
+              <p className="py-2 text-sm text-muted-foreground">Loading calendars...</p>
+            ) : availableCalendars.length === 0 ? (
+              <p className="py-2 text-sm text-muted-foreground">
+                No calendars found in your Google account.
+              </p>
+            ) : (
+              <div className="divide-y">
+                {availableCalendars.map((cal) => {
+                  const key = `${cal.providerAccountId}:${cal.providerCalendarId}`
+                  return (
+                    <div
+                      key={key}
+                      className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
+                    >
+                      <div className="w-16 shrink-0">
+                        {cal.isAlreadyAdded ? (
+                          <div className="flex items-center gap-1 text-success">
+                            <CheckCircle className="h-3 w-3" />
+                            <span className="text-xs">Added</span>
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={addingCalendarId === key}
+                            onClick={() =>
+                              handleAddCalendar(
+                                cal.providerCalendarId,
+                                cal.name,
+                                cal.providerAccountId
+                              )
+                            }
+                          >
+                            <Plus className="mr-1 h-3 w-3" />
+                            Add
+                          </Button>
+                        )}
+                      </div>
+                      <CalendarColorDot color={cal.color} />
+                      <p className="min-w-0 flex-1 truncate text-sm font-medium">
+                        {cal.name}
+                        {cal.isPrimary ? (
+                          <span className="text-xs font-normal text-muted-foreground">
+                            {' '}
+                            (Primary)
+                          </span>
+                        ) : null}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CollapsibleSection>
+        )}
+
+        {/* Synced Calendars */}
+        {googleAccounts.length > 0 &&
+          effectiveAccountId &&
+          syncedCalendars.length > 0 && (
+            <CollapsibleSection
+              title="Synced Calendars"
+              icon={<CalendarDays className="h-5 w-5 text-muted-foreground" />}
+              defaultOpen
+            >
+              <div className="divide-y">
+                {syncedCalendars.map((cal) => {
+                  const lastSynced = cal.lastSyncedAt
+                    ? new Date(cal.lastSyncedAt).toLocaleString()
+                    : 'Never'
+                  const calAccountLabel =
+                    accountLabelById.get(cal.providerAccountId) ?? cal.providerAccountId
+
+                  return (
+                    <div
+                      key={cal.id}
+                      className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <CalendarColorDot color={cal.color} />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{cal.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {calAccountLabel} · Last synced: {lastSynced}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Switch
+                          checked={cal.isEnabled}
+                          onCheckedChange={(enabled) =>
+                            void toggleCalendarEnabled(cal.id, enabled)
+                          }
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={syncingCalendarId === cal.id}
+                          onClick={() => void handleSyncCalendar(cal.id)}
+                          title="Sync now"
+                        >
+                          <RefreshCw
+                            className={`h-4 w-4 ${
+                              syncingCalendarId === cal.id ? 'animate-spin' : ''
+                            }`}
+                          />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={removingCalendarId === cal.id}
+                          onClick={() => void handleRemoveCalendar(cal.id)}
+                          title="Remove"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </CollapsibleSection>
+          )}
 
         {/* Keyboard Shortcuts — collapsible */}
         <CollapsibleSection

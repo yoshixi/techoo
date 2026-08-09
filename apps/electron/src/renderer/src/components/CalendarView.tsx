@@ -13,8 +13,8 @@
  * - Current time indicator with auto-scroll on mount
  * - Lane-based layout for overlapping todos
  */
-import React, { useMemo, useState, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, Minus, Pencil, Plus, Trash2 } from 'lucide-react'
+import React, { useMemo, useState, useCallback, useEffect } from 'react'
+import { CalendarDays, ChevronLeft, ChevronRight, Minus, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
@@ -22,7 +22,10 @@ import { Switch } from './ui/switch'
 import { Dialog, DialogContent } from './ui/dialog'
 import { cn } from '../lib/utils'
 import { useTodos } from '../hooks/useTodos'
+import { useCalendarEvents } from '../hooks/useCalendarEvents'
+import { useCalendarAutoSync } from '../hooks/useCalendarAutoSync'
 import type { Todo as ApiTodo } from '../gen/api/schemas'
+import type { CalendarEvent as ApiCalendarEvent } from '../gen/api/schemas'
 import {
   MINUTES_PER_DAY,
   DAY_MS,
@@ -1048,6 +1051,18 @@ export function apiTodoToCalendar(t: ApiTodo): Todo {
 }
 
 /** Calendar + todo scheduling workspace (todo drag/create/move/delete). */
+function apiEventToCalendarEvent(event: ApiCalendarEvent): CalendarEvent {
+  return {
+    id: Number(event.id),
+    title: event.title,
+    description: event.description,
+    startAt: event.startAt,
+    endAt: event.endAt,
+    isAllDay: event.isAllDay ? 1 : 0,
+    providerEventId: event.providerEventId
+  }
+}
+
 export function CalendarTodoWorkspace({
   className,
   onTodoSelect,
@@ -1061,6 +1076,41 @@ export function CalendarTodoWorkspace({
   const { todos: apiTodos, createTodo, updateTodo, deleteTodo } = useTodos({ fetchAll: true })
   const todos = apiTodos.map(apiTodoToCalendar)
   const [visibleDate, setVisibleDate] = useState<Date>(() => startOfDay(new Date()))
+  const [viewMode, setViewMode] = useState<ViewMode>('day')
+  const [filterOpen, setFilterOpen] = useState(false)
+
+  const eventRange = useMemo(() => {
+    const start = startOfDay(visibleDate)
+    const end = viewMode === 'day' ? addDays(start, 1) : addDays(startOfWeek(start), 7)
+    return { startDate: start, endDate: end }
+  }, [visibleDate, viewMode])
+
+  const {
+    events: apiEvents,
+    calendars: syncedCalendars,
+    visibleCalendarIds,
+    toggleCalendarVisibility
+  } = useCalendarEvents(eventRange)
+  useCalendarAutoSync()
+
+  const calendarEvents = useMemo(
+    () => apiEvents.map(apiEventToCalendarEvent),
+    [apiEvents]
+  )
+
+  const visibleCount = useMemo(() => {
+    if (syncedCalendars.length === 0) return 0
+    return syncedCalendars.filter((c) => visibleCalendarIds.has(String(c.id))).length
+  }, [syncedCalendars, visibleCalendarIds])
+
+  useEffect(() => {
+    if (!filterOpen) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setFilterOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [filterOpen])
 
   const [createDraft, setCreateDraft] = useState<{
     title: string
@@ -1139,23 +1189,62 @@ export function CalendarTodoWorkspace({
     <div className={cn('flex flex-col flex-1 min-h-0', className)}>
       <CalendarViewInner
         todos={todos}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
         onCreateRange={handleCreateRange}
         onAnchorDateChange={setVisibleDate}
         onTodoMove={handleTodoMove}
         onTodoDelete={handleTodoDelete}
         onTodoSelect={onTodoSelect}
+        calendarEvents={calendarEvents}
         headerTrailing={
-          showHeaderNew ? (
-            <Button
-              size="sm"
-              className="shrink-0 gap-1 rounded-full"
-              style={{ background: 'var(--amber)' }}
-              onClick={handleNewButton}
-            >
-              <Plus className="w-4 h-4" />
-              New
-            </Button>
-          ) : undefined
+          <div className="relative flex items-center gap-2">
+            {syncedCalendars.length > 0 && (
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="shrink-0 gap-1"
+                  onClick={() => setFilterOpen((open) => !open)}
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  Calendars ({visibleCount}/{syncedCalendars.length})
+                </Button>
+                {filterOpen && (
+                  <div className="absolute right-0 top-full z-50 mt-1 w-64 rounded-lg border bg-background p-3 shadow-md">
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">
+                      Visible calendars
+                    </p>
+                    <div className="space-y-2">
+                      {syncedCalendars.map((cal) => (
+                        <label
+                          key={cal.id}
+                          className="flex cursor-pointer items-center justify-between gap-2"
+                        >
+                          <span className="truncate text-sm">{cal.name}</span>
+                          <Switch
+                            checked={visibleCalendarIds.has(String(cal.id))}
+                            onCheckedChange={() => toggleCalendarVisibility(String(cal.id))}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            {showHeaderNew ? (
+              <Button
+                size="sm"
+                className="shrink-0 gap-1 rounded-full"
+                style={{ background: 'var(--amber)' }}
+                onClick={handleNewButton}
+              >
+                <Plus className="w-4 h-4" />
+                New
+              </Button>
+            ) : null}
+          </div>
         }
       />
 
