@@ -71,6 +71,7 @@ export interface Todo {
 /** Calendar event displayed alongside todos */
 export interface CalendarEvent {
   id: number
+  calendarId: string
   title: string
   description: string | null
   startAt: string
@@ -197,6 +198,8 @@ type CalendarViewProps = {
   onAnchorDateChange?: (date: Date) => void
   /** Calendar events to display */
   calendarEvents?: CalendarEvent[]
+  /** Client-side color per calendar id */
+  calendarColorMap?: Record<string, string>
   /** Hide the header bar (navigation, zoom, view mode buttons) */
   hideHeader?: boolean
   /** Extra controls on the right side of the header (e.g. “New”); avoids overlapping the toolbar */
@@ -222,6 +225,7 @@ export function CalendarViewInner({
   onCreateRange,
   onAnchorDateChange,
   calendarEvents = [],
+  calendarColorMap = {},
   hideHeader,
   headerTrailing,
   className
@@ -989,7 +993,7 @@ export function CalendarViewInner({
                       </button>
                     )
                   })}
-                  {/* Calendar events - grayish to distinguish from todos */}
+                  {/* Calendar events — colored by client-side calendar assignment */}
                   {dayEvents.map((eventItem) => {
                     const top = eventItem.startSlot * slotHeight
                     const height = Math.max(
@@ -999,23 +1003,29 @@ export function CalendarViewInner({
                     const width = 100 / eventItem.laneCount
                     const left = eventItem.lane * width
                     const evt = eventItem.event as unknown as CalendarEvent
+                    const color = calendarColorMap[evt.calendarId] ?? '#4285F4'
 
                     return (
                       <div
                         key={evt.id}
-                        className="absolute rounded-xl px-2.5 py-1.5 text-left text-xs bg-slate-200/55 dark:bg-slate-700/45 pointer-events-none"
+                        className="absolute rounded-xl px-2.5 py-1.5 text-left text-xs pointer-events-none"
                         style={{
                           top,
                           height,
                           left: `${left}%`,
-                          width: `${width}%`
+                          width: `${width}%`,
+                          backgroundColor: `${color}33`,
+                          borderLeft: `3px solid ${color}`
                         }}
                       >
                         <div className="min-w-0">
-                          <div className="font-medium line-clamp-1 text-slate-600 dark:text-slate-300">
+                          <div
+                            className="font-medium line-clamp-1"
+                            style={{ color }}
+                          >
                             {evt.title}
                           </div>
-                          <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                          <div className="text-[10px] opacity-80" style={{ color }}>
                             {formatTimeRange(eventItem.startDate, eventItem.endDate)}
                           </div>
                         </div>
@@ -1054,6 +1064,7 @@ export function apiTodoToCalendar(t: ApiTodo): Todo {
 function apiEventToCalendarEvent(event: ApiCalendarEvent): CalendarEvent {
   return {
     id: Number(event.id),
+    calendarId: String(event.calendarId),
     title: event.title,
     description: event.description,
     startAt: event.startAt,
@@ -1089,6 +1100,7 @@ export function CalendarTodoWorkspace({
     events: apiEvents,
     calendars: syncedCalendars,
     visibleCalendarIds,
+    calendarColorMap,
     toggleCalendarVisibility
   } = useCalendarEvents(eventRange)
   useCalendarAutoSync()
@@ -1197,6 +1209,7 @@ export function CalendarTodoWorkspace({
         onTodoDelete={handleTodoDelete}
         onTodoSelect={onTodoSelect}
         calendarEvents={calendarEvents}
+        calendarColorMap={calendarColorMap}
         headerTrailing={
           <div className="relative flex items-center gap-2">
             {syncedCalendars.length > 0 && (
@@ -1221,7 +1234,15 @@ export function CalendarTodoWorkspace({
                           key={cal.id}
                           className="flex cursor-pointer items-center justify-between gap-2"
                         >
-                          <span className="truncate text-sm">{cal.name}</span>
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span
+                              className="h-2.5 w-2.5 shrink-0 rounded-full"
+                              style={{
+                                backgroundColor: calendarColorMap[String(cal.id)] ?? '#6366f1'
+                              }}
+                            />
+                            <span className="truncate text-sm">{cal.name}</span>
+                          </span>
                           <Switch
                             checked={visibleCalendarIds.has(String(cal.id))}
                             onCheckedChange={() => toggleCalendarVisibility(String(cal.id))}

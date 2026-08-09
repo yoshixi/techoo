@@ -1,11 +1,10 @@
 import { useCallback, useMemo } from 'react'
-import { useSWRConfig } from 'swr'
+import useSWR, { useSWRConfig } from 'swr'
 import {
   useGetApiOauthGoogleAccounts,
   getGetApiOauthGoogleAccountsKey,
-  useGetApiOauthGoogleStatus,
   getGetApiOauthGoogleStatusKey,
-  useGetApiCalendarsAvailable,
+  getApiCalendarsAvailable,
   getGetApiCalendarsAvailableKey,
   useGetApiCalendars,
   postApiCalendars,
@@ -22,15 +21,36 @@ import type {
 } from '@/gen/api/schemas'
 import { isApiRequestError } from '@/lib/api/ApiRequestError'
 
+export type CalendarSettingsRow = {
+  key: string
+  providerAccountId: string
+  providerCalendarId: string
+  name: string
+  isPrimary?: boolean
+  googleColor?: string
+  synced?: Calendar
+  isOn: boolean
+}
+
+export type CalendarAccountGroup = {
+  accountId: string
+  label: string
+  provider: 'google'
+  calendars: CalendarSettingsRow[]
+  error: string | null
+}
+
 interface UseCalendarSettingsReturn {
   isGoogleConnected: boolean
-  hasCalendarScope: boolean | undefined
   isLoading: boolean
-  availableError: string | null
   googleAccounts: OAuthAccount[]
-  availableCalendars: AvailableCalendar[]
+  accountGroups: CalendarAccountGroup[]
   syncedCalendars: Calendar[]
-  addCalendar: (providerCalendarId: string, name: string) => Promise<void>
+  addCalendar: (
+    providerAccountId: string,
+    providerCalendarId: string,
+    name: string
+  ) => Promise<void>
   removeCalendar: (calendarId: string) => Promise<void>
   toggleCalendarEnabled: (calendarId: string, enabled: boolean) => Promise<void>
   syncCalendar: (calendarId: string) => Promise<void>
@@ -58,9 +78,34 @@ function messageFromAvailableError(error: unknown): string | null {
   return 'Failed to load available calendars.'
 }
 
-export function useCalendarSettings(
-  providerAccountId?: string
-): UseCalendarSettingsReturn {
+function buildRowsForAccount(
+  availableCalendars: AvailableCalendar[],
+  syncedCalendars: Calendar[]
+): CalendarSettingsRow[] {
+  const syncedByProviderId = new Map(
+    syncedCalendars.map((calendar) => [calendar.providerCalendarId, calendar])
+  )
+  return availableCalendars.map((cal) => {
+    const synced = syncedByProviderId.get(cal.providerCalendarId)
+    return {
+      key: `${cal.providerAccountId}:${cal.providerCalendarId}`,
+      providerAccountId: cal.providerAccountId,
+      providerCalendarId: cal.providerCalendarId,
+      name: cal.name,
+      isPrimary: cal.isPrimary,
+      googleColor: cal.color,
+      synced,
+      isOn: Boolean(synced),
+    }
+  })
+}
+
+type AvailableByAccount = Record<
+  string,
+  { calendars: AvailableCalendar[]; error: string | null }
+>
+
+export function useCalendarSettings(): UseCalendarSettingsReturn {
   const { mutate } = useSWRConfig()
 
   const { data: accountsData, isLoading: isAccountsLoading } =
@@ -71,81 +116,90 @@ export function useCalendarSettings(
     [accountsData?.accounts]
   )
 
-  // Default to first account when none is explicitly selected
-  const effectiveAccountId = providerAccountId ?? googleAccounts[0]?.accountId
-
-  const { data: statusData, isLoading: isStatusLoading } = useGetApiOauthGoogleStatus(
-    effectiveAccountId ? { accountId: effectiveAccountId } : undefined,
-    {
-      swr: { enabled: Boolean(effectiveAccountId) },
-    }
+  const accountIdsKey = useMemo(
+    () => googleAccounts.map((account) => account.accountId).join('|'),
+    [googleAccounts]
   )
-
-  const isGoogleConnected = useMemo(() => {
-    if (effectiveAccountId) {
-      return statusData?.connected === true
-    }
-    return googleAccounts.length > 0
-  }, [googleAccounts.length, effectiveAccountId, statusData?.connected])
-
-  const hasCalendarScope = statusData?.hasCalendarScope
 
   const {
-    data: availableData,
-    error: availableQueryError,
+    data: availableByAccount,
     isLoading: isAvailableLoading,
-  } = useGetApiCalendarsAvailable(
-    { accountId: effectiveAccountId || '' },
-    {
-      swr: {
-        enabled: Boolean(effectiveAccountId),
-        shouldRetryOnError: false,
-      },
-    }
-  )
-
-  const availableError = useMemo(
-    () => messageFromAvailableError(availableQueryError),
-    [availableQueryError]
+  } = useSWR<AvailableByAccount>(
+    accountIdsKey ? ['available-calendars-by-account', accountIdsKey] : null,
+    async () => {
+      const entries = await Promise.all(
+        googleAccounts.map(async (account) => {
+          try {
+            const response = await getApiCalendarsAvailable({
+              accountId: account.accountId,
+            })
+            return [
+              account.accountId,
+              { calendars: response.calendars ?? [], error: null },
+            ] as const
+          } catch (error) {
+            return [
+              account.accountId,
+              {
+                calendars: [] as AvailableCalendar[],
+                error: messageFromAvailableError(error),
+              },
+            ] as const
+          }
+        })
+      )
+      return Object.fromEntries(entries)
+    },
+    { shouldRetryOnError: false, revalidateOnFocus: false }
   )
 
   const { data: syncedData, isLoading: isSyncedLoading } = useGetApiCalendars()
 
-  const syncedCalendars = useMemo(() => {
-    const calendars = syncedData?.calendars ?? []
-    if (!effectiveAccountId) return calendars
-    return calendars.filter(
-      (calendar) => calendar.providerAccountId === effectiveAccountId
-    )
-  }, [effectiveAccountId, syncedData?.calendars])
+  const syncedCalendars = useMemo(
+    () => syncedData?.calendars ?? [],
+    [syncedData?.calendars]
+  )
+
+  const accountGroups = useMemo((): CalendarAccountGroup[] => {
+    return googleAccounts.map((account, index) => {
+      const label = account.email?.trim() || `Google account ${index + 1}`
+      const available = availableByAccount?.[account.accountId]
+      const accountSynced = syncedCalendars.filter(
+        (calendar) => calendar.providerAccountId === account.accountId
+      )
+      return {
+        accountId: account.accountId,
+        label,
+        provider: 'google',
+        calendars: buildRowsForAccount(available?.calendars ?? [], accountSynced),
+        error: available?.error ?? null,
+      }
+    })
+  }, [googleAccounts, availableByAccount, syncedCalendars])
 
   const refresh = useCallback(async () => {
     await Promise.all([
       mutate(getGetApiOauthGoogleAccountsKey()),
-      effectiveAccountId
-        ? mutate(getGetApiOauthGoogleStatusKey({ accountId: effectiveAccountId }))
-        : Promise.resolve(),
-      effectiveAccountId
-        ? mutate(getGetApiCalendarsAvailableKey({ accountId: effectiveAccountId }))
-        : Promise.resolve(),
+      ...googleAccounts.flatMap((account) => [
+        mutate(getGetApiOauthGoogleStatusKey({ accountId: account.accountId })),
+        mutate(getGetApiCalendarsAvailableKey({ accountId: account.accountId })),
+      ]),
+      mutate(['available-calendars-by-account', accountIdsKey]),
       mutate(getGetApiCalendarsKey()),
       mutate(getGetApiEventsKey()),
     ])
-  }, [mutate, effectiveAccountId])
+  }, [mutate, googleAccounts, accountIdsKey])
 
   const addCalendar = useCallback(
-    async (providerCalendarId: string, name: string) => {
-      if (!effectiveAccountId) {
-        throw new Error('No provider account selected')
-      }
+    async (providerAccountId: string, providerCalendarId: string, name: string) => {
       await postApiCalendars({
-        providerAccountId: effectiveAccountId,
+        providerAccountId,
         providerCalendarId,
         name,
       })
       await refresh()
     },
-    [effectiveAccountId, refresh]
+    [refresh]
   )
 
   const removeCalendar = useCallback(
@@ -173,13 +227,10 @@ export function useCalendarSettings(
   )
 
   return {
-    isGoogleConnected,
-    hasCalendarScope,
-    isLoading:
-      isAccountsLoading || isStatusLoading || isAvailableLoading || isSyncedLoading,
-    availableError,
+    isGoogleConnected: googleAccounts.length > 0,
+    isLoading: isAccountsLoading || isAvailableLoading || isSyncedLoading,
     googleAccounts,
-    availableCalendars: availableData?.calendars ?? [],
+    accountGroups,
     syncedCalendars,
     addCalendar,
     removeCalendar,

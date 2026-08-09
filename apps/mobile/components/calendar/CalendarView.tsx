@@ -65,7 +65,11 @@ export function CalendarView() {
     return { startDate: start, endDate: end };
   }, [selectedDate, viewMode]);
 
-  const { events: calendarEvents, calendars: syncedCalendars } = useCalendarEvents(eventDateRange);
+  const {
+    events: calendarEvents,
+    calendars: syncedCalendars,
+    calendarColorMap,
+  } = useCalendarEvents(eventDateRange);
   useCalendarAutoSync();
 
   const eventsByDay = useMemo(() => {
@@ -77,14 +81,6 @@ export function CalendarView() {
     });
     return grouped;
   }, [calendarEvents]);
-
-  const calendarColorMap = useMemo(() => {
-    const map: Record<string, string | null> = {};
-    syncedCalendars.forEach((cal) => {
-      map[cal.id] = cal.color;
-    });
-    return map;
-  }, [syncedCalendars]);
 
   const tasksByDay = useMemo(() => {
     const grouped: Record<string, typeof calendarItems> = {};
