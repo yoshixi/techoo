@@ -17,4 +17,11 @@ export interface OAuthStatusResponse {
    * @nullable
    */
   expiresAt?: string | null
+  /**
+   * Granted OAuth scopes for the account (space-separated)
+   * @nullable
+   */
+  scope?: string | null
+  /** Whether the token includes Google Calendar read scopes */
+  hasCalendarScope?: boolean
 }

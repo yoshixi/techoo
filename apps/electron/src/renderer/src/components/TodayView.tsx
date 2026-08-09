@@ -7,7 +7,9 @@ import { Badge } from './ui/badge'
 import { Label } from './ui/label'
 import { Switch } from './ui/switch'
 import { TodoDetailDialog } from './TodoView'
-import { CalendarViewInner, apiTodoToCalendar } from './CalendarView'
+import { CalendarViewInner, apiTodoToCalendar, type CalendarEvent } from './CalendarView'
+import { useCalendarEvents } from '../hooks/useCalendarEvents'
+import { useCalendarAutoSync } from '../hooks/useCalendarAutoSync'
 import { PostComposer } from './PostComposer'
 import {
   emptyPostComposerAssociations,
@@ -587,6 +589,28 @@ export function TodayView(): React.JSX.Element {
   const prevFocusMode = useRef(focusMode)
 
   const calendarTodos = useMemo(() => todos.map(apiTodoToCalendar), [todos])
+  const eventRange = useMemo(
+    () => ({
+      startDate: new Date(dayStart * 1000),
+      endDate: new Date(dayEnd * 1000)
+    }),
+    [dayStart, dayEnd]
+  )
+  const { events: apiCalendarEvents } = useCalendarEvents(eventRange)
+  useCalendarAutoSync(focusMode === 'plan')
+  const calendarEvents = useMemo<CalendarEvent[]>(
+    () =>
+      apiCalendarEvents.map((event) => ({
+        id: Number(event.id),
+        title: event.title,
+        description: event.description,
+        startAt: event.startAt,
+        endAt: event.endAt,
+        isAllDay: event.isAllDay ? 1 : 0,
+        providerEventId: event.providerEventId
+      })),
+    [apiCalendarEvents]
+  )
   const todosForPostHash = useMemo(() => todos.filter((t) => t.done === 0), [todos])
 
   const applyRunningTodoContext = useCallback(() => {
@@ -715,6 +739,7 @@ export function TodayView(): React.JSX.Element {
                 todos={calendarTodos}
                 viewMode="day"
                 hideHeader
+                calendarEvents={calendarEvents}
                 onCreateRange={handleCreateRange}
                 onTodoSelect={handleCalendarTodoSelect}
                 onTodoMove={handleTodoMove}

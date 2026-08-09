@@ -106,6 +106,8 @@ export function SettingsContent() {
 
   const {
     isLoading: isCalendarLoading,
+    hasCalendarScope,
+    availableError,
     googleAccounts,
     availableCalendars,
     syncedCalendars,
@@ -432,7 +434,26 @@ export function SettingsContent() {
           icon={<Plus size={20} className="text-muted-foreground" />}
           defaultOpen={syncedCalendars.length === 0}
         >
-          {isCalendarLoading ? (
+          {hasCalendarScope === false && (
+            <View className="gap-2 py-2">
+              <Text className="text-sm text-destructive">
+                This Google account is missing Calendar permission. Re-link to grant access.
+              </Text>
+              <Button size="sm" onPress={handleLinkGoogle} disabled={isLinking}>
+                <Text className="text-sm text-primary-foreground">
+                  Re-link Google Account
+                </Text>
+              </Button>
+            </View>
+          )}
+          {availableError ? (
+            <View className="gap-2 py-2">
+              <Text className="text-sm text-destructive">{availableError}</Text>
+              <Button size="sm" variant="outline" onPress={handleLinkGoogle} disabled={isLinking}>
+                <Text className="text-sm">Re-link Google Account</Text>
+              </Button>
+            </View>
+          ) : isCalendarLoading ? (
             <Text className="text-sm text-muted-foreground py-2">
               Loading calendars...
             </Text>

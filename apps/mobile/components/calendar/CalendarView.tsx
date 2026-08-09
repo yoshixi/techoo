@@ -1,11 +1,12 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { View, Dimensions } from 'react-native';
+import { View, Dimensions, Pressable } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
 import type { CalendarEvent } from '@/gen/api/schemas';
 import { Text } from '@/components/ui/text';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
+import { useCalendarAutoSync } from '@/hooks/useCalendarAutoSync';
 import { useTodos } from '@/hooks/useTodos';
 import { todoToCalendarTimedItem, type CalendarTimedItem } from '@/lib/todoCalendar';
 import { CalendarHeader } from './CalendarHeader';
@@ -65,6 +66,7 @@ export function CalendarView() {
   }, [selectedDate, viewMode]);
 
   const { events: calendarEvents, calendars: syncedCalendars } = useCalendarEvents(eventDateRange);
+  useCalendarAutoSync();
 
   const eventsByDay = useMemo(() => {
     const grouped: Record<string, CalendarEvent[]> = {};
@@ -170,6 +172,17 @@ export function CalendarView() {
         onToday={handleToday}
         onToggleViewMode={handleToggleViewMode}
       />
+
+      {syncedCalendars.length === 0 && (
+        <View className="mx-4 mb-2 rounded-lg border border-border px-4 py-3 gap-2">
+          <Text className="text-sm text-muted-foreground">
+            Google Calendar events appear here after you add calendars in Settings.
+          </Text>
+          <Pressable onPress={() => router.push('/(tabs)/settings')}>
+            <Text className="text-sm font-medium text-primary">Open Settings</Text>
+          </Pressable>
+        </View>
+      )}
 
       <ScrollView ref={scrollViewRef} className="flex-1">
         <View className="flex-row">

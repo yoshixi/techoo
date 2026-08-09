@@ -44,6 +44,12 @@ export const OAuthStatusResponseModel = z.object({
   }),
   expiresAt: z.string().optional().nullable().openapi({
     description: 'Token expiration timestamp'
+  }),
+  scope: z.string().optional().nullable().openapi({
+    description: 'Granted OAuth scopes for the account (space-separated)'
+  }),
+  hasCalendarScope: z.boolean().optional().openapi({
+    description: 'Whether the token includes Google Calendar read scopes'
   })
 }).openapi('OAuthStatusResponse')
 

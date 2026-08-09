@@ -6,12 +6,13 @@ const POLL_INTERVAL_MS = 30 * 1000 // Poll every 30 seconds
 const NOTIFY_BEFORE_MS = 60 * 1000 // Notify 1 minute before
 const NEXT_TASK_WINDOW_MS = 30 * 60 * 1000 // 30 minutes window for next task
 
-interface Task {
+interface Todo {
   id: number
   title: string
-  startAt: string | null
-  endAt: string | null
-  completedAt: string | null
+  starts_at: string | null
+  ends_at: string | null
+  done: number
+  done_at: string | null
 }
 
 interface NotificationRecord {
@@ -23,8 +24,8 @@ interface NotificationRecord {
 interface SnoozeRecord {
   type: 'start' | 'end'
   taskId: number
-  task: Task
-  nextTask?: Task
+  todo: Todo
+  nextTodo?: Todo
   notifyAt: number
 }
 
@@ -183,19 +184,19 @@ export class NotificationScheduler {
     }
   }
 
-  private async fetchTasks(): Promise<Task[]> {
+  private async fetchTodos(): Promise<Todo[]> {
     if (!this.authToken) {
       return []
     }
     try {
-      const response = await fetch(`${API_URL}/api/tasks?completed=false`, {
+      const response = await fetch(`${API_URL}/api/v1/todos?done=false&limit=500`, {
         headers: this.getAuthHeaders()
       })
       if (!response.ok) return []
-      const data = (await response.json()) as { tasks: Task[] }
-      return data.tasks || []
+      const body = (await response.json()) as { data: Todo[] }
+      return body.data || []
     } catch (error) {
-      console.error('Failed to fetch tasks for notifications:', error)
+      console.error('Failed to fetch todos for notifications:', error)
       return []
     }
   }
@@ -228,14 +229,19 @@ export class NotificationScheduler {
     }
   }
 
-  private scheduleSnooze(type: 'start' | 'end', task: Task, delayMinutes: number, nextTask?: Task): void {
-    const key = `snooze-${type}-${task.id}-${Date.now()}`
+  private scheduleSnooze(
+    type: 'start' | 'end',
+    todo: Todo,
+    delayMinutes: number,
+    nextTodo?: Todo
+  ): void {
+    const key = `snooze-${type}-${todo.id}-${Date.now()}`
     const notifyAt = Date.now() + delayMinutes * 60 * 1000
     this.snoozedNotifications.set(key, {
       type,
-      taskId: task.id,
-      task,
-      nextTask,
+      taskId: todo.id,
+      todo,
+      nextTodo,
       notifyAt
     })
   }
@@ -246,11 +252,11 @@ export class NotificationScheduler {
       if (now >= snooze.notifyAt) {
         this.snoozedNotifications.delete(key)
         if (snooze.type === 'start') {
-          this.showStartNotification(snooze.task)
-        } else if (snooze.nextTask) {
-          this.showEndWithNextNotification(snooze.task, snooze.nextTask)
+          this.showStartNotification(snooze.todo)
+        } else if (snooze.nextTodo) {
+          this.showEndWithNextNotification(snooze.todo, snooze.nextTodo)
         } else {
-          this.showEndNotification(snooze.task)
+          this.showEndNotification(snooze.todo)
         }
       }
     }
@@ -266,72 +272,72 @@ export class NotificationScheduler {
       return
     }
 
-    const tasks = await this.fetchTasks()
+    const todos = await this.fetchTodos()
 
-    for (const task of tasks) {
-      // Skip completed tasks
-      if (task.completedAt) continue
+    for (const todo of todos) {
+      // Skip completed todos
+      if (todo.done === 1 || todo.done_at) continue
 
-      // Task about to start
-      if (task.startAt) {
-        const startTime = new Date(task.startAt).getTime()
+      // Todo about to start
+      if (todo.starts_at) {
+        const startTime = new Date(todo.starts_at).getTime()
         const timeUntilStart = startTime - now
 
         if (timeUntilStart > 0 && timeUntilStart <= NOTIFY_BEFORE_MS) {
-          if (!this.hasNotified('start', task.id)) {
-            this.showStartNotification(task)
-            this.markNotified('start', task.id)
+          if (!this.hasNotified('start', todo.id)) {
+            this.showStartNotification(todo)
+            this.markNotified('start', todo.id)
           }
         }
       }
 
-      // Task about to end (scheduled end time)
-      if (task.endAt) {
-        const endTime = new Date(task.endAt).getTime()
+      // Todo about to end (scheduled end time)
+      if (todo.ends_at) {
+        const endTime = new Date(todo.ends_at).getTime()
         const timeUntilEnd = endTime - now
 
         if (timeUntilEnd > 0 && timeUntilEnd <= NOTIFY_BEFORE_MS) {
-          if (!this.hasNotified('end', task.id)) {
-            const nextTask = this.findNextTask(tasks, task, endTime)
-            if (nextTask) {
-              this.showEndWithNextNotification(task, nextTask)
+          if (!this.hasNotified('end', todo.id)) {
+            const nextTodo = this.findNextTodo(todos, todo, endTime)
+            if (nextTodo) {
+              this.showEndWithNextNotification(todo, nextTodo)
             } else {
-              this.showEndNotification(task)
+              this.showEndNotification(todo)
             }
-            this.markNotified('end', task.id)
+            this.markNotified('end', todo.id)
           }
         }
       }
     }
   }
 
-  private findNextTask(tasks: Task[], currentTask: Task, currentEndTime: number): Task | null {
-    const candidates = tasks.filter((t) => {
-      if (t.id === currentTask.id) return false
-      if (t.completedAt) return false
-      if (!t.startAt) return false
+  private findNextTodo(todos: Todo[], currentTodo: Todo, currentEndTime: number): Todo | null {
+    const candidates = todos.filter((t) => {
+      if (t.id === currentTodo.id) return false
+      if (t.done === 1 || t.done_at) return false
+      if (!t.starts_at) return false
 
-      const taskStartTime = new Date(t.startAt).getTime()
-      const timeBetween = taskStartTime - currentEndTime
+      const todoStartTime = new Date(t.starts_at).getTime()
+      const timeBetween = todoStartTime - currentEndTime
 
-      // Next task should start within 30 minutes after current task ends
+      // Next todo should start within 30 minutes after current todo ends
       return timeBetween >= 0 && timeBetween <= NEXT_TASK_WINDOW_MS
     })
 
-    // Return the earliest upcoming task
+    // Return the earliest upcoming todo
     if (candidates.length === 0) return null
 
-    return candidates.reduce((earliest, task) => {
-      const earliestStart = new Date(earliest.startAt!).getTime()
-      const taskStart = new Date(task.startAt!).getTime()
-      return taskStart < earliestStart ? task : earliest
+    return candidates.reduce((earliest, todo) => {
+      const earliestStart = new Date(earliest.starts_at!).getTime()
+      const todoStart = new Date(todo.starts_at!).getTime()
+      return todoStart < earliestStart ? todo : earliest
     })
   }
 
-  private showStartNotification(task: Task): void {
+  private showStartNotification(todo: Todo): void {
     const notification = new Notification({
       title: 'Task Starting Soon',
-      body: `"${task.title}" is about to start`,
+      body: `"${todo.title}" is about to start`,
       silent: false,
       timeoutType: 'never',
       actions: [
@@ -342,19 +348,19 @@ export class NotificationScheduler {
     })
 
     notification.on('click', () => {
-      this.handlers?.onShowTask(task.id)
+      this.handlers?.onShowTask(todo.id)
     })
 
     notification.on('action', (_event, index) => {
       switch (index) {
         case 0:
-          this.scheduleSnooze('start', task, 5)
+          this.scheduleSnooze('start', todo, 5)
           break
         case 1:
-          this.scheduleSnooze('start', task, 15)
+          this.scheduleSnooze('start', todo, 15)
           break
         case 2:
-          this.scheduleSnooze('start', task, 30)
+          this.scheduleSnooze('start', todo, 30)
           break
       }
     })
@@ -362,10 +368,10 @@ export class NotificationScheduler {
     notification.show()
   }
 
-  private showEndNotification(task: Task): void {
+  private showEndNotification(todo: Todo): void {
     const notification = new Notification({
       title: 'Task Ending Soon',
-      body: `"${task.title}" is about to end`,
+      body: `"${todo.title}" is about to end`,
       silent: false,
       timeoutType: 'never',
       actions: [
@@ -376,19 +382,19 @@ export class NotificationScheduler {
     })
 
     notification.on('click', () => {
-      this.handlers?.onShowTask(task.id)
+      this.handlers?.onShowTask(todo.id)
     })
 
     notification.on('action', (_event, index) => {
       switch (index) {
         case 0:
-          this.scheduleSnooze('end', task, 5)
+          this.scheduleSnooze('end', todo, 5)
           break
         case 1:
-          this.scheduleSnooze('end', task, 15)
+          this.scheduleSnooze('end', todo, 15)
           break
         case 2:
-          this.scheduleSnooze('end', task, 30)
+          this.scheduleSnooze('end', todo, 30)
           break
       }
     })
@@ -396,10 +402,10 @@ export class NotificationScheduler {
     notification.show()
   }
 
-  private showEndWithNextNotification(currentTask: Task, nextTask: Task): void {
+  private showEndWithNextNotification(currentTodo: Todo, nextTodo: Todo): void {
     const notification = new Notification({
       title: 'Task Ending Soon',
-      body: `"${currentTask.title}" ending. Next: "${nextTask.title}"`,
+      body: `"${currentTodo.title}" ending. Next: "${nextTodo.title}"`,
       silent: false,
       timeoutType: 'never',
       actions: [
@@ -410,19 +416,19 @@ export class NotificationScheduler {
     })
 
     notification.on('click', () => {
-      this.handlers?.onShowTask(currentTask.id)
+      this.handlers?.onShowTask(currentTodo.id)
     })
 
     notification.on('action', (_event, index) => {
       switch (index) {
         case 0:
-          this.scheduleSnooze('end', currentTask, 5, nextTask)
+          this.scheduleSnooze('end', currentTodo, 5, nextTodo)
           break
         case 1:
-          this.scheduleSnooze('end', currentTask, 15, nextTask)
+          this.scheduleSnooze('end', currentTodo, 15, nextTodo)
           break
         case 2:
-          this.scheduleSnooze('end', currentTask, 30, nextTask)
+          this.scheduleSnooze('end', currentTodo, 30, nextTodo)
           break
       }
     })

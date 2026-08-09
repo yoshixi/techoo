@@ -16,6 +16,7 @@ import {
   getWatchStatusRoute
 } from '../routes/calendars'
 import type { OAuthService } from '../../../core/oauth.service'
+import type { DB } from '../../../core/common.db'
 import {
   getAllCalendars,
   getCalendarById,
@@ -36,9 +37,52 @@ import {
   googleCalendarProvider,
   getValidGoogleTokens
 } from '../../../core/calendar-providers/google.service'
+import { mapGoogleCalendarError } from '../../../core/calendar-providers/google-errors'
 import type { ProviderTokens } from '../../../core/calendar-providers/types'
 import { formatTimestamp, getCurrentTimestamp } from '../../../core/common.core'
 import { rootLogger } from '../../../lib/logger'
+
+async function syncCalendarEvents(
+  db: DB,
+  oauth: OAuthService,
+  calendar: {
+    id: string | number
+    providerAccountId: string
+    providerCalendarId: string
+  }
+): Promise<{ eventsCount: number } | { errorMessage: string; status: 401 | 403 | 500 }> {
+  const calendarId = Number(calendar.id)
+  const tokensResult = await getValidTokensOrThrow(oauth, calendar.providerAccountId)
+  if ('errorMessage' in tokensResult) {
+    return { errorMessage: tokensResult.errorMessage, status: 401 }
+  }
+
+  try {
+    const now = new Date()
+    const endDate = new Date()
+    endDate.setDate(endDate.getDate() + 30)
+
+    const events = await googleCalendarProvider.listEvents(
+      tokensResult.tokens,
+      calendar.providerCalendarId,
+      now,
+      endDate
+    )
+
+    const eventsCount = await importEventsForCalendar(
+      db,
+      calendarId,
+      'google',
+      events
+    )
+    await updateCalendarLastSynced(db, calendarId)
+    return { eventsCount }
+  } catch (error) {
+    rootLogger.error({ err: error }, 'failed to sync calendar events')
+    const mapped = mapGoogleCalendarError(error)
+    return { errorMessage: mapped.error, status: mapped.status }
+  }
+}
 
 // Helper function to convert watch channel to API format
 function convertWatchChannelToApi(channel: {
@@ -96,7 +140,9 @@ async function getValidTokensOrThrow(
     return { tokens: validTokens }
   } catch (error) {
     rootLogger.error({ err: error }, 'failed to refresh google tokens')
-    return { errorMessage: 'Google OAuth token expired or invalid' }
+    return {
+      errorMessage: mapGoogleCalendarError(error).error
+    }
   }
 }
 
@@ -110,7 +156,13 @@ export const listAvailableCalendarsHandler: RouteHandler<typeof listAvailableCal
 
     const tokensResult = await getValidTokensOrThrow(oauth, accountId)
     if ('errorMessage' in tokensResult) {
-      return c.json({ error: tokensResult.errorMessage }, 401)
+      return c.json(
+        {
+          error: tokensResult.errorMessage,
+          code: 'GOOGLE_TOKEN_EXPIRED'
+        },
+        401
+      )
     }
 
     // Get existing calendars to mark which ones are already added
@@ -137,7 +189,8 @@ export const listAvailableCalendarsHandler: RouteHandler<typeof listAvailableCal
     return c.json({ calendars: availableCalendars }, 200)
   } catch (error) {
     c.get('logger').error({ err: error }, 'failed to list available calendars')
-    return c.json({ error: 'Failed to retrieve available calendars' }, 500)
+    const mapped = mapGoogleCalendarError(error)
+    return c.json({ error: mapped.error, code: mapped.code }, mapped.status)
   }
 }
 
@@ -204,9 +257,30 @@ export const createCalendarHandler: RouteHandler<typeof createCalendarRoute, App
       googleCalendar.color
     )
 
-    return c.json({ calendar }, 201)
+    // Import events immediately so Add is not a dead end
+    const syncResult = await syncCalendarEvents(db, oauth, {
+      id: calendar.id,
+      providerAccountId: calendar.providerAccountId,
+      providerCalendarId: calendar.providerCalendarId
+    })
+    if ('errorMessage' in syncResult) {
+      c.get('logger').warn(
+        { err: syncResult.errorMessage, calendarId: calendar.id },
+        'calendar added but initial sync failed'
+      )
+    }
+
+    const refreshed = await getCalendarById(db, user.id, Number(calendar.id))
+    return c.json({ calendar: refreshed ?? calendar }, 201)
   } catch (error) {
     c.get('logger').error({ err: error }, 'failed to create calendar')
+    const mapped = mapGoogleCalendarError(error)
+    if (mapped.status === 401) {
+      return c.json({ error: mapped.error, code: mapped.code }, 401)
+    }
+    if (mapped.status === 403) {
+      return c.json({ error: mapped.error, code: mapped.code }, 403)
+    }
     return c.json({ error: 'Failed to add calendar' }, 500)
   }
 }
@@ -285,48 +359,39 @@ export const syncCalendarHandler: RouteHandler<typeof syncCalendarRoute, AppBind
       return c.json({ error: 'Calendar not found' }, 404)
     }
 
-    const tokensResult = await getValidTokensOrThrow(
-      oauth,
-      calendar.providerAccountId
-    )
-    if ('errorMessage' in tokensResult) {
-      return c.json({ error: tokensResult.errorMessage }, 401)
+    const syncResult = await syncCalendarEvents(db, oauth, {
+      id: calendar.id,
+      providerAccountId: calendar.providerAccountId,
+      providerCalendarId: calendar.providerCalendarId
+    })
+    if ('errorMessage' in syncResult) {
+      if (syncResult.status === 401) {
+        return c.json({ error: syncResult.errorMessage }, 401)
+      }
+      if (syncResult.status === 403) {
+        return c.json({ error: syncResult.errorMessage }, 403)
+      }
+      return c.json({ error: syncResult.errorMessage }, 500)
     }
-
-    // Fetch events for the next 30 days
-    const now = new Date()
-    const endDate = new Date()
-    endDate.setDate(endDate.getDate() + 30)
-
-    const events = await googleCalendarProvider.listEvents(
-      tokensResult.tokens,
-      calendar.providerCalendarId,
-      now,
-      endDate
-    )
-
-    // Import events (full replace)
-    const eventsCount = await importEventsForCalendar(
-      db,
-      id,
-      'google',
-      events
-    )
-
-    // Update last synced timestamp
-    await updateCalendarLastSynced(db, id)
 
     return c.json(
       {
         success: true,
-        message: `Synced ${eventsCount} events`,
-        eventsCount
+        message: `Synced ${syncResult.eventsCount} events`,
+        eventsCount: syncResult.eventsCount
       },
       200
     )
   } catch (error) {
     c.get('logger').error({ err: error }, 'failed to sync calendar')
-    return c.json({ error: 'Failed to sync calendar' }, 500)
+    const mapped = mapGoogleCalendarError(error)
+    if (mapped.status === 401) {
+      return c.json({ error: mapped.error, code: mapped.code }, 401)
+    }
+    if (mapped.status === 403) {
+      return c.json({ error: mapped.error, code: mapped.code }, 403)
+    }
+    return c.json({ error: mapped.error, code: mapped.code }, 500)
   }
 }
 
