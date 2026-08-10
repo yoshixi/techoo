@@ -18,24 +18,8 @@
     "turbo": "^2.5.8",
     "typescript": "5.9.3"
   },
-  "packageManager": "pnpm@10.26.2+sha512.0e308ff2005fc7410366f154f625f6631ab2b16b1d2e70238444dd6ae9d630a8482d92a451144debc492416896ed16f7b114a86ec68b8404b2443869e68ffda6",
+  "packageManager": "pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee",
   "engines": {
-    "node": ">=18"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "electron",
-      "esbuild",
-      "sharp"
-    ],
-    "overrides": {
-      "esbuild": "0.25.10",
-      "@libsql/client": "0.15.15",
-      "zod": "4.3.6",
-      "hono": "4.10.6"
-    },
-    "patchedDependencies": {
-      "@cloudflare/vitest-pool-workers@0.16.3": "patches/@cloudflare__vitest-pool-workers@0.16.3.patch"
-    }
+    "node": ">=24"
   }
 }
