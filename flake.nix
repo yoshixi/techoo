@@ -16,7 +16,7 @@
         devShells.default = pkgs.mkShell {
           buildInputs = [
             pkgs.git
-            pkgs.pnpm
+            pkgs.nodejs_24
             pkgs.turso-cli
             pkgs.bundletool
             pkgs.android-tools
@@ -26,6 +26,10 @@
           ];
 
           shellHook = ''
+            corepack prepare pnpm@11.20.0 --activate
+            pnpm() { corepack pnpm "$@"; }
+            export -f pnpm
+
             # Load .env if it exists
             if [ -f .env ]; then
               set -a

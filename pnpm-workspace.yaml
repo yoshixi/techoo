@@ -8,3 +8,19 @@ catalog:
   '@types/node': ^22.15.3
 
 nodeLinker: hoisted
+
+allowBuilds:
+  dtrace-provider: false
+  electron: true
+  esbuild: true
+  sharp: true
+  workerd: true
+
+overrides:
+  esbuild: 0.25.10
+  '@libsql/client': 0.15.15
+  zod: 4.3.6
+  hono: 4.10.6
+
+patchedDependencies:
+  '@cloudflare/vitest-pool-workers@0.16.3': patches/@cloudflare__vitest-pool-workers@0.16.3.patch
