@@ -7,6 +7,7 @@
 
 - Calendar sync date range — today imports only `now → +30 days` (full replace, no past). Users can navigate any date in the UI, so the right window (past/future, per-view sync, incremental) needs a deliberate product decision later.
 - API field naming inconsistency — todos/posts/notes use snake_case (`starts_at`); calendars/events/oauth use camelCase (`startAt`, `lastSyncedAt`). Pick one convention and align OpenAPI models + clients. **No DB schema change required** — SQLite columns are already snake_case; Drizzle maps them in JS. This is an API/response + generated-client migration only.
+- Calendar/events API path prefix — calendars and events live at `/api/calendars` and `/api/events` while todos/posts/notes use `/api/v1/...`. Move calendar/event routes under `/api/v1`, regenerate clients, update docs/tests (auth/oauth/session stay unversioned). Optionally pair with the snake_case field naming pass. See `agents/plans/2026-08-10-calendar-api-v1-prefix.md`.
 
 ## Operation improvements
 

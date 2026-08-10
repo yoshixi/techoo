@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useGetApiEvents, useGetApiCalendars } from '../gen/api/endpoints/techooAPI.gen'
 import type { CalendarEvent as ApiCalendarEvent, Calendar } from '../gen/api/schemas'
+import { useCalendarColors } from './useCalendarColors'
 
 const STORAGE_KEY = 'techoo:visible-calendar-ids'
 
@@ -15,6 +16,7 @@ export interface UseCalendarEventsReturn {
   calendars: Calendar[]
   isLoading: boolean
   visibleCalendarIds: Set<string>
+  calendarColorMap: Record<string, string>
   toggleCalendarVisibility: (calendarId: string) => void
   setAllCalendarsVisible: (visible: boolean) => void
 }
@@ -49,6 +51,7 @@ export function useCalendarEvents(
     () => calendarsData?.calendars ?? [],
     [calendarsData?.calendars]
   )
+  const { calendarColorMap } = useCalendarColors(calendars)
 
   useEffect(() => {
     if (!hasInitialized && storageLoaded && calendars.length > 0) {
@@ -111,6 +114,7 @@ export function useCalendarEvents(
     calendars,
     isLoading: isCalendarsLoading || isEventsLoading,
     visibleCalendarIds,
+    calendarColorMap,
     toggleCalendarVisibility,
     setAllCalendarsVisible
   }

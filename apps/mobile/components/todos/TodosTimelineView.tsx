@@ -10,11 +10,13 @@ import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-nativ
 import { useFocusEffect } from '@react-navigation/native';
 import { Check, Clock } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
-import type { Todo } from '@/gen/api/schemas';
+import type { CalendarEvent, Todo } from '@/gen/api/schemas';
 import { dayBoundsLocal, isSameLocalDay } from '@/lib/dayBounds';
 import { formatTodoClockTime } from '@/lib/time';
 import { useDailyHourWindow } from '@/hooks/useDailyHourWindow';
 import { usePeriodicNow } from '@/hooks/usePeriodicNow';
+import { useCalendarEvents } from '@/hooks/useCalendarEvents';
+import { useCalendarAutoSync } from '@/hooks/useCalendarAutoSync';
 import { CreateTodoSheet } from '@/components/todos/CreateTodoSheet';
 
 /** Pixels per hour on the schedule grid (matches calendar scale). */
@@ -98,6 +100,41 @@ function todoBlockLayout(
   return { top, height: Math.max(height, MIN_TODO_BLOCK_HEIGHT) };
 }
 
+function eventBlockLayout(
+  event: CalendarEvent,
+  wakeHour: number,
+  bedHour: number,
+  hourHeight: number
+): { top: number; height: number } | null {
+  const start = new Date(event.startAt);
+  const end = new Date(event.endAt);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+
+  let top = yForClockTime(start.getHours(), start.getMinutes(), wakeHour, hourHeight);
+  const endMinutes = Math.max(
+    1,
+    (end.getTime() - start.getTime()) / 60_000
+  );
+  let height = Math.max(MIN_TODO_BLOCK_HEIGHT, durationHeight(endMinutes, hourHeight));
+  const gridHeight = (bedHour - wakeHour + 1) * hourHeight;
+
+  if (top + height <= 0 || top >= gridHeight) return null;
+  if (top < 0) {
+    height += top;
+    top = 0;
+  }
+  if (top + height > gridHeight) {
+    height = gridHeight - top;
+  }
+  return { top, height: Math.max(height, MIN_TODO_BLOCK_HEIGHT) };
+}
+
+function eventClockLabel(event: CalendarEvent): string {
+  const start = formatTodoClockTime(event.startAt);
+  const end = formatTodoClockTime(event.endAt);
+  return `${start} – ${end}`;
+}
+
 function todoScheduleClockLabel(t: Todo): string {
   if (t.starts_at != null) {
     const start = formatTodoClockTime(t.starts_at);
@@ -151,6 +188,12 @@ export function TodosTimelineView({
   const allDaySectionHeight = useRef(0);
   const { wakeHour, bedHour } = useDailyHourWindow();
   const bounds = useMemo(() => dayBoundsLocal(selectedDay), [selectedDay]);
+  const eventRange = useMemo(
+    () => ({ startDate: bounds.start, endDate: bounds.endExclusive }),
+    [bounds.start, bounds.endExclusive]
+  );
+  const { events: calendarEvents, calendarColorMap } = useCalendarEvents(eventRange);
+  useCalendarAutoSync();
   const viewingToday = isSameLocalDay(selectedDay, new Date());
   const currentHour = now.getHours();
   const currentMinute = now.getMinutes();
@@ -175,6 +218,25 @@ export function TodosTimelineView({
   const timedTodos = useMemo(
     () => sortedTodos.filter((t) => t.is_all_day !== 1 && t.starts_at != null),
     [sortedTodos]
+  );
+
+  const dayScopedEvents = useMemo(() => {
+    const lo = bounds.start.getTime();
+    const hi = bounds.endExclusive.getTime();
+    return calendarEvents.filter((event) => {
+      const start = new Date(event.startAt).getTime();
+      if (Number.isNaN(start)) return false;
+      return start >= lo && start < hi;
+    });
+  }, [calendarEvents, bounds.start, bounds.endExclusive]);
+
+  const allDayEvents = useMemo(
+    () => dayScopedEvents.filter((event) => event.isAllDay),
+    [dayScopedEvents]
+  );
+  const timedEvents = useMemo(
+    () => dayScopedEvents.filter((event) => !event.isAllDay),
+    [dayScopedEvents]
   );
   const hours = useMemo(
     () => Array.from({ length: bedHour - wakeHour + 1 }, (_, i) => wakeHour + i),
@@ -316,11 +378,13 @@ export function TodosTimelineView({
       contentContainerStyle={{ paddingBottom: Math.max(bottomInset + 84, 120) }}
     >
       {isLoading ? <ActivityIndicator className="py-8" /> : null}
-      {!isLoading && sortedTodos.length === 0 ? (
-        <Text className="py-6 text-sm text-muted-foreground">No timed to-dos for this day yet.</Text>
+      {!isLoading && sortedTodos.length === 0 && dayScopedEvents.length === 0 ? (
+        <Text className="py-6 text-sm text-muted-foreground">
+          No to-dos or calendar events for this day yet.
+        </Text>
       ) : null}
 
-      {!isLoading && allDayTodos.length > 0 ? (
+      {!isLoading && (allDayTodos.length > 0 || allDayEvents.length > 0) ? (
         <View
           className="mb-5 rounded-2xl bg-muted/20 px-3 py-3"
           onLayout={(event) => {
@@ -331,6 +395,24 @@ export function TodosTimelineView({
             All day
           </Text>
           <View className="gap-2">
+            {allDayEvents.map((event) => {
+              const color = calendarColorMap[event.calendarId] ?? '#4285F4';
+              return (
+                <View
+                  key={`event-${event.id}`}
+                  className="rounded-xl px-3 py-3"
+                  style={{
+                    backgroundColor: `${color}22`,
+                    borderLeftWidth: 3,
+                    borderLeftColor: color,
+                  }}
+                >
+                  <Text className="text-sm font-medium" style={{ color }} numberOfLines={2}>
+                    {event.title}
+                  </Text>
+                </View>
+              );
+            })}
             {allDayTodos.map((t) => (
               <View
                 key={t.id}
@@ -422,6 +504,50 @@ export function TodosTimelineView({
               <Animated.View style={selectionAnimatedStyle} pointerEvents="none" />
             </Animated.View>
           </GestureDetector>
+
+          {timedEvents.map((event) => {
+            const layout = eventBlockLayout(
+              event,
+              wakeHour,
+              bedHour,
+              HOUR_ROW_MIN_HEIGHT
+            );
+            if (!layout) return null;
+            const { top, height } = layout;
+            const compact = height < COMPACT_TODO_BLOCK_HEIGHT;
+            const color = calendarColorMap[event.calendarId] ?? '#4285F4';
+            return (
+              <View
+                key={`event-${event.id}`}
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  left: TODO_AREA_LEFT,
+                  right: 0,
+                  top,
+                  height,
+                  zIndex: 4,
+                  backgroundColor: `${color}30`,
+                  borderLeftWidth: 3,
+                  borderLeftColor: color,
+                }}
+                className={`overflow-hidden rounded-lg px-2 ${compact ? 'py-0.5' : 'py-1.5'}`}
+              >
+                <Text
+                  className={`font-medium ${compact ? 'text-xs leading-tight' : 'text-sm'}`}
+                  style={{ color }}
+                  numberOfLines={compact ? 1 : 2}
+                >
+                  {event.title}
+                </Text>
+                {!compact ? (
+                  <Text className="mt-0.5 text-[11px] tabular-nums opacity-80" style={{ color }}>
+                    {eventClockLabel(event)}
+                  </Text>
+                ) : null}
+              </View>
+            );
+          })}
 
           {timedTodos.map((t) => {
             const { top, height } = todoBlockLayout(t, wakeHour, bedHour, HOUR_ROW_MIN_HEIGHT);

@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSWRConfig } from 'swr';
 import { useTodos } from '@/hooks/useTodos';
 import { useTodosListView } from '@/hooks/useTodosListView';
 import { useTodoUndoToast } from '@/hooks/useTodoUndoToast';
@@ -14,6 +15,10 @@ import {
   consumeTodosPostCreateIntent,
   DEFAULT_LIST_FILTERS,
 } from '@/lib/todosScreenIntent';
+import {
+  getGetApiCalendarsKey,
+  getGetApiEventsKey,
+} from '@/gen/api/endpoints/techooAPI.gen';
 import { FloatingCreateButton } from '@/components/navigation/FloatingCreateButton';
 import { TodosScreenHeader } from '@/components/todos/TodosScreenHeader';
 import { TodosTimelineView, type TimelineScrollTarget } from '@/components/todos/TodosTimelineView';
@@ -23,6 +28,7 @@ import { TodoUndoToast } from '@/components/todos/TodoUndoToast';
 export default function TodayScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { mutate: globalMutate } = useSWRConfig();
   const [selectedDay, setSelectedDay] = useState(() => startOfLocalDay(new Date()));
   const [refreshing, setRefreshing] = useState(false);
   const [scrollTarget, setScrollTarget] = useState<TimelineScrollTarget>(null);
@@ -86,14 +92,20 @@ export default function TodayScreen() {
     setRefreshing(true);
     try {
       if (viewMode === 'timeline') {
-        await mutateTimeline();
+        await Promise.all([
+          mutateTimeline(),
+          globalMutate(getGetApiCalendarsKey()),
+          globalMutate(
+            (key) => Array.isArray(key) && key[0] === getGetApiEventsKey()[0]
+          ),
+        ]);
       } else {
         await mutateList();
       }
     } finally {
       setRefreshing(false);
     }
-  }, [viewMode, mutateTimeline, mutateList]);
+  }, [viewMode, mutateTimeline, mutateList, globalMutate]);
 
   const handleListToggleDone = useCallback(
     async (id: number, done: number, options?: { reinsert?: Todo; undoTitle?: string }) => {

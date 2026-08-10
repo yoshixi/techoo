@@ -596,12 +596,13 @@ export function TodayView(): React.JSX.Element {
     }),
     [dayStart, dayEnd]
   )
-  const { events: apiCalendarEvents } = useCalendarEvents(eventRange)
+  const { events: apiCalendarEvents, calendarColorMap } = useCalendarEvents(eventRange)
   useCalendarAutoSync(focusMode === 'plan')
   const calendarEvents = useMemo<CalendarEvent[]>(
     () =>
       apiCalendarEvents.map((event) => ({
         id: Number(event.id),
+        calendarId: String(event.calendarId),
         title: event.title,
         description: event.description,
         startAt: event.startAt,
@@ -740,6 +741,7 @@ export function TodayView(): React.JSX.Element {
                 viewMode="day"
                 hideHeader
                 calendarEvents={calendarEvents}
+                calendarColorMap={calendarColorMap}
                 onCreateRange={handleCreateRange}
                 onTodoSelect={handleCalendarTodoSelect}
                 onTodoMove={handleTodoMove}
