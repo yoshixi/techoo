@@ -40,7 +40,6 @@ function PostRowActions({
   onFavoriteToggled,
   onListDialogOpen,
   onStartEdit,
-  onOpenThread,
   onDelete,
   compact
 }: {
@@ -50,7 +49,6 @@ function PostRowActions({
   onFavoriteToggled?: () => void
   onListDialogOpen: () => void
   onStartEdit: () => void
-  onOpenThread?: () => void
   onDelete: (id: number) => void
   compact: boolean
 }): React.JSX.Element {
@@ -63,17 +61,6 @@ function PostRowActions({
         <FavoriteStarButton post={post} onToggled={onFavoriteToggled} />
       ) : null}
       <div className={`flex flex-col ${compact ? 'gap-0.5' : 'gap-1'} opacity-0 group-hover:opacity-100`}>
-        {onOpenThread && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`${iconBtn} p-0 text-muted-foreground hover:text-foreground`}
-            onClick={onOpenThread}
-            title="Open thread"
-          >
-            <MessageCircle className={iconSize} />
-          </Button>
-        )}
         {showCollectionActions ? (
           <PostRowListAction onListDialogOpen={onListDialogOpen} />
         ) : null}
@@ -119,7 +106,7 @@ function PostAssociationTags({
     : 'text-[10px] px-2 py-0 h-5 border-transparent bg-background/70 text-muted-foreground'
 
   return (
-    <div className={`mt-auto flex flex-wrap pt-2 ${compact ? 'gap-0.5' : 'gap-1.5'}`}>
+    <div className={`flex flex-wrap pt-2 ${compact ? 'gap-0.5' : 'gap-1.5'}`}>
       {listEntries.map((list) => (
         <Badge key={`list-${list.id}`} variant="outline" className={tagClass}>
           #{list.name}
@@ -266,26 +253,26 @@ export function PostRow({
           </div>
         ) : (
           <div className="flex items-stretch gap-2">
-            <div className="flex min-w-0 flex-1 flex-col">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
               <div>
                 <span className="mb-1.5 block text-[11px] tabular-nums text-muted-foreground">{timeStr}</span>
                 <p className={`min-h-0 flex-1 ${bodyClass}`} style={bodyStyle}>
                   {renderTextWithLinks(post.body)}
                 </p>
               </div>
+              <PostAssociationTags post={post} listEntries={listEntries} compact={compact} />
               {onOpenThread ? (
                 <button
                   type="button"
-                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                  className="mt-auto inline-flex items-center gap-1.5 pt-2 text-xs font-medium text-primary hover:underline"
                   onClick={() => onOpenThread(post)}
                 >
                   <MessageCircle className="h-3.5 w-3.5 shrink-0" />
-                  {post.reply_count > 0
+                  {(post.reply_count ?? 0) > 0
                     ? `${post.reply_count} ${post.reply_count === 1 ? 'reply' : 'replies'}`
                     : 'Reply in thread'}
                 </button>
               ) : null}
-              <PostAssociationTags post={post} listEntries={listEntries} compact={compact} />
             </div>
             <PostRowActions
               post={post}
@@ -294,7 +281,6 @@ export function PostRow({
               onFavoriteToggled={onFavoriteToggled}
               onListDialogOpen={() => setListDialogOpen(true)}
               onStartEdit={handleStartEdit}
-              onOpenThread={onOpenThread ? () => onOpenThread(post) : undefined}
               onDelete={onDelete}
               compact={compact}
             />
