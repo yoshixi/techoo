@@ -115,7 +115,7 @@ async function loadListMembershipsBatch(db: DB, userId: number, postIds: number[
   return result
 }
 
-function convertDbPostToApiSync(
+function mapDbPostToApi(
   row: SelectPost,
   events: LinkedEvent[],
   todos: LinkedTodo[],
@@ -134,13 +134,13 @@ function convertDbPostToApiSync(
   }
 }
 
-async function convertDbPostToApi(db: DB, userId: number, row: SelectPost): Promise<Post> {
+async function loadAndMapDbPostToApi(db: DB, userId: number, row: SelectPost): Promise<Post> {
   const [{ events, todos }, favorited, listMemberships] = await Promise.all([
     loadPostRelations(db, row.id),
     loadFavoritesBatch(db, userId, [row.id]),
     loadListMembershipsBatch(db, userId, [row.id]),
   ])
-  return convertDbPostToApiSync(row, events, todos, favorited.has(row.id), listMemberships.get(row.id) ?? [])
+  return mapDbPostToApi(row, events, todos, favorited.has(row.id), listMemberships.get(row.id) ?? [])
 }
 
 function buildFilterConditions(userId: number, filter?: PostsFilter) {
@@ -163,7 +163,7 @@ async function enrichPostsBatch(db: DB, userId: number, rows: SelectPost[]): Pro
     loadListMembershipsBatch(db, userId, ids),
   ])
   return rows.map(row =>
-    convertDbPostToApiSync(
+    mapDbPostToApi(
       row,
       events.get(row.id) ?? [],
       todos.get(row.id) ?? [],
@@ -229,7 +229,7 @@ export async function getPostById(db: DB, userId: number, postId: number): Promi
     .from(postsTable)
     .where(and(eq(postsTable.id, postId), eq(postsTable.userId, userId)))
 
-  return row ? convertDbPostToApi(db, userId, row) : null
+  return row ? loadAndMapDbPostToApi(db, userId, row) : null
 }
 
 export async function createPost(db: DB, userId: number, data: CreatePost): Promise<Result<Post>> {
@@ -353,7 +353,7 @@ export async function getPostThread(
     .orderBy(asc(postsTable.postedAt), asc(postsTable.id))
 
   const [root, replies] = await Promise.all([
-    convertDbPostToApi(db, userId, rootRow),
+    loadAndMapDbPostToApi(db, userId, rootRow),
     enrichPostsBatch(db, userId, replyRows),
   ])
 
