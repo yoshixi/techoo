@@ -4,6 +4,7 @@ import {
   PostResponseModel,
   PostQueryParamsModel,
   PostIdParamModel,
+  PostThreadResponseModel,
   CreatePostModel,
   UpdatePostModel,
 } from '../../../core/posts.core'
@@ -57,6 +58,19 @@ export const deletePostRoute = createRoute({
   request: { params: PostIdParamModel },
   responses: {
     200: { content: { 'application/json': { schema: PostResponseModel } }, description: 'Post deleted' },
+    404: { content: { 'application/json': { schema: ErrorResponseModel } }, description: 'Not found' },
+    500: { content: { 'application/json': { schema: ErrorResponseModel } }, description: 'Internal error' },
+  },
+})
+
+export const getPostThreadRoute = createRoute({
+  method: 'get',
+  path: '/v1/posts/{id}/thread',
+  summary: 'Get a post thread',
+  description: 'Returns the root post and its direct replies in chronological order.',
+  request: { params: PostIdParamModel },
+  responses: {
+    200: { content: { 'application/json': { schema: PostThreadResponseModel } }, description: 'Thread retrieved' },
     404: { content: { 'application/json': { schema: ErrorResponseModel } }, description: 'Not found' },
     500: { content: { 'application/json': { schema: ErrorResponseModel } }, description: 'Internal error' },
   },
