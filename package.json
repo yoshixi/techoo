@@ -11,11 +11,12 @@
     "test": "pnpm run check:dup-deps && turbo run test",
     "release:electron": "./scripts/release-electron.sh",
     "release:android-apk": "./scripts/release-android-apk.sh",
-    "aab-to-apk": "./scripts/aab-to-apk.sh"
+    "aab-to-apk": "./scripts/aab-to-apk.sh",
+    "postinstall": "node scripts/fix-node-bin-permissions.mjs"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
-    "turbo": "^2.5.8",
+    "turbo": "^2.10.12",
     "typescript": "5.9.3"
   },
   "packageManager": "pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee",
