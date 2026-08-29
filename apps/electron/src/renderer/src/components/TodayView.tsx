@@ -17,6 +17,7 @@ import {
   type PostComposerAssociations
 } from '../lib/post-composer-associations'
 import { PostRow } from './PostRow'
+import { PostThreadDialog } from './PostThreadDialog'
 import { useTodos } from '../hooks/useTodos'
 import { usePosts } from '../hooks/usePosts'
 import { usePostLists } from '../hooks/usePostLists'
@@ -453,7 +454,8 @@ function TodayLogPanel({
   layout,
   showStatusLine,
   todosForStatus,
-  postDraftStorageKey
+  postDraftStorageKey,
+  onOpenThread,
 }: {
   posts: Post[]
   isLoading: boolean
@@ -470,6 +472,7 @@ function TodayLogPanel({
   todosForStatus?: Todo[]
   /** Persists composer draft per local calendar day */
   postDraftStorageKey: string
+  onOpenThread: (postId: number) => void
 }): React.JSX.Element {
   const nowSec = usePeriodicNow()
   const handleSubmit = useCallback(
@@ -528,6 +531,7 @@ function TodayLogPanel({
               onUpdatePost={updatePost}
               onDelete={deletePost}
               variant={comfortable ? 'default' : 'compact'}
+              onOpenThread={(selected) => onOpenThread(selected.id)}
             />
           ))
         )}
@@ -584,6 +588,7 @@ export function TodayView(): React.JSX.Element {
   const [logComposerAssociations, setLogComposerAssociations] = useState<PostComposerAssociations>(
     emptyPostComposerAssociations()
   )
+  const [threadPostId, setThreadPostId] = useState<number | null>(null)
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
   const prevRailTab = useRef(railTab)
   const prevFocusMode = useRef(focusMode)
@@ -784,6 +789,7 @@ export function TodayView(): React.JSX.Element {
                     composerAssociations={logComposerAssociations}
                     onComposerAssociationsChange={setLogComposerAssociations}
                     postDraftStorageKey={postDraftStorageKey}
+                    onOpenThread={setThreadPostId}
                   />
                 )}
               </div>
@@ -817,6 +823,7 @@ export function TodayView(): React.JSX.Element {
                 composerAssociations={logComposerAssociations}
                 onComposerAssociationsChange={setLogComposerAssociations}
                 postDraftStorageKey={postDraftStorageKey}
+                onOpenThread={setThreadPostId}
               />
             </main>
           </>
@@ -906,6 +913,11 @@ export function TodayView(): React.JSX.Element {
           />
         )}
       </Dialog>
+      <PostThreadDialog
+        postId={threadPostId}
+        open={threadPostId !== null}
+        onOpenChange={(open) => !open && setThreadPostId(null)}
+      />
     </div>
   )
 }

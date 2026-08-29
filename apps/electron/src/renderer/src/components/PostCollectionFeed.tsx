@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import { PostRow } from './PostRow'
+import { PostThreadDialog } from './PostThreadDialog'
 import { Button } from './ui/button'
 import { patchApiV1PostsId, deleteApiV1PostsId } from '../gen/api/endpoints/techooAPI.gen'
 import { useFilteredPostsFeed, type PostsFeedFilter } from '../hooks/useFilteredPostsFeed'
@@ -16,6 +17,7 @@ export function PostCollectionFeed({
   emptyMessage: string
   refreshKey?: number
 }): React.JSX.Element {
+  const [threadPostId, setThreadPostId] = React.useState<number | null>(null)
   const { posts, initialLoading, loadingMore, hasMore, error, loadMore, refetch } =
     useFilteredPostsFeed(filter)
 
@@ -127,6 +129,7 @@ export function PostCollectionFeed({
                     onUpdatePost={updatePost}
                     onDelete={deletePost}
                     onFavoriteToggled={filter.type === 'favorites' ? refetch : undefined}
+                    onOpenThread={(selected) => setThreadPostId(selected.id)}
                   />
                 ))}
               </div>
@@ -140,6 +143,11 @@ export function PostCollectionFeed({
         <p className="py-2 text-center text-[11px] text-muted-foreground">End of list</p>
       )}
       </div>
+      <PostThreadDialog
+        postId={threadPostId}
+        open={threadPostId !== null}
+        onOpenChange={(open) => !open && setThreadPostId(null)}
+      />
     </div>
   )
 }

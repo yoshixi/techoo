@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { PostComposer } from './PostComposer'
 import { PostRow } from './PostRow'
+import { PostThreadDialog } from './PostThreadDialog'
 import { usePostsFeed } from '../hooks/usePostsFeed'
 import { useTodos } from '../hooks/useTodos'
 import { usePostLists } from '../hooks/usePostLists'
@@ -36,6 +37,7 @@ export function PostsView(): React.JSX.Element {
   const [postAssociations, setPostAssociations] = useState<PostComposerAssociations>(
     emptyPostComposerAssociations()
   )
+  const [threadPostId, setThreadPostId] = useState<number | null>(null)
 
   const handleSubmit = useCallback(
     async (body: string) => {
@@ -145,6 +147,7 @@ export function PostsView(): React.JSX.Element {
                             post={post}
                             onUpdatePost={updatePost}
                             onDelete={deletePost}
+                            onOpenThread={(selected) => setThreadPostId(selected.id)}
                           />
                         ))}
                       </div>
@@ -163,6 +166,7 @@ export function PostsView(): React.JSX.Element {
           )}
         </div>
       </main>
+      <PostThreadDialog postId={threadPostId} open={threadPostId !== null} onOpenChange={(open) => !open && setThreadPostId(null)} />
     </div>
   )
 }

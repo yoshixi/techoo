@@ -15,6 +15,13 @@ export interface Post {
    * @exclusiveMinimum
    */
   id: number
+  /**
+   * Numeric ID
+   * @minimum 0
+   * @exclusiveMinimum
+   * @nullable
+   */
+  parent_post_id: number | null
   body: string
   /** RFC3339 timestamp */
   posted_at: string

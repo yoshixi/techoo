@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
-import { X, Pencil, Check } from 'lucide-react'
+import { X, Pencil, Check, MessageCircle } from 'lucide-react'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { Textarea } from './ui/textarea'
@@ -40,6 +40,7 @@ function PostRowActions({
   onFavoriteToggled,
   onListDialogOpen,
   onStartEdit,
+  onOpenThread,
   onDelete,
   compact
 }: {
@@ -49,6 +50,7 @@ function PostRowActions({
   onFavoriteToggled?: () => void
   onListDialogOpen: () => void
   onStartEdit: () => void
+  onOpenThread?: () => void
   onDelete: (id: number) => void
   compact: boolean
 }): React.JSX.Element {
@@ -61,6 +63,17 @@ function PostRowActions({
         <FavoriteStarButton post={post} onToggled={onFavoriteToggled} />
       ) : null}
       <div className={`flex flex-col ${compact ? 'gap-0.5' : 'gap-1'} opacity-0 group-hover:opacity-100`}>
+        {onOpenThread && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`${iconBtn} p-0 text-muted-foreground hover:text-foreground`}
+            onClick={onOpenThread}
+            title="Open thread"
+          >
+            <MessageCircle className={iconSize} />
+          </Button>
+        )}
         {showCollectionActions ? (
           <PostRowListAction onListDialogOpen={onListDialogOpen} />
         ) : null}
@@ -132,7 +145,8 @@ export function PostRow({
   onUpdatePost,
   variant = 'default',
   showCollectionActions = true,
-  onFavoriteToggled
+  onFavoriteToggled,
+  onOpenThread
 }: {
   post: Post
   onDelete: (id: number) => void
@@ -140,6 +154,7 @@ export function PostRow({
   variant?: 'default' | 'compact'
   showCollectionActions?: boolean
   onFavoriteToggled?: () => void
+  onOpenThread?: (post: Post) => void
 }): React.JSX.Element {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(post.body)
@@ -252,10 +267,18 @@ export function PostRow({
         ) : (
           <div className="flex items-stretch gap-2">
             <div className="flex min-w-0 flex-1 flex-col">
-              <span className="mb-1.5 block text-[11px] tabular-nums text-muted-foreground">{timeStr}</span>
-              <p className={`min-h-0 flex-1 ${bodyClass}`} style={bodyStyle}>
-                {renderTextWithLinks(post.body)}
-              </p>
+              <button
+                type="button"
+                className={`text-left ${onOpenThread ? 'cursor-pointer hover:opacity-95' : ''}`}
+                onClick={() => onOpenThread?.(post)}
+                disabled={!onOpenThread}
+                title={onOpenThread ? 'Open thread' : undefined}
+              >
+                <span className="mb-1.5 block text-[11px] tabular-nums text-muted-foreground">{timeStr}</span>
+                <p className={`min-h-0 flex-1 ${bodyClass}`} style={bodyStyle}>
+                  {renderTextWithLinks(post.body)}
+                </p>
+              </button>
               <PostAssociationTags post={post} listEntries={listEntries} compact={compact} />
             </div>
             <PostRowActions
@@ -265,6 +288,7 @@ export function PostRow({
               onFavoriteToggled={onFavoriteToggled}
               onListDialogOpen={() => setListDialogOpen(true)}
               onStartEdit={handleStartEdit}
+              onOpenThread={onOpenThread ? () => onOpenThread(post) : undefined}
               onDelete={onDelete}
               compact={compact}
             />

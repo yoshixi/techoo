@@ -212,6 +212,13 @@ components:
           exclusiveMinimum: true
           description: Numeric ID
           example: 1
+        parent_post_id:
+          type: integer
+          nullable: true
+          minimum: 0
+          exclusiveMinimum: true
+          description: Numeric ID
+          example: 1
         body:
           type: string
         posted_at:
@@ -255,6 +262,7 @@ components:
             type: integer
       required:
         - id
+        - parent_post_id
         - body
         - posted_at
         - events
@@ -285,6 +293,12 @@ components:
         body:
           type: string
           minLength: 1
+        parent_post_id:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+          description: Numeric ID
+          example: 1
         posted_at:
           type: string
           format: date-time
@@ -323,6 +337,23 @@ components:
             exclusiveMinimum: true
             description: Numeric ID
             example: 1
+    PostThreadResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            root:
+              $ref: "#/components/schemas/Post"
+            replies:
+              type: array
+              items:
+                $ref: "#/components/schemas/Post"
+          required:
+            - root
+            - replies
+      required:
+        - data
     PostList:
       type: object
       properties:
@@ -350,6 +381,15 @@ components:
       required:
         - data
     CreatePostList:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+      required:
+        - name
+    UpdatePostList:
       type: object
       properties:
         name:
@@ -468,6 +508,13 @@ components:
           type: string
           nullable: true
           description: Token expiration timestamp
+        scope:
+          type: string
+          nullable: true
+          description: Granted OAuth scopes for the account (space-separated)
+        hasCalendarScope:
+          type: boolean
+          description: Whether the token includes Google Calendar read scopes
       required:
         - connected
     OAuthDisconnectResponse:
@@ -1314,6 +1361,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/posts/{id}/thread:
+    get:
+      summary: Get a post thread
+      description: Returns the root post and its direct replies in chronological order.
+      parameters:
+        - schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            description: Numeric ID
+            example: 1
+          required: true
+          description: Numeric ID
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Thread retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostThreadResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/posts/{id}/favorite:
     post:
       summary: Favorite a post
@@ -1406,6 +1487,47 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
   /api/v1/post-lists/{id}:
+    patch:
+      summary: Update a post list
+      parameters:
+        - schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            description: Numeric ID
+            example: 1
+          required: true
+          description: Numeric ID
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePostList"
+      responses:
+        "200":
+          description: List updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PostListResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/PostList"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
       summary: Delete a post list
       parameters:
@@ -1770,7 +1892,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/AvailableCalendarsResponse"
         "401":
-          description: Google OAuth not connected
+          description: Google OAuth not connected or token expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Calendar API disabled or missing calendar scopes
           content:
             application/json:
               schema:
@@ -1821,6 +1949,12 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Google OAuth not connected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Calendar API disabled or missing calendar scopes
           content:
             application/json:
               schema:
@@ -1960,6 +2094,12 @@ paths:
                 $ref: "#/components/schemas/CalendarSyncResponse"
         "401":
           description: Google OAuth not connected or token expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Calendar API disabled or missing calendar scopes
           content:
             application/json:
               schema:
