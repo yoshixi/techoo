@@ -27,8 +27,9 @@
 
           shellHook = ''
             corepack prepare pnpm@11.20.0 --activate
-            pnpm() { corepack pnpm "$@"; }
-            export -f pnpm
+            # Turbo needs a real pnpm binary on PATH (corepack enable cannot
+            # symlink into the read-only nix store, so use corepack shims).
+            export PATH="$(dirname "$(command -v node)")/../lib/node_modules/corepack/shims:$PATH"
 
             # Load .env if it exists
             if [ -f .env ]; then
