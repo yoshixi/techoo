@@ -292,8 +292,18 @@ export function TimelineView(): React.JSX.Element {
 
   const handleSubmit = useCallback(
     async (body: string) => {
-      const hasCollection = postAssociations.favorite || postAssociations.lists.length > 0
-      await submitComposerPost(body, postAssociations, {
+      const submitAssociations: PostComposerAssociations =
+        activeTab.type === 'list' && activeList
+          ? {
+              ...postAssociations,
+              lists: postAssociations.lists.some((list) => list.id === activeList.id)
+                ? postAssociations.lists
+                : [...postAssociations.lists, { id: activeList.id, name: activeList.name }]
+            }
+          : postAssociations
+
+      const hasCollection = submitAssociations.favorite || submitAssociations.lists.length > 0
+      await submitComposerPost(body, submitAssociations, {
         simpleCreate: createPost,
         refresh: hasCollection
           ? async () => {
@@ -306,7 +316,7 @@ export function TimelineView(): React.JSX.Element {
       setIsCreatePostDialogOpen(false)
       setPostAssociations(emptyPostComposerAssociations())
     },
-    [activeTab.type, bumpFeedRefresh, createPost, postAssociations, refetch]
+    [activeList, activeTab.type, bumpFeedRefresh, createPost, postAssociations, refetch]
   )
 
   const handleCreateList = useCallback(async () => {
