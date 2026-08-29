@@ -19,6 +19,7 @@ import {
   createPostRoute,
   updatePostRoute,
   deletePostRoute,
+  getPostThreadRoute,
   // Post favorite + list routes
   favoritePostRoute,
   unfavoritePostRoute,
@@ -77,6 +78,7 @@ import {
   createPostHandler,
   updatePostHandler,
   deletePostHandler,
+  getPostThreadHandler,
   // Post favorite + list handlers
   favoritePostHandler,
   unfavoritePostHandler,
@@ -262,6 +264,7 @@ export function createApp(deps?: AppDeps): CreateAppResult {
   app.openapi(createPostRoute, createPostHandler)
   app.openapi(updatePostRoute, updatePostHandler)
   app.openapi(deletePostRoute, deletePostHandler)
+  app.openapi(getPostThreadRoute, getPostThreadHandler)
 
   // Post favorite routes
   app.openapi(favoritePostRoute, favoritePostHandler)

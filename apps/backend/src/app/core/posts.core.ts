@@ -14,6 +14,7 @@ const LinkedTodoModel = z.object({
 
 export const PostModel = z.object({
   id: IdSchema,
+  parent_post_id: IdSchema.nullable(),
   body: z.string(),
   posted_at: Rfc3339Schema,
   events: z.array(LinkedEventModel),
@@ -24,6 +25,7 @@ export const PostModel = z.object({
 
 export const CreatePostModel = z.object({
   body: z.string().min(1),
+  parent_post_id: IdSchema.optional(),
   posted_at: Rfc3339InputSchema.optional().openapi({ description: 'Defaults to now if omitted' }),
   event_ids: z.array(z.number().int()).optional().default([]),
   todo_ids: z.array(IdSchema).optional().default([]),
@@ -98,6 +100,13 @@ export const PostListResponseModel = z
 export const PostResponseModel = z.object({
   data: PostModel,
 }).openapi('PostResponse')
+
+export const PostThreadResponseModel = z.object({
+  data: z.object({
+    root: PostModel,
+    replies: z.array(PostModel),
+  }),
+}).openapi('PostThreadResponse')
 
 export type Post = z.infer<typeof PostModel>
 export type CreatePost = z.infer<typeof CreatePostModel>

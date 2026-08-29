@@ -3,8 +3,8 @@ import { describe, it, expect, beforeEach, beforeAll, afterAll } from 'vitest'
 import { OpenAPIHono } from '@hono/zod-openapi'
 import pino from 'pino'
 import type { AppBindings } from '../types'
-import { createPostRoute, updatePostRoute } from '../routes/posts'
-import { createPostHandler, updatePostHandler } from './posts'
+import { createPostRoute, updatePostRoute, getPostThreadRoute } from '../routes/posts'
+import { createPostHandler, updatePostHandler, getPostThreadHandler } from './posts'
 import {
   createSqliteLibsqlTestContext,
   createTestRequest,
@@ -34,6 +34,7 @@ const createTestApp = (getUser: () => TestUser | null, getDb: () => DB) => {
 
   app.openapi(createPostRoute, createPostHandler)
   app.openapi(updatePostRoute, updatePostHandler)
+  app.openapi(getPostThreadRoute, getPostThreadHandler)
 
   return app
 }
@@ -103,6 +104,27 @@ describe('Post Handlers', () => {
       expect(posts).toHaveLength(1)
       const links = await testContext.db.select().from(postTodosTable).where(eq(postTodosTable.postId, posts[0]!.id))
       expect(links).toEqual([{ postId: posts[0]!.id, todoId: todo.id }])
+    })
+
+    it('creates a reply post when parent_post_id exists', async () => {
+      const [parent] = await testContext.db.insert(postsTable).values({
+        userId: testUser!.id,
+        body: 'root post',
+        postedAt: 123,
+      }).returning()
+
+      const res = await request(new Request('http://localhost/v1/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          body: 'reply post',
+          parent_post_id: parent.id,
+        }),
+      }))
+
+      expect(res.status).toBe(201)
+      const json = await res.json() as { data: { parent_post_id: number | null } }
+      expect(json.data.parent_post_id).toBe(parent.id)
     })
 
     it('returns 400 when mixing valid and invalid todo_ids', async () => {
@@ -211,6 +233,42 @@ describe('Post Handlers', () => {
 
       expect(storedPost?.body).toBe('updated body')
       expect(links).toEqual([{ postId: post.id, todoId: newTodo.id }])
+    })
+  })
+
+  describe('getPostThread', () => {
+    it('returns root post with direct replies in chronological order', async () => {
+      const [root] = await testContext.db.insert(postsTable).values({
+        userId: testUser!.id,
+        body: 'root',
+        postedAt: 100,
+      }).returning()
+
+      await testContext.db.insert(postsTable).values([
+        { userId: testUser!.id, body: 'reply 2', parentPostId: root.id, postedAt: 300 },
+        { userId: testUser!.id, body: 'reply 1', parentPostId: root.id, postedAt: 200 },
+      ])
+
+      const res = await request(new Request(`http://localhost/v1/posts/${root.id}/thread`, {
+        method: 'GET',
+      }))
+
+      expect(res.status).toBe(200)
+      const json = await res.json() as {
+        data: { root: { id: number; body: string }; replies: Array<{ body: string; parent_post_id: number | null }> }
+      }
+      expect(json.data.root.id).toBe(root.id)
+      expect(json.data.replies.map((reply) => reply.body)).toEqual(['reply 1', 'reply 2'])
+      expect(json.data.replies.every((reply) => reply.parent_post_id === root.id)).toBe(true)
+    })
+
+    it('returns 404 for missing root post', async () => {
+      const res = await request(new Request('http://localhost/v1/posts/999999/thread', {
+        method: 'GET',
+      }))
+      expect(res.status).toBe(404)
+      const json = await res.json() as { error: string }
+      expect(json.error).toBe('Post not found')
     })
   })
 })
