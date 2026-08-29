@@ -349,6 +349,10 @@
             "items": {
               "type": "integer"
             }
+          },
+          "reply_count": {
+            "type": "integer",
+            "description": "Number of direct replies (root posts only)"
           }
         },
         "required": [
@@ -359,7 +363,8 @@
           "events",
           "todos",
           "is_favorited",
-          "list_ids"
+          "list_ids",
+          "reply_count"
         ]
       },
       "PostListResponse": {

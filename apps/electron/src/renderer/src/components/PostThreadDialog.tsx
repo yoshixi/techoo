@@ -2,37 +2,8 @@ import React, { useCallback, useMemo, useState } from 'react'
 import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
+import { PostRow } from './PostRow'
 import { usePostThread } from '../hooks/usePostThread'
-
-const URL_REGEX = /(https?:\/\/[^\s]+)/g
-const URL_PART_REGEX = /^https?:\/\/[^\s]+$/
-
-function renderTextWithLinks(text: string): React.ReactNode[] {
-  const parts = text.split(URL_REGEX)
-  return parts.map((part, idx) => {
-    if (!URL_PART_REGEX.test(part)) return <React.Fragment key={`txt-${idx}`}>{part}</React.Fragment>
-    return (
-      <a
-        key={`url-${idx}`}
-        href={part}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="underline underline-offset-2 text-primary/90 hover:text-primary"
-        onClick={(event) => {
-          event.preventDefault()
-          window.open(part, '_blank', 'noopener,noreferrer')
-        }}
-      >
-        {part}
-      </a>
-    )
-  })
-}
-
-function formatPostedAt(ts: string): string {
-  const d = new Date(ts)
-  return `${d.toLocaleDateString()} ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`
-}
 
 export function PostThreadDialog({
   postId,
@@ -43,7 +14,7 @@ export function PostThreadDialog({
   open: boolean
   onOpenChange: (next: boolean) => void
 }): React.JSX.Element {
-  const { root, replies, isLoading, createReply } = usePostThread(open ? postId : null)
+  const { root, replies, isLoading, createReply, updatePost, deletePost } = usePostThread(open ? postId : null)
   const [draft, setDraft] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -64,6 +35,14 @@ export function PostThreadDialog({
     }
   }, [draft, submitting, createReply])
 
+  const handleDelete = useCallback(
+    async (id: number) => {
+      await deletePost(id)
+      if (id === postId) onOpenChange(false)
+    },
+    [deletePost, onOpenChange, postId]
+  )
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[min(96vw,860px)] p-0 overflow-hidden">
@@ -71,33 +50,39 @@ export function PostThreadDialog({
           <DialogTitle>Thread</DialogTitle>
         </DialogHeader>
 
-        <div className="max-h-[68vh] overflow-y-auto px-5 py-4 space-y-4">
+        <div className="max-h-[68vh] overflow-y-auto px-5 py-4 space-y-3">
           {isLoading && !root ? (
             <p className="text-sm text-muted-foreground">Loading thread…</p>
           ) : !root ? (
             <p className="text-sm text-muted-foreground">Thread not found.</p>
           ) : (
             <>
-              <div className="rounded-xl border bg-card/70 px-4 py-3">
-                <p className="whitespace-pre-wrap text-sm leading-relaxed">{renderTextWithLinks(root.body)}</p>
-                <span className="mt-1.5 block text-[11px] text-muted-foreground">{formatPostedAt(root.posted_at)}</span>
-              </div>
+              <PostRow
+                post={root}
+                onUpdatePost={updatePost}
+                onDelete={(id) => void handleDelete(id)}
+                showCollectionActions={false}
+              />
 
-              <div className="space-y-2">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Replies ({orderedReplies.length})</p>
-                {orderedReplies.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No replies yet.</p>
-                ) : (
-                  orderedReplies.map((reply) => (
-                    <div key={reply.id} className="rounded-xl border bg-card/55 px-4 py-3">
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed">{renderTextWithLinks(reply.body)}</p>
-                      <span className="mt-1.5 block text-[11px] text-muted-foreground">
-                        {formatPostedAt(reply.posted_at)}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
+              {orderedReplies.length > 0 ? (
+                <div className="space-y-2 border-l-2 border-border/70 pl-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    {orderedReplies.length} {orderedReplies.length === 1 ? 'reply' : 'replies'}
+                  </p>
+                  {orderedReplies.map((reply) => (
+                    <PostRow
+                      key={reply.id}
+                      post={reply}
+                      variant="compact"
+                      onUpdatePost={updatePost}
+                      onDelete={(id) => void handleDelete(id)}
+                      showCollectionActions={false}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No replies yet.</p>
+              )}
             </>
           )}
         </div>

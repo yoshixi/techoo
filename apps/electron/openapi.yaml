@@ -260,6 +260,9 @@ components:
           type: array
           items:
             type: integer
+        reply_count:
+          type: integer
+          description: Number of direct replies (root posts only)
       required:
         - id
         - parent_post_id
@@ -269,6 +272,7 @@ components:
         - todos
         - is_favorited
         - list_ids
+        - reply_count
     PostListResponse:
       type: object
       properties:

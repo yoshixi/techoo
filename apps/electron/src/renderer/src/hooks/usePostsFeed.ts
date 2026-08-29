@@ -58,7 +58,8 @@ export function usePostsFeed(pageSize = DEFAULT_PAGE_SIZE): {
         events: [],
         todos: [],
         is_favorited: false,
-        list_ids: []
+        list_ids: [],
+        reply_count: 0,
       }
       prependPost(optimistic)
       try {

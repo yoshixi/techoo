@@ -8,6 +8,7 @@ import {
   type PostComposerAssociations
 } from '../lib/post-composer-associations'
 import { PostRow } from './PostRow'
+import { PostThreadDialog } from './PostThreadDialog'
 import { TodoDetailDialog } from './TodoView'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
@@ -263,6 +264,7 @@ export function TimelineView(): React.JSX.Element {
   const [deletingList, setDeletingList] = useState<PostList | null>(null)
   const [deletingListInProgress, setDeletingListInProgress] = useState(false)
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null)
+  const [threadPostId, setThreadPostId] = useState<number | null>(null)
 
   const activeList = useMemo(() => {
     if (activeTab.type !== 'list') return null
@@ -505,6 +507,7 @@ export function TimelineView(): React.JSX.Element {
                                   post={post}
                                   onUpdatePost={updatePost}
                                   onDelete={deletePost}
+                                  onOpenThread={(selected) => setThreadPostId(selected.id)}
                                 />
                               ))}
                             </div>
@@ -670,6 +673,12 @@ export function TimelineView(): React.JSX.Element {
           />
         )}
       </Dialog>
+
+      <PostThreadDialog
+        postId={threadPostId}
+        open={threadPostId !== null}
+        onOpenChange={(open) => !open && setThreadPostId(null)}
+      />
     </div>
   )
 }

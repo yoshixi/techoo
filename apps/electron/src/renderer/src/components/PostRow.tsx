@@ -267,18 +267,24 @@ export function PostRow({
         ) : (
           <div className="flex items-stretch gap-2">
             <div className="flex min-w-0 flex-1 flex-col">
-              <button
-                type="button"
-                className={`text-left ${onOpenThread ? 'cursor-pointer hover:opacity-95' : ''}`}
-                onClick={() => onOpenThread?.(post)}
-                disabled={!onOpenThread}
-                title={onOpenThread ? 'Open thread' : undefined}
-              >
+              <div>
                 <span className="mb-1.5 block text-[11px] tabular-nums text-muted-foreground">{timeStr}</span>
                 <p className={`min-h-0 flex-1 ${bodyClass}`} style={bodyStyle}>
                   {renderTextWithLinks(post.body)}
                 </p>
-              </button>
+              </div>
+              {onOpenThread ? (
+                <button
+                  type="button"
+                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                  onClick={() => onOpenThread(post)}
+                >
+                  <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                  {post.reply_count > 0
+                    ? `${post.reply_count} ${post.reply_count === 1 ? 'reply' : 'replies'}`
+                    : 'Reply in thread'}
+                </button>
+              ) : null}
               <PostAssociationTags post={post} listEntries={listEntries} compact={compact} />
             </div>
             <PostRowActions

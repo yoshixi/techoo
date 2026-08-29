@@ -59,7 +59,8 @@ export function usePosts(options?: { from: number; to: number; limit?: number })
         events: [],
         todos: [],
         is_favorited: false,
-        list_ids: []
+        list_ids: [],
+        reply_count: 0,
       }
 
       mutate(
