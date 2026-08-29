@@ -178,6 +178,8 @@ describe('posts.db', () => {
       const result = await createPost(ctx.db, user.id, {
         body: 'reply body',
         parent_post_id: parent.id,
+        event_ids: [],
+        todo_ids: [],
       })
 
       expect(result.ok).toBe(true)
@@ -195,6 +197,8 @@ describe('posts.db', () => {
       const result = await createPost(ctx.db, user.id, {
         body: 'should fail',
         parent_post_id: foreignParent!.id,
+        event_ids: [],
+        todo_ids: [],
       })
 
       expect(result.ok).toBe(false)
