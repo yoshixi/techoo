@@ -16,7 +16,7 @@
     "start": "electron-vite preview",
     "start:direct": "mv out/main/index.js out/main/index.cjs && ./node_modules/.bin/electron .",
     "start:api": "cp .env_api_example .env && electron-vite preview",
-    "dev": "electron-vite dev",
+    "dev": "cp .env_api_example .env && electron-vite dev",
     "dev:api": "cp .env_api_example .env && electron-vite dev",
     "dev:prod": "cp .env_prod_example .env && electron-vite dev",
     "dev:build": "electron-vite build && npm run start:direct",
