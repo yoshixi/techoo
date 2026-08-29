@@ -63,6 +63,7 @@ export function usePosts(options?: { from: Date; to: Date; limit?: number }): {
         todos: [],
         is_favorited: false,
         list_ids: [],
+        reply_count: 0,
       }
       mutate(
         (current) => ({

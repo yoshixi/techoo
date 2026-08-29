@@ -29,4 +29,6 @@ export interface Post {
   todos: PostTodosItem[];
   is_favorited: boolean;
   list_ids: number[];
+  /** Number of direct replies (root posts only) */
+  reply_count: number;
 }

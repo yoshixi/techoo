@@ -1,5 +1,10 @@
 import { useCallback } from 'react';
-import { postApiV1Posts, useGetApiV1PostsIdThread } from '@/gen/api/endpoints/techooAPI.gen';
+import {
+  deleteApiV1PostsId,
+  patchApiV1PostsId,
+  postApiV1Posts,
+  useGetApiV1PostsIdThread,
+} from '@/gen/api/endpoints/techooAPI.gen';
 import type { ErrorResponse, Post } from '@/gen/api/schemas';
 import { revalidateAllPostFeedCaches } from '@/lib/patchPostCaches';
 import { revalidateAllPostLists } from '@/lib/revalidatePostLists';
@@ -11,6 +16,8 @@ export function usePostThread(postId: number | null): {
   error: ErrorResponse | undefined;
   refresh: () => Promise<void>;
   createReply: (body: string) => Promise<void>;
+  updatePost: (id: number, body: string) => Promise<void>;
+  deletePost: (id: number) => Promise<void>;
 } {
   const query = useGetApiV1PostsIdThread(postId ?? 0, {
     swr: {
@@ -39,6 +46,24 @@ export function usePostThread(postId: number | null): {
     [postId, query]
   );
 
+  const updatePost = useCallback(
+    async (id: number, body: string) => {
+      const trimmed = body.trim();
+      if (!trimmed) return;
+      await patchApiV1PostsId(id, { body: trimmed });
+      await Promise.all([query.mutate(), revalidateAllPostFeedCaches(), revalidateAllPostLists()]);
+    },
+    [query]
+  );
+
+  const deletePost = useCallback(
+    async (id: number) => {
+      await deleteApiV1PostsId(id);
+      await Promise.all([query.mutate(), revalidateAllPostFeedCaches(), revalidateAllPostLists()]);
+    },
+    [query]
+  );
+
   return {
     root: query.data?.data.root ?? null,
     replies: query.data?.data.replies ?? [],
@@ -46,5 +71,7 @@ export function usePostThread(postId: number | null): {
     error: query.error as ErrorResponse | undefined,
     refresh,
     createReply,
+    updatePost,
+    deletePost,
   };
 }

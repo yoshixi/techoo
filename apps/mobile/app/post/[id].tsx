@@ -4,10 +4,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { usePostThread } from '@/hooks/usePostThread';
-import { deleteApiV1PostsId, patchApiV1PostsId } from '@/gen/api/endpoints/techooAPI.gen';
-import { formatDateTime, formatTime } from '@/lib/time';
+import { deleteApiV1PostsId } from '@/gen/api/endpoints/techooAPI.gen';
+import { formatTime } from '@/lib/time';
 import { showApiError } from '@/lib/showApiError';
-import { LinkifiedText } from '@/components/ui/LinkifiedText';
+import { ThreadReplyRow } from '@/components/posts/ThreadReplyRow';
 import { revalidateAllPostLists } from '@/lib/revalidatePostLists';
 import { revalidateAllPostFeedCaches } from '@/lib/patchPostCaches';
 
@@ -34,14 +34,13 @@ export default function PostDetailScreen() {
     if (post) setBody(post.body);
   }, [post]);
 
-  const onSave = useCallback(async () => {
+  const onSaveRoot = useCallback(async () => {
     if (!post || submitting) return;
     const trimmed = body.trim();
     if (!trimmed) return;
     setSubmitting(true);
     try {
-      await patchApiV1PostsId(post.id, { body: trimmed });
-      await Promise.all([thread.refresh(), revalidateAllPostFeedCaches(), revalidateAllPostLists()]);
+      await thread.updatePost(post.id, trimmed);
     } catch (err) {
       showApiError(err, 'Couldn’t update post');
     } finally {
@@ -49,7 +48,7 @@ export default function PostDetailScreen() {
     }
   }, [body, post, submitting, thread]);
 
-  const onDelete = useCallback(() => {
+  const onDeleteRoot = useCallback(() => {
     if (!post || submitting) return;
     Alert.alert('Delete post', 'Remove this post and its replies?', [
       { text: 'Cancel', style: 'cancel' },
@@ -59,9 +58,7 @@ export default function PostDetailScreen() {
         onPress: () => {
           setSubmitting(true);
           void deleteApiV1PostsId(post.id)
-            .then(() => {
-              return Promise.all([revalidateAllPostFeedCaches(), revalidateAllPostLists()]);
-            })
+            .then(() => Promise.all([revalidateAllPostFeedCaches(), revalidateAllPostLists()]))
             .then(() => {
               router.replace('/(tabs)/logbook');
             })
@@ -89,6 +86,29 @@ export default function PostDetailScreen() {
     }
   }, [postingReply, replyBody, thread]);
 
+  const onUpdateReply = useCallback(
+    async (replyId: number, nextBody: string) => {
+      try {
+        await thread.updatePost(replyId, nextBody);
+      } catch (err) {
+        showApiError(err, 'Couldn’t update reply');
+        throw err;
+      }
+    },
+    [thread]
+  );
+
+  const onDeleteReply = useCallback(
+    async (replyId: number) => {
+      try {
+        await thread.deletePost(replyId);
+      } catch (err) {
+        showApiError(err, 'Couldn’t delete reply');
+      }
+    },
+    [thread]
+  );
+
   if (id == null || Number.isNaN(postId)) return null;
 
   return (
@@ -97,8 +117,8 @@ export default function PostDetailScreen() {
         <Pressable onPress={() => router.back()}>
           <Text className="text-base text-muted-foreground">Close</Text>
         </Pressable>
-        <Text className="text-base font-semibold text-foreground">Post</Text>
-        <Pressable onPress={() => void onSave()} disabled={submitting || !body.trim()}>
+        <Text className="text-base font-semibold text-foreground">Thread</Text>
+        <Pressable onPress={() => void onSaveRoot()} disabled={submitting || !body.trim()}>
           <Text
             className={`text-base font-semibold ${
               submitting || !body.trim() ? 'text-muted-foreground' : 'text-primary'
@@ -113,7 +133,7 @@ export default function PostDetailScreen() {
         {thread.isLoading && !post ? <Text className="text-sm text-muted-foreground">Loading...</Text> : null}
         {!thread.isLoading && !post ? (
           <Text className="text-sm text-muted-foreground">
-            {thread.error ? 'Couldn’t load thread.' : 'Post not found.'}
+            {thread.error ? 'Couldn’t load thread.' : 'Thread not found.'}
           </Text>
         ) : null}
         {post ? (
@@ -121,7 +141,6 @@ export default function PostDetailScreen() {
             <Text className="mb-1 text-xs text-muted-foreground">
               {new Date(post.posted_at).toLocaleDateString()} at {formatTime(post.posted_at)}
             </Text>
-            <Text className="mb-1 mt-2 text-xs text-muted-foreground">Root post</Text>
             <TextInput
               value={body}
               onChangeText={setBody}
@@ -129,25 +148,24 @@ export default function PostDetailScreen() {
               placeholderTextColor="#9ca3af"
               multiline
               textAlignVertical="top"
-              className="min-h-[150px] rounded-xl border border-border/40 bg-card/70 px-3 py-3 text-sm text-foreground"
+              className="min-h-[120px] rounded-xl border border-border/40 bg-card/70 px-3 py-3 text-sm text-foreground"
             />
 
             <View className="mt-5">
-              <Text className="mb-2 text-xs text-muted-foreground">Replies ({replies.length})</Text>
+              <Text className="mb-2 text-xs text-muted-foreground">
+                {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
+              </Text>
               {replies.length === 0 ? (
                 <Text className="text-sm text-muted-foreground">No replies yet.</Text>
               ) : (
                 <View className="gap-2.5">
                   {replies.map((reply) => (
-                    <View
+                    <ThreadReplyRow
                       key={reply.id}
-                      className="rounded-xl border border-border/35 bg-card/60 px-3 py-2.5"
-                    >
-                      <LinkifiedText text={reply.body} className="text-sm text-foreground" />
-                      <Text className="mt-1 text-[11px] text-muted-foreground">
-                        {formatDateTime(reply.posted_at)}
-                      </Text>
-                    </View>
+                      reply={reply}
+                      onUpdate={onUpdateReply}
+                      onDelete={onDeleteReply}
+                    />
                   ))}
                 </View>
               )}
@@ -177,24 +195,8 @@ export default function PostDetailScreen() {
               </View>
             </View>
 
-            {post.todos.length > 0 ? (
-              <View className="mt-4 gap-1.5">
-                <Text className="text-xs text-muted-foreground">Linked ToDos</Text>
-                <View className="flex-row flex-wrap gap-1.5">
-                  {post.todos.map((todo) => (
-                    <View
-                      key={todo.id}
-                      className="min-h-[32px] justify-center rounded-xl border border-primary/35 bg-primary/10 px-2.5 py-1"
-                    >
-                      <Text className="text-xs font-semibold text-primary">{todo.title}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            ) : null}
-
             <Pressable
-              onPress={onDelete}
+              onPress={onDeleteRoot}
               disabled={submitting}
               className="mt-8 items-center rounded-xl border border-destructive/35 bg-destructive/10 py-3"
             >

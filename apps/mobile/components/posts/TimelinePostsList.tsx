@@ -62,7 +62,7 @@ export function TimelinePostsList({
   const renderItem = useCallback(
     ({ item }: SectionListRenderItemInfo<Post>) => (
       <View className="pl-5 pr-4">
-        <PostRow post={item} onPress={() => openPost(item)} />
+        <PostRow post={item} onOpenThread={() => openPost(item)} />
       </View>
     ),
     [openPost]
