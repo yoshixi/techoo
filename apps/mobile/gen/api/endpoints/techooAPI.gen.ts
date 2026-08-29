@@ -39,10 +39,12 @@ import type {
   OAuthAccountsResponse,
   OAuthDisconnectResponse,
   OAuthStatusResponse,
+  PatchApiV1PostListsId200,
   PostApiV1PostLists201,
   PostListResponse,
   PostListsResponse,
   PostResponse,
+  PostThreadResponse,
   SessionCodeResponse,
   SessionResponse,
   StopWatchResponse,
@@ -53,6 +55,7 @@ import type {
   UpdateCalendar,
   UpdateNote,
   UpdatePost,
+  UpdatePostList,
   UpdateTodo,
   WatchChannelResponse,
   WatchChannelStatus,
@@ -599,6 +602,47 @@ export const useDeleteApiV1PostsId = <TError = ErrorResponse | ErrorResponse>(
 };
 
 /**
+ * Returns the root post and its direct replies in chronological order.
+ * @summary Get a post thread
+ */
+export const getApiV1PostsIdThread = (id: number) => {
+  return customInstance<PostThreadResponse>({ url: `/api/v1/posts/${id}/thread`, method: 'GET' });
+};
+
+export const getGetApiV1PostsIdThreadKey = (id: number) => [`/api/v1/posts/${id}/thread`] as const;
+
+export type GetApiV1PostsIdThreadQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getApiV1PostsIdThread>>
+>;
+export type GetApiV1PostsIdThreadQueryError = ErrorResponse | ErrorResponse;
+
+/**
+ * @summary Get a post thread
+ */
+export const useGetApiV1PostsIdThread = <TError = ErrorResponse | ErrorResponse>(
+  id: number,
+  options?: {
+    swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiV1PostsIdThread>>, TError> & {
+      swrKey?: Key;
+      enabled?: boolean;
+    };
+  }
+) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const isEnabled = swrOptions?.enabled !== false && !!id;
+  const swrKey = swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiV1PostsIdThreadKey(id) : null));
+  const swrFn = () => getApiV1PostsIdThread(id);
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
  * @summary Favorite a post
  */
 export const postApiV1PostsIdFavorite = (id: number) => {
@@ -771,6 +815,59 @@ export const usePostApiV1PostLists = <TError = ErrorResponse>(options?: {
 
   const swrKey = swrOptions?.swrKey ?? getPostApiV1PostListsMutationKey();
   const swrFn = getPostApiV1PostListsMutationFetcher();
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions);
+
+  return {
+    swrKey,
+    ...query,
+  };
+};
+
+/**
+ * @summary Update a post list
+ */
+export const patchApiV1PostListsId = (id: number, updatePostList: UpdatePostList) => {
+  return customInstance<PatchApiV1PostListsId200>({
+    url: `/api/v1/post-lists/${id}`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updatePostList,
+  });
+};
+
+export const getPatchApiV1PostListsIdMutationFetcher = (id: number) => {
+  return (_: Key, { arg }: { arg: UpdatePostList }) => {
+    return patchApiV1PostListsId(id, arg);
+  };
+};
+export const getPatchApiV1PostListsIdMutationKey = (id: number) =>
+  [`/api/v1/post-lists/${id}`] as const;
+
+export type PatchApiV1PostListsIdMutationResult = NonNullable<
+  Awaited<ReturnType<typeof patchApiV1PostListsId>>
+>;
+export type PatchApiV1PostListsIdMutationError = ErrorResponse | ErrorResponse;
+
+/**
+ * @summary Update a post list
+ */
+export const usePatchApiV1PostListsId = <TError = ErrorResponse | ErrorResponse>(
+  id: number,
+  options?: {
+    swr?: SWRMutationConfiguration<
+      Awaited<ReturnType<typeof patchApiV1PostListsId>>,
+      TError,
+      Key,
+      UpdatePostList,
+      Awaited<ReturnType<typeof patchApiV1PostListsId>>
+    > & { swrKey?: string };
+  }
+) => {
+  const { swr: swrOptions } = options ?? {};
+
+  const swrKey = swrOptions?.swrKey ?? getPatchApiV1PostListsIdMutationKey(id);
+  const swrFn = getPatchApiV1PostListsIdMutationFetcher(id);
 
   const query = useSWRMutation(swrKey, swrFn, swrOptions);
 
@@ -1318,12 +1415,12 @@ export const getGetApiCalendarsAvailableKey = (params: GetApiCalendarsAvailableP
 export type GetApiCalendarsAvailableQueryResult = NonNullable<
   Awaited<ReturnType<typeof getApiCalendarsAvailable>>
 >;
-export type GetApiCalendarsAvailableQueryError = ErrorResponse | ErrorResponse;
+export type GetApiCalendarsAvailableQueryError = ErrorResponse | ErrorResponse | ErrorResponse;
 
 /**
  * @summary List available Google Calendars
  */
-export const useGetApiCalendarsAvailable = <TError = ErrorResponse | ErrorResponse>(
+export const useGetApiCalendarsAvailable = <TError = ErrorResponse | ErrorResponse | ErrorResponse>(
   params: GetApiCalendarsAvailableParams,
   options?: {
     swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiCalendarsAvailable>>, TError> & {
@@ -1406,13 +1503,17 @@ export const getPostApiCalendarsMutationKey = () => [`/api/calendars`] as const;
 export type PostApiCalendarsMutationResult = NonNullable<
   Awaited<ReturnType<typeof postApiCalendars>>
 >;
-export type PostApiCalendarsMutationError = ErrorResponse | ErrorResponse | ErrorResponse;
+export type PostApiCalendarsMutationError =
+  | ErrorResponse
+  | ErrorResponse
+  | ErrorResponse
+  | ErrorResponse;
 
 /**
  * @summary Add a calendar to sync
  */
 export const usePostApiCalendars = <
-  TError = ErrorResponse | ErrorResponse | ErrorResponse,
+  TError = ErrorResponse | ErrorResponse | ErrorResponse | ErrorResponse,
 >(options?: {
   swr?: SWRMutationConfiguration<
     Awaited<ReturnType<typeof postApiCalendars>>,
@@ -1596,12 +1697,18 @@ export const getPostApiCalendarsIdSyncMutationKey = (id: number) =>
 export type PostApiCalendarsIdSyncMutationResult = NonNullable<
   Awaited<ReturnType<typeof postApiCalendarsIdSync>>
 >;
-export type PostApiCalendarsIdSyncMutationError = ErrorResponse | ErrorResponse | ErrorResponse;
+export type PostApiCalendarsIdSyncMutationError =
+  | ErrorResponse
+  | ErrorResponse
+  | ErrorResponse
+  | ErrorResponse;
 
 /**
  * @summary Sync a calendar
  */
-export const usePostApiCalendarsIdSync = <TError = ErrorResponse | ErrorResponse | ErrorResponse>(
+export const usePostApiCalendarsIdSync = <
+  TError = ErrorResponse | ErrorResponse | ErrorResponse | ErrorResponse,
+>(
   id: number,
   options?: {
     swr?: SWRMutationConfiguration<

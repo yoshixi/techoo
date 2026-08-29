@@ -44,9 +44,16 @@ export function PostRow({
     <>
       <Pressable onPress={onPress} className="mb-3 rounded-xl bg-card/60 px-3 py-3 active:opacity-85">
         <View className="mb-1.5 flex-row items-center justify-between gap-2">
-          <Text className="text-xs tabular-nums text-muted-foreground">
-            {formatTodoClockTime(post.posted_at)}
-          </Text>
+          <View className="flex-row items-center gap-1.5">
+            <Text className="text-xs tabular-nums text-muted-foreground">
+              {formatTodoClockTime(post.posted_at)}
+            </Text>
+            {post.parent_post_id != null ? (
+              <Text className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                Reply
+              </Text>
+            ) : null}
+          </View>
           {showActions ? (
             <View className="flex-row items-center gap-1">
               <Pressable
