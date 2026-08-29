@@ -16,6 +16,8 @@ import {
 } from "../db/schema/schema";
 
 const authLogger = rootLogger.child({ module: 'auth' });
+const SESSION_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 30
+const SESSION_UPDATE_AGE_SECONDS = 60 * 60 * 24
 
 const updateGoogleAccountProfile = async (account: {
   id?: number | string
@@ -117,6 +119,11 @@ export const createAuth = () => {
           `[better-auth] ${String(message)}`,
         );
       },
+    },
+    session: {
+      // Keep users signed in for at least one month while still rotating sessions periodically.
+      expiresIn: SESSION_EXPIRES_IN_SECONDS,
+      updateAge: SESSION_UPDATE_AGE_SECONDS,
     },
     emailAndPassword: { enabled: true },
     account: {
