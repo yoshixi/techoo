@@ -21,6 +21,7 @@ export const PostModel = z.object({
   todos: z.array(LinkedTodoModel),
   is_favorited: z.boolean(),
   list_ids: z.array(z.number().int()),
+  reply_count: z.number().int().openapi({ description: 'Number of direct replies (root posts only)' }),
 }).openapi('Post')
 
 export const CreatePostModel = z.object({

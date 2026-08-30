@@ -22,7 +22,12 @@ export function usePosts(options?: { from: number; to: number; limit?: number })
   isLoading: boolean
   error: ErrorResponse | undefined
   refetch: () => Promise<void>
-  createPost: (body: string, eventIds: number[], todoIds: number[]) => Promise<void>
+  createPost: (
+    body: string,
+    eventIds: number[],
+    todoIds: number[],
+    parentPostId?: number
+  ) => Promise<void>
   updatePost: (id: number, body: string) => Promise<void>
   deletePost: (id: number) => Promise<void>
 } {
@@ -40,15 +45,22 @@ export function usePosts(options?: { from: number; to: number; limit?: number })
   const posts: Post[] = data?.data ?? []
 
   const createPost = useCallback(
-    async (body: string, eventIds: number[], todoIds: number[]) => {
+    async (
+      body: string,
+      eventIds: number[],
+      todoIds: number[],
+      parentPostId?: number
+    ) => {
       const optimistic: Post = {
         id: -Math.abs(Date.now()),
         body,
+        parent_post_id: parentPostId ?? null,
         posted_at: new Date().toISOString(),
         events: [],
         todos: [],
         is_favorited: false,
-        list_ids: []
+        list_ids: [],
+        reply_count: 0,
       }
 
       mutate(
@@ -61,6 +73,7 @@ export function usePosts(options?: { from: number; to: number; limit?: number })
       try {
         await postApiV1Posts({
           body,
+          parent_post_id: parentPostId,
           event_ids: eventIds,
           todo_ids: todoIds
         })

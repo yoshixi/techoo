@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
-import { X, Pencil, Check } from 'lucide-react'
+import { X, Pencil, Check, MessageCircle } from 'lucide-react'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { Textarea } from './ui/textarea'
@@ -106,7 +106,7 @@ function PostAssociationTags({
     : 'text-[10px] px-2 py-0 h-5 border-transparent bg-background/70 text-muted-foreground'
 
   return (
-    <div className={`mt-auto flex flex-wrap pt-2 ${compact ? 'gap-0.5' : 'gap-1.5'}`}>
+    <div className={`flex flex-wrap pt-2 ${compact ? 'gap-0.5' : 'gap-1.5'}`}>
       {listEntries.map((list) => (
         <Badge key={`list-${list.id}`} variant="outline" className={tagClass}>
           #{list.name}
@@ -132,7 +132,8 @@ export function PostRow({
   onUpdatePost,
   variant = 'default',
   showCollectionActions = true,
-  onFavoriteToggled
+  onFavoriteToggled,
+  onOpenThread
 }: {
   post: Post
   onDelete: (id: number) => void
@@ -140,6 +141,7 @@ export function PostRow({
   variant?: 'default' | 'compact'
   showCollectionActions?: boolean
   onFavoriteToggled?: () => void
+  onOpenThread?: (post: Post) => void
 }): React.JSX.Element {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(post.body)
@@ -251,12 +253,26 @@ export function PostRow({
           </div>
         ) : (
           <div className="flex items-stretch gap-2">
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="mb-1.5 block text-[11px] tabular-nums text-muted-foreground">{timeStr}</span>
-              <p className={`min-h-0 flex-1 ${bodyClass}`} style={bodyStyle}>
-                {renderTextWithLinks(post.body)}
-              </p>
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              <div>
+                <span className="mb-1.5 block text-[11px] tabular-nums text-muted-foreground">{timeStr}</span>
+                <p className={`min-h-0 flex-1 ${bodyClass}`} style={bodyStyle}>
+                  {renderTextWithLinks(post.body)}
+                </p>
+              </div>
               <PostAssociationTags post={post} listEntries={listEntries} compact={compact} />
+              {onOpenThread ? (
+                <button
+                  type="button"
+                  className="mt-auto inline-flex items-center gap-1.5 pt-2 text-xs font-medium text-primary hover:underline"
+                  onClick={() => onOpenThread(post)}
+                >
+                  <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                  {(post.reply_count ?? 0) > 0
+                    ? `${post.reply_count} ${post.reply_count === 1 ? 'reply' : 'replies'}`
+                    : 'Reply in thread'}
+                </button>
+              ) : null}
             </div>
             <PostRowActions
               post={post}

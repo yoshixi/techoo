@@ -252,4 +252,34 @@ describe('posts.db', () => {
       expect(await getPostThread(ctx.db, user.id, foreignRoot!.id)).toBeNull()
     })
   })
+
+  describe('list feeds', () => {
+    it('returns reply_count on root posts and omits replies from paginated results', async () => {
+      const root = await insertPost(1_000, 'root')
+      await ctx.db.insert(postsTable).values({
+        userId: user.id,
+        parentPostId: root.id,
+        body: 'reply one',
+        postedAt: 1_100,
+      })
+      await ctx.db.insert(postsTable).values({
+        userId: user.id,
+        parentPostId: root.id,
+        body: 'reply two',
+        postedAt: 1_200,
+      })
+      await ctx.db.insert(postsTable).values({
+        userId: user.id,
+        parentPostId: root.id,
+        body: 'reply three',
+        postedAt: 1_300,
+      })
+
+      const { posts } = await getPostsPaginated(ctx.db, user.id, { limit: 10, offset: 0 })
+
+      expect(posts).toHaveLength(1)
+      expect(posts[0]?.id).toBe(root.id)
+      expect(posts[0]?.reply_count).toBe(3)
+    })
+  })
 })
