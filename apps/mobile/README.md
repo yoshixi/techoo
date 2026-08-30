@@ -15,10 +15,18 @@ pnpm --filter mobile run api:generate
 From repo root (with dev env):
 
 ```bash
-pnpm --filter mobile run dev
+pnpm run dev-mobile
 ```
 
-Configure API base URL for the mutator via your Expo env (see `.env_example`).
+**Local API:** By default the app uses `http://localhost:8787`. Override in `apps/mobile/.env.local` (copy from `.env_example`). Do not put the production URL in `apps/mobile/.env` — Expo loads it during `expo start` and simulators will hit prod by mistake.
+
+Start the backend first:
+
+```bash
+nix develop --command pnpm --filter @apps/backend run dev
+```
+
+After changing `.env.local` or `app.config.js`, restart Expo with cache clear (`pnpm run dev-mobile` already passes `-c`).
 
 ### Google sign-in (mobile)
 

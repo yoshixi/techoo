@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { router } from 'expo-router'
-import { initAuth, getJwt, clearAuthState, getSessionToken } from '@/lib/auth'
-import { API_BASE_URL } from '@/lib/api/baseUrl'
+import { initAuth, getJwt, clearAuthState, userFromJwt } from '@/lib/auth'
 import { subscribeSessionInvalidated } from '@/lib/sessionEvents'
 
 export interface AuthUser {
@@ -48,29 +47,9 @@ export function useAuthProvider(): AuthContextValue {
         return
       }
 
-      const sessionToken = await getSessionToken()
-      if (!sessionToken) {
-        setUser(null)
-        await clearAuthState()
-        return
-      }
-
-      const res = await fetch(`${API_BASE_URL}/api/session`, {
-        headers: { Authorization: `Bearer ${sessionToken}` },
-      })
-      if (!res.ok) {
-        setUser(null)
-        await clearAuthState()
-        return
-      }
-
-      const session = await res.json()
-      if (session?.user) {
-        setUser({
-          id: String(session.user.id),
-          email: session.user.email,
-          name: session.user.name,
-        })
+      const authUser = userFromJwt(jwt)
+      if (authUser) {
+        setUser(authUser)
       } else {
         setUser(null)
         await clearAuthState()

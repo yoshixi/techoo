@@ -27,6 +27,7 @@ Prefix with `nix develop --command` when not already inside `nix develop`.
 
 ```sh
 pnpm run dev          # Start all apps (Turbo)
+pnpm run dev-mobile   # Expo dev server (simulator: i for iOS, a for Android)
 pnpm run build        # Build all apps/packages
 pnpm run lint         # Lint all
 pnpm run check-types  # Type-check all — run after every edit
