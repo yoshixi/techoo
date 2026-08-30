@@ -9,6 +9,12 @@
 export interface CreatePost {
   /** @minLength 1 */
   body: string;
+  /**
+   * Numeric ID
+   * @minimum 0
+   * @exclusiveMinimum
+   */
+  parent_post_id?: number;
   /** Defaults to now if omitted */
   posted_at?: string;
   event_ids?: number[];

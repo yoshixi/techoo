@@ -21,7 +21,12 @@ export function usePosts(options?: { from: Date; to: Date; limit?: number }): {
   posts: Post[]
   isLoading: boolean
   error: ErrorResponse | undefined
-  createPost: (body: string, eventIds: number[], todoIds: number[]) => Promise<void>
+  createPost: (
+    body: string,
+    eventIds: number[],
+    todoIds: number[],
+    parentPostId?: number
+  ) => Promise<void>
   deletePost: (id: number) => Promise<void>
   mutate: ReturnType<typeof useGetApiV1Posts>['mutate']
 } {
@@ -42,16 +47,23 @@ export function usePosts(options?: { from: Date; to: Date; limit?: number }): {
   const posts: Post[] = data?.data ?? []
 
   const createPost = useCallback(
-    async (body: string, eventIds: number[], todoIds: number[]) => {
+    async (
+      body: string,
+      eventIds: number[],
+      todoIds: number[],
+      parentPostId?: number
+    ) => {
       const nowIso = toRfc3339(new Date())
       const optimistic: Post = {
         id: -Math.abs(Date.now()),
         body,
+        parent_post_id: parentPostId ?? null,
         posted_at: nowIso,
         events: [],
         todos: [],
         is_favorited: false,
         list_ids: [],
+        reply_count: 0,
       }
       mutate(
         (current) => ({
@@ -60,7 +72,12 @@ export function usePosts(options?: { from: Date; to: Date; limit?: number }): {
         { revalidate: false }
       )
       try {
-        await postApiV1Posts({ body, event_ids: eventIds, todo_ids: todoIds })
+        await postApiV1Posts({
+          body,
+          parent_post_id: parentPostId,
+          event_ids: eventIds,
+          todo_ids: todoIds
+        })
         await revalidateAllPostLists()
       } catch (err) {
         await revalidateAllPostLists()
