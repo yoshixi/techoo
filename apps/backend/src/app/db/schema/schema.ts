@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, unique, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 // Users table
@@ -86,6 +86,9 @@ export const todosTable = sqliteTable('todos', {
 export const postsTable = sqliteTable('posts', {
   id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
   userId: integer('user_id', { mode: 'number' }).notNull().references(() => usersTable.id, { onDelete: 'cascade' }),
+  parentPostId: integer('parent_post_id', { mode: 'number' }).references((): AnySQLiteColumn => postsTable.id, {
+    onDelete: 'cascade',
+  }),
   body: text('body').notNull(),
   postedAt: integer('posted_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
 });
@@ -205,6 +208,12 @@ export const todosUserIdDoneIdx = index('todos_user_id_done_idx').on(todosTable.
 
 // Indexes — Posts
 export const postsPostedAtIdx = index('posts_posted_at_idx').on(postsTable.postedAt);
+export const postsParentPostIdIdx = index('posts_parent_post_id_idx').on(postsTable.parentPostId);
+export const postsUserParentPostedAtIdx = index('posts_user_parent_posted_at_idx').on(
+  postsTable.userId,
+  postsTable.parentPostId,
+  postsTable.postedAt
+);
 
 // Indexes — Calendar (kept from previous schema)
 export const calendarsUserIdIdx = index('calendars_user_id_idx').on(calendarsTable.userId);

@@ -12,7 +12,7 @@ import {
   calendarsTable,
   calendarEventsTable,
 } from '../db/schema/schema'
-import { getPostsPaginated, getPostsByRange } from './posts.db'
+import { createPost, getPostThread, getPostsPaginated, getPostsByRange } from './posts.db'
 
 type TestUser = { id: number }
 
@@ -168,6 +168,88 @@ describe('posts.db', () => {
       const result = await getPostsByRange(ctx.db, user.id, 200, 300, 100)
 
       expect(result).toEqual([])
+    })
+  })
+
+  describe('createPost', () => {
+    it('creates a reply post when parent_post_id belongs to user', async () => {
+      const parent = await insertPost(1_000, 'root post')
+
+      const result = await createPost(ctx.db, user.id, {
+        body: 'reply body',
+        parent_post_id: parent.id,
+        event_ids: [],
+        todo_ids: [],
+      })
+
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value.parent_post_id).toBe(parent.id)
+    })
+
+    it('rejects parent_post_id that is not owned by the user', async () => {
+      const otherUser = await createTestUser(ctx.db, 'Other User', 'other-user@example.com')
+      const [foreignParent] = await ctx.db
+        .insert(postsTable)
+        .values({ userId: otherUser.id, body: 'other root', postedAt: 1_000 })
+        .returning()
+
+      const result = await createPost(ctx.db, user.id, {
+        body: 'should fail',
+        parent_post_id: foreignParent!.id,
+        event_ids: [],
+        todo_ids: [],
+      })
+
+      expect(result.ok).toBe(false)
+      if (result.ok) return
+      expect(result.error).toBe('parent_post_id not found')
+    })
+  })
+
+  describe('getPostThread', () => {
+    it('returns root with direct replies sorted oldest-first', async () => {
+      const root = await insertPost(1_000, 'root')
+      await insertPost(500, 'unrelated')
+      await ctx.db.insert(postsTable).values({
+        userId: user.id,
+        parentPostId: root.id,
+        body: 'newest direct reply',
+        postedAt: 1_300,
+      })
+      await ctx.db.insert(postsTable).values({
+        userId: user.id,
+        parentPostId: root.id,
+        body: 'oldest direct reply',
+        postedAt: 1_100,
+      })
+      await ctx.db.insert(postsTable).values({
+        userId: user.id,
+        parentPostId: root.id,
+        body: 'middle direct reply',
+        postedAt: 1_200,
+      })
+
+      const thread = await getPostThread(ctx.db, user.id, root.id)
+
+      expect(thread?.root.id).toBe(root.id)
+      expect(thread?.replies.map((p) => p.body)).toEqual([
+        'oldest direct reply',
+        'middle direct reply',
+        'newest direct reply',
+      ])
+    })
+
+    it('returns null when root post is missing or not owned by user', async () => {
+      expect(await getPostThread(ctx.db, user.id, 999_999)).toBeNull()
+
+      const otherUser = await createTestUser(ctx.db, 'Other User 2', 'other-user-2@example.com')
+      const [foreignRoot] = await ctx.db
+        .insert(postsTable)
+        .values({ userId: otherUser.id, body: 'other root', postedAt: 1_000 })
+        .returning()
+
+      expect(await getPostThread(ctx.db, user.id, foreignRoot!.id)).toBeNull()
     })
   })
 })

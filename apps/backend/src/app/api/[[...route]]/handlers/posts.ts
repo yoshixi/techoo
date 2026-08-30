@@ -1,7 +1,7 @@
 import type { RouteHandler } from '@hono/zod-openapi'
 import type { AppBindings } from '../types'
-import { listPostsRoute, createPostRoute, updatePostRoute, deletePostRoute } from '../routes/posts'
-import { getPostsByRange, getPostsPaginated, createPost, updatePost, deletePost } from '../../../core/posts.db'
+import { listPostsRoute, createPostRoute, updatePostRoute, deletePostRoute, getPostThreadRoute } from '../routes/posts'
+import { getPostsByRange, getPostsPaginated, createPost, updatePost, deletePost, getPostThread } from '../../../core/posts.db'
 import { clampPostsPaginatedLimit, clampPostsRangeLimit } from '../../../core/list-limits'
 
 export const listPostsHandler: RouteHandler<typeof listPostsRoute, AppBindings> = async (c) => {
@@ -66,5 +66,19 @@ export const deletePostHandler: RouteHandler<typeof deletePostRoute, AppBindings
   } catch (error) {
     c.get('logger').error({ err: error }, 'failed to delete post')
     return c.json({ error: 'Failed to delete post' }, 500)
+  }
+}
+
+export const getPostThreadHandler: RouteHandler<typeof getPostThreadRoute, AppBindings> = async (c) => {
+  try {
+    const db = c.get('db')
+    const user = c.get('user')
+    const { id } = c.req.valid('param')
+    const thread = await getPostThread(db, user.id, id)
+    if (!thread) return c.json({ error: 'Post not found' }, 404)
+    return c.json({ data: thread }, 200)
+  } catch (error) {
+    c.get('logger').error({ err: error }, 'failed to fetch post thread')
+    return c.json({ error: 'Failed to fetch post thread' }, 500)
   }
 }

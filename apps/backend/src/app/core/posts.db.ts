@@ -1,4 +1,4 @@
-import { eq, and, sql, desc, inArray } from 'drizzle-orm'
+import { eq, and, sql, desc, inArray, asc } from 'drizzle-orm'
 import {
   postsTable, postEventsTable, postTodosTable, postFavoritesTable, postListItemsTable, postListsTable,
   calendarEventsTable, calendarsTable, todosTable, type SelectPost,
@@ -28,6 +28,14 @@ async function validateEventIds(db: DB, userId: number, eventIds: number[]): Pro
     .innerJoin(calendarsTable, eq(calendarEventsTable.calendarId, calendarsTable.id))
     .where(and(eq(calendarsTable.userId, userId), inArray(calendarEventsTable.id, eventIds)))
   return found.length === eventIds.length ? Ok() : Err('One or more event_ids not found')
+}
+
+async function validateParentPostId(db: DB, userId: number, parentPostId: number): Promise<Result<void>> {
+  const [parent] = await db
+    .select({ id: postsTable.id })
+    .from(postsTable)
+    .where(and(eq(postsTable.id, parentPostId), eq(postsTable.userId, userId)))
+  return parent ? Ok() : Err('parent_post_id not found')
 }
 
 async function loadPostRelations(db: DB, postId: number): Promise<{ events: LinkedEvent[]; todos: LinkedTodo[] }> {
@@ -107,7 +115,7 @@ async function loadListMembershipsBatch(db: DB, userId: number, postIds: number[
   return result
 }
 
-function convertDbPostToApiSync(
+function mapDbPostToApi(
   row: SelectPost,
   events: LinkedEvent[],
   todos: LinkedTodo[],
@@ -116,6 +124,7 @@ function convertDbPostToApiSync(
 ): Post {
   return {
     id: row.id,
+    parent_post_id: row.parentPostId ?? null,
     body: row.body,
     posted_at: unixToIso(row.postedAt),
     events,
@@ -125,13 +134,13 @@ function convertDbPostToApiSync(
   }
 }
 
-async function convertDbPostToApi(db: DB, userId: number, row: SelectPost): Promise<Post> {
+async function loadAndMapDbPostToApi(db: DB, userId: number, row: SelectPost): Promise<Post> {
   const [{ events, todos }, favorited, listMemberships] = await Promise.all([
     loadPostRelations(db, row.id),
     loadFavoritesBatch(db, userId, [row.id]),
     loadListMembershipsBatch(db, userId, [row.id]),
   ])
-  return convertDbPostToApiSync(row, events, todos, favorited.has(row.id), listMemberships.get(row.id) ?? [])
+  return mapDbPostToApi(row, events, todos, favorited.has(row.id), listMemberships.get(row.id) ?? [])
 }
 
 function buildFilterConditions(userId: number, filter?: PostsFilter) {
@@ -154,7 +163,7 @@ async function enrichPostsBatch(db: DB, userId: number, rows: SelectPost[]): Pro
     loadListMembershipsBatch(db, userId, ids),
   ])
   return rows.map(row =>
-    convertDbPostToApiSync(
+    mapDbPostToApi(
       row,
       events.get(row.id) ?? [],
       todos.get(row.id) ?? [],
@@ -220,10 +229,14 @@ export async function getPostById(db: DB, userId: number, postId: number): Promi
     .from(postsTable)
     .where(and(eq(postsTable.id, postId), eq(postsTable.userId, userId)))
 
-  return row ? convertDbPostToApi(db, userId, row) : null
+  return row ? loadAndMapDbPostToApi(db, userId, row) : null
 }
 
 export async function createPost(db: DB, userId: number, data: CreatePost): Promise<Result<Post>> {
+  if (data.parent_post_id !== undefined) {
+    const v = await validateParentPostId(db, userId, data.parent_post_id)
+    if (!v.ok) return v
+  }
   if (data.todo_ids && data.todo_ids.length > 0) {
     const v = await validateTodoIds(db, userId, data.todo_ids)
     if (!v.ok) return v
@@ -237,6 +250,7 @@ export async function createPost(db: DB, userId: number, data: CreatePost): Prom
   const postId = await db.transaction(async (tx) => {
     const [row] = await tx.insert(postsTable).values({
       userId,
+      parentPostId: data.parent_post_id ?? null,
       body: data.body.trim(),
       postedAt: data.posted_at ?? now,
     }).returning()
@@ -319,4 +333,29 @@ export async function deletePost(db: DB, userId: number, postId: number): Promis
   // Junction tables cascade-delete via FK
   await db.delete(postsTable).where(and(eq(postsTable.id, postId), eq(postsTable.userId, userId)))
   return post
+}
+
+export async function getPostThread(
+  db: DB,
+  userId: number,
+  postId: number
+): Promise<{ root: Post; replies: Post[] } | null> {
+  const [rootRow] = await db
+    .select()
+    .from(postsTable)
+    .where(and(eq(postsTable.id, postId), eq(postsTable.userId, userId)))
+  if (!rootRow) return null
+
+  const replyRows = await db
+    .select()
+    .from(postsTable)
+    .where(and(eq(postsTable.userId, userId), eq(postsTable.parentPostId, postId)))
+    .orderBy(asc(postsTable.postedAt), asc(postsTable.id))
+
+  const [root, replies] = await Promise.all([
+    loadAndMapDbPostToApi(db, userId, rootRow),
+    enrichPostsBatch(db, userId, replyRows),
+  ])
+
+  return { root, replies }
 }
