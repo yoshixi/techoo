@@ -57,29 +57,70 @@ export function tenantNameForUser(userId: number): string {
   return `${group}-user-${userId}`
 }
 
+const TENANT_DB_READY_TIMEOUT_MS = 30_000
+const TENANT_DB_RETRY_BASE_MS = 500
+
+/** Turso returns 404/503 until a newly cloned tenant DB is ready for queries. */
+function isTenantDbNotReadyError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  const cause = (error as Error & { cause?: { httpStatus?: number; message?: string } }).cause
+  if (cause?.httpStatus === 404 || cause?.httpStatus === 503) return true
+  const message = `${error.message} ${cause?.message ?? ''}`
+  return message.includes('404') || message.includes('503') || message.includes('SERVER_ERROR')
+}
+
+async function seedTenantUser(
+  tenantDb: DB,
+  user: { id: number; name: string; email: string }
+): Promise<void> {
+  const deadline = Date.now() + TENANT_DB_READY_TIMEOUT_MS
+  let attempt = 0
+
+  while (Date.now() < deadline) {
+    attempt++
+    try {
+      await tenantDb
+        .insert(schema.usersTable)
+        .values({ id: user.id, name: user.name, email: user.email })
+        .onConflictDoNothing()
+      return
+    } catch (error) {
+      if (!isTenantDbNotReadyError(error) || Date.now() >= deadline) throw error
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.min(TENANT_DB_RETRY_BASE_MS * attempt, 2_000))
+      )
+    }
+  }
+
+  throw new Error(`Tenant database not ready after ${attempt} attempts`)
+}
+
 /**
  * Creates the tenant DB for a user and seeds the user record.
- * No-op in local dev (single DB mode). Throws on failure.
+ * Throws on failure.
  *
- * tenanso 0.2.1+ polls the health endpoint after creation,
- * so the DB is ready to use when createTenant() resolves.
+ * Turso may return 404/503 for a few seconds after cloning from the seed DB;
+ * seedTenantUser retries until the tenant accepts writes.
  */
 export async function provisionTenant(user: { id: number; name: string; email: string }): Promise<void> {
   const tenantName = tenantNameForUser(user.id)
-  await getTenanso().createTenant(tenantName)
+
+  try {
+    await getTenanso().createTenant(tenantName)
+  } catch (error) {
+    // Tenant may already exist from a prior partial provisioning attempt.
+    const message = error instanceof Error ? error.message : String(error)
+    if (!message.includes('already exists') && !message.includes('409')) throw error
+  }
 
   // Seed the user record into the tenant DB so FK constraints are satisfied.
-  const tenantDb = getTenantDbForUser(user.id)
-  await tenantDb
-    .insert(schema.usersTable)
-    .values({ id: user.id, name: user.name, email: user.email })
-    .onConflictDoNothing()
+  await seedTenantUser(getTenantDbForUser(user.id), user)
 }
 
 /**
  * Validates that the user's tenant DB is provisioned and ready.
  * Returns Ok() on success, Err(reason) on failure.
- * In local dev (single DB mode), always returns Ok().
+ * Returns Ok() when the tenant DB exists.
  */
 export async function validateUserReady(userId: number): Promise<Result> {
   try {

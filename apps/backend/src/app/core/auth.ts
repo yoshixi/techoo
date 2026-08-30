@@ -169,7 +169,10 @@ export const createAuth = () => {
         .map((origin) => origin.trim())
         .filter(Boolean),
       "http://127.0.0.1:*",
-      "http://localhost:*"
+      "http://localhost:*",
+      // Expo dev on a physical device uses the LAN IP as API_BASE_URL / Origin.
+      "http://192.168.*:*",
+      "http://10.*:*",
     ],
     databaseHooks: {
       account: {

@@ -1,4 +1,6 @@
-// Load environment variables from .env.local
+// Load environment variables from .env.local (local dev overrides).
+// Do not use apps/mobile/.env for API URL — Expo loads it into process.env and would
+// point local simulators at production. EAS builds use EXPO_PUBLIC_API_BASE_URL from eas.json.
 const fs = require('fs');
 const path = require('path');
 
@@ -23,6 +25,17 @@ const loadEnvLocal = () => {
 
 const localEnv = loadEnvLocal();
 
+function getApiBaseUrl() {
+  if (localEnv.EXPO_PUBLIC_API_BASE_URL) {
+    return localEnv.EXPO_PUBLIC_API_BASE_URL;
+  }
+  // EAS cloud builds only — not `expo start` on your machine (which also sets process.env from .env).
+  if (process.env.EAS_BUILD === 'true' && process.env.EXPO_PUBLIC_API_BASE_URL) {
+    return process.env.EXPO_PUBLIC_API_BASE_URL;
+  }
+  return 'http://localhost:8787';
+}
+
 /** DEBUG / API error details in alerts — opt-in; `pnpm run dev` sets DEBUG=true. */
 function envFlag(localVal, processVal) {
   const v = localVal !== undefined && localVal !== '' ? localVal : processVal;
@@ -44,8 +57,8 @@ module.exports = ({ config }) => {
     },
     extra: {
       ...config.extra,
-      // API URL from environment variable, defaults to localhost
-      apiUrl: localEnv.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8787',
+      // API URL: .env.local for local dev, eas.json env for EAS builds, else localhost.
+      apiUrl: getApiBaseUrl(),
       apiDebug: envFlag(localEnv.DEBUG, process.env.DEBUG),
     },
   };

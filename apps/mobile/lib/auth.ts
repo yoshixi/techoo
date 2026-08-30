@@ -4,6 +4,70 @@ import { notifySessionInvalidated } from './sessionEvents'
 
 const SESSION_TOKEN_KEY = 'session_token'
 
+/** Do not send the platform cookie jar — it triggers better-auth CSRF checks without Origin. */
+const AUTH_FETCH_INIT = { credentials: 'omit' as RequestCredentials }
+
+/**
+ * better-auth rejects POST requests that include cookies but no Origin header.
+ * React Native fetch omits Origin; send the API base URL (same as BETTER_AUTH_URL in dev).
+ */
+function authHeaders(extra?: Record<string, string>): Record<string, string> {
+  return {
+    Origin: API_BASE_URL,
+    ...extra,
+  }
+}
+
+function authJsonHeaders(extra?: Record<string, string>): Record<string, string> {
+  return {
+    ...authHeaders(),
+    'Content-Type': 'application/json',
+    ...extra,
+  }
+}
+
+function parseAuthError(data: unknown, fallback: string): string {
+  if (data && typeof data === 'object') {
+    if ('message' in data && typeof data.message === 'string') return data.message
+    if ('error' in data && typeof data.error === 'string') return data.error
+  }
+  return fallback
+}
+
+/** Session token from sign-in/sign-up — prefer JSON body (RN-friendly), fall back to header. */
+function sessionTokenFromAuthResponse(
+  data: { token?: string },
+  res: Response
+): string | null {
+  if (typeof data.token === 'string' && data.token.length > 0) return data.token
+  const header = res.headers.get('set-auth-token')
+  if (!header) return null
+  try {
+    return decodeURIComponent(header)
+  } catch {
+    return header
+  }
+}
+
+/** Read user claims from a JWT issued by our backend (already validated via /api/token). */
+export function userFromJwt(jwt: string): { id: string; email: string; name: string } | null {
+  try {
+    const segment = jwt.split('.')[1]
+    if (!segment) return null
+    const payload = JSON.parse(
+      atob(segment.replace(/-/g, '+').replace(/_/g, '/'))
+    ) as { sub?: string | number; email?: string; name?: string }
+    if (payload.sub == null || !payload.email) return null
+    return {
+      id: String(payload.sub),
+      email: payload.email,
+      name: payload.name ?? '',
+    }
+  } catch {
+    return null
+  }
+}
+
 // JWT Token Manager — in-memory cache for performance
 let jwtToken: string | null = null
 let jwtExpiresAt: number = 0
@@ -32,26 +96,34 @@ export async function getJwt(): Promise<string | null> {
 
   try {
     const res = await fetch(`${API_BASE_URL}/api/token`, {
+      ...AUTH_FETCH_INIT,
       method: 'POST',
-      headers: { Authorization: `Bearer ${sessionToken}` },
+      headers: authJsonHeaders({ Authorization: `Bearer ${sessionToken}` }),
+      // RN may send Content-Type: application/json on POST; an empty body breaks OpenAPI JSON parsing.
+      body: '{}',
     })
-    if (!res.ok) throw new Error('Token exchange failed')
+    if (!res.ok) {
+      if (res.status === 401) {
+        await clearAuthState()
+        notifySessionInvalidated()
+      }
+      throw new Error('Token exchange failed')
+    }
 
     const { token } = await res.json()
     jwtToken = token
     jwtExpiresAt = Date.now() + 14 * 60 * 1000 // ~14 min (conservative)
     return jwtToken
   } catch {
-    await clearAuthState()
-    notifySessionInvalidated()
     return null
   }
 }
 
 export async function exchangeSessionCode(code: string): Promise<string> {
   const res = await fetch(`${API_BASE_URL}/api/token`, {
+    ...AUTH_FETCH_INIT,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authJsonHeaders(),
     body: JSON.stringify({ code }),
   })
   if (!res.ok) {
@@ -66,8 +138,10 @@ export async function exchangeSessionCode(code: string): Promise<string> {
 
 export async function createSessionCode(sessionToken: string): Promise<string> {
   const res = await fetch(`${API_BASE_URL}/api/session-code`, {
+    ...AUTH_FETCH_INIT,
     method: 'POST',
-    headers: { Authorization: `Bearer ${sessionToken}` },
+    headers: authJsonHeaders({ Authorization: `Bearer ${sessionToken}` }),
+    body: '{}',
   })
   if (!res.ok) {
     throw new Error('Failed to create session code')
@@ -102,17 +176,19 @@ export async function signInWithEmail(
   password: string
 ): Promise<string> {
   const res = await fetch(`${API_BASE_URL}/api/auth/sign-in/email`, {
+    ...AUTH_FETCH_INIT,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authJsonHeaders(),
     body: JSON.stringify({ email, password }),
   })
 
+  const data = (await res.json()) as { token?: string; message?: string; error?: string }
+
   if (!res.ok) {
-    const data = await res.json().catch(() => null)
-    throw new Error(data?.message || 'Sign in failed')
+    throw new Error(parseAuthError(data, 'Sign in failed'))
   }
 
-  const sessionToken = res.headers.get('set-auth-token')
+  const sessionToken = sessionTokenFromAuthResponse(data, res)
   if (!sessionToken) {
     throw new Error('No session token received')
   }
@@ -128,17 +204,19 @@ export async function signUpWithEmail(
   name: string
 ): Promise<string> {
   const res = await fetch(`${API_BASE_URL}/api/auth/sign-up/email`, {
+    ...AUTH_FETCH_INIT,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authJsonHeaders(),
     body: JSON.stringify({ email, password, name }),
   })
 
+  const data = (await res.json()) as { token?: string; message?: string; error?: string }
+
   if (!res.ok) {
-    const data = await res.json().catch(() => null)
-    throw new Error(data?.message || 'Sign up failed')
+    throw new Error(parseAuthError(data, 'Sign up failed'))
   }
 
-  const sessionToken = res.headers.get('set-auth-token')
+  const sessionToken = sessionTokenFromAuthResponse(data, res)
   if (!sessionToken) {
     throw new Error('No session token received')
   }
