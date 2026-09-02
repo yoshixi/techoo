@@ -3,6 +3,7 @@ import { X, Pencil, Check, MessageCircle } from 'lucide-react'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { Textarea } from './ui/textarea'
+import { ThreadReplyComposer } from './ThreadReplyComposer'
 import { AddPostToListDialog, PostRowListAction } from './AddPostToListDialog'
 import { FavoriteStarButton } from './FavoriteStarButton'
 import { usePostLists } from '../hooks/usePostLists'
@@ -14,7 +15,8 @@ const URL_PART_REGEX = /^https?:\/\/[^\s]+$/
 function renderTextWithLinks(text: string): React.ReactNode[] {
   const parts = text.split(URL_REGEX)
   return parts.map((part, idx) => {
-    if (!URL_PART_REGEX.test(part)) return <React.Fragment key={`txt-${idx}`}>{part}</React.Fragment>
+    if (!URL_PART_REGEX.test(part))
+      return <React.Fragment key={`txt-${idx}`}>{part}</React.Fragment>
     return (
       <a
         key={`url-${idx}`}
@@ -60,10 +62,10 @@ function PostRowActions({
       {showCollectionActions ? (
         <FavoriteStarButton post={post} onToggled={onFavoriteToggled} />
       ) : null}
-      <div className={`flex flex-col ${compact ? 'gap-0.5' : 'gap-1'} opacity-0 group-hover:opacity-100`}>
-        {showCollectionActions ? (
-          <PostRowListAction onListDialogOpen={onListDialogOpen} />
-        ) : null}
+      <div
+        className={`flex flex-col ${compact ? 'gap-0.5' : 'gap-1'} opacity-0 group-hover:opacity-100`}
+      >
+        {showCollectionActions ? <PostRowListAction onListDialogOpen={onListDialogOpen} /> : null}
         {canEdit && (
           <Button
             variant="ghost"
@@ -201,7 +203,7 @@ export function PostRow({
     : { background: 'color-mix(in srgb, var(--background) 70%, var(--card) 30%)' }
 
   const bodyClass = compact
-    ? 'text-[11px] leading-snug whitespace-pre-wrap line-clamp-3'
+    ? 'text-[11px] leading-snug whitespace-pre-wrap'
     : 'text-[13px] leading-relaxed whitespace-pre-wrap'
 
   const bodyStyle = compact ? undefined : { color: 'var(--text-dark)' }
@@ -210,52 +212,63 @@ export function PostRow({
     <>
       <div className={shellClass} style={shellStyle}>
         {editing ? (
-          <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
-            <Textarea
+          compact ? (
+            <ThreadReplyComposer
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              className={
-                compact
-                  ? 'min-h-[72px] resize-y text-[11px] leading-snug'
-                  : 'min-h-[100px] resize-y text-sm'
-              }
+              onChange={setDraft}
+              onSubmit={() => void handleSave()}
+              onCancel={handleCancel}
+              submitting={saving}
+              submitLabel="Save"
+              submittingLabel="Saving…"
               autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') handleCancel()
-                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                  e.preventDefault()
-                  void handleSave()
-                }
-              }}
             />
-            <div className={`flex flex-wrap ${compact ? 'gap-1' : 'gap-2'}`}>
-              <Button
-                type="button"
-                size="sm"
-                className={compact ? 'h-6 px-2 text-[10px]' : 'h-8 gap-1 text-xs'}
-                disabled={saving || !draft.trim()}
-                style={compact ? undefined : { background: 'var(--amber)' }}
-                onClick={() => void handleSave()}
-              >
-                {!compact ? <Check className="h-3.5 w-3.5" /> : null}
-                {saving ? (compact ? '…' : 'Saving…') : 'Save'}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className={compact ? 'h-6 px-2 text-[10px]' : 'h-8 text-xs'}
-                onClick={handleCancel}
-              >
-                Cancel
-              </Button>
+          ) : (
+            <div className="space-y-2">
+              <Textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                className="min-h-[100px] resize-y text-sm"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') handleCancel()
+                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                    e.preventDefault()
+                    void handleSave()
+                  }
+                }}
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-8 gap-1 text-xs"
+                  disabled={saving || !draft.trim()}
+                  style={{ background: 'var(--amber)' }}
+                  onClick={() => void handleSave()}
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  {saving ? 'Saving…' : 'Save'}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 text-xs"
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
-          </div>
+          )
         ) : (
           <div className="flex items-stretch gap-2">
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
               <div>
-                <span className="mb-1.5 block text-[11px] tabular-nums text-muted-foreground">{timeStr}</span>
+                <span className="mb-1.5 block text-[11px] tabular-nums text-muted-foreground">
+                  {timeStr}
+                </span>
                 <p className={`min-h-0 flex-1 ${bodyClass}`} style={bodyStyle}>
                   {renderTextWithLinks(post.body)}
                 </p>

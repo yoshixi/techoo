@@ -1,25 +1,29 @@
 import React, { useCallback, useMemo, useState } from 'react'
-import { Button } from './ui/button'
-import { Textarea } from './ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { PostRow } from './PostRow'
+import { ThreadReplyComposer } from './ThreadReplyComposer'
 import { usePostThread } from '../hooks/usePostThread'
 
 export function PostThreadDialog({
   postId,
   open,
-  onOpenChange,
+  onOpenChange
 }: {
   postId: number | null
   open: boolean
   onOpenChange: (next: boolean) => void
 }): React.JSX.Element {
-  const { root, replies, isLoading, createReply, updatePost, deletePost } = usePostThread(open ? postId : null)
+  const { root, replies, isLoading, createReply, updatePost, deletePost } = usePostThread(
+    open ? postId : null
+  )
   const [draft, setDraft] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   const orderedReplies = useMemo(
-    () => [...replies].sort((a, b) => new Date(a.posted_at).getTime() - new Date(b.posted_at).getTime()),
+    () =>
+      [...replies].sort(
+        (a, b) => new Date(a.posted_at).getTime() - new Date(b.posted_at).getTime()
+      ),
     [replies]
   )
 
@@ -45,12 +49,12 @@ export function PostThreadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[min(96vw,860px)] p-0 overflow-hidden">
-        <DialogHeader className="border-b px-5 py-4">
+      <DialogContent className="flex max-h-[90vh] max-w-[min(96vw,860px)] flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="shrink-0 border-b px-5 py-4">
           <DialogTitle>Thread</DialogTitle>
         </DialogHeader>
 
-        <div className="max-h-[68vh] overflow-y-auto px-5 py-4 space-y-3">
+        <div className="min-h-[8rem] flex-1 overflow-y-auto px-5 py-4 space-y-3">
           {isLoading && !root ? (
             <p className="text-sm text-muted-foreground">Loading thread…</p>
           ) : !root ? (
@@ -87,32 +91,14 @@ export function PostThreadDialog({
           )}
         </div>
 
-        <div className="border-t px-5 py-4 space-y-2">
-          <Textarea
+        <div className="shrink-0 border-t px-5 py-4">
+          <ThreadReplyComposer
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Write a reply..."
-            rows={3}
-            className="min-h-[96px] resize-none"
-            onKeyDown={(e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                e.preventDefault()
-                void handleSubmit()
-              }
-            }}
+            onChange={setDraft}
+            onSubmit={() => void handleSubmit()}
+            submitting={submitting}
+            disabled={!root}
           />
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] text-muted-foreground">Press Ctrl/Cmd+Enter to reply</span>
-            <Button
-              type="button"
-              size="sm"
-              style={{ background: 'var(--amber)' }}
-              disabled={submitting || !draft.trim() || !root}
-              onClick={() => void handleSubmit()}
-            >
-              {submitting ? 'Posting…' : 'Reply'}
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
