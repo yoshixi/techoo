@@ -2,11 +2,5 @@
   "name": "Techoo",
   "user": "ubuntu",
   "install": "bash .cursor/install.sh",
-  "terminals": [
-    {
-      "name": "nix-daemon",
-      "command": "bash .cursor/nix-daemon.sh"
-    }
-  ],
   "ports": [8787, 3001]
 }
