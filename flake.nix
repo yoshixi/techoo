@@ -30,6 +30,11 @@
             # Turbo needs a real pnpm binary on PATH (corepack enable cannot
             # symlink into the read-only nix store, so use corepack shims).
             export PATH="$(dirname "$(command -v node)")/../lib/node_modules/corepack/shims:$PATH"
+            # Keep Node's bundled `npm` ahead of the corepack `npm` shim, which
+            # refuses to run in this pnpm-managed repo (packageManager=pnpm) and
+            # would otherwise break scripts that shell out to `npm run`
+            # (e.g. electron's check-types). `pnpm` still resolves to the shim.
+            export PATH="$(dirname "$(command -v node)"):$PATH"
 
             # Load .env if it exists
             if [ -f .env ]; then

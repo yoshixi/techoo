@@ -1,0 +1,7 @@
+{
+  "name": "Techoo",
+  "user": "ubuntu",
+  "install": "bash .cursor/install.sh",
+  "start": "bash .cursor/start.sh",
+  "ports": [8787, 3001]
+}
