@@ -311,6 +311,7 @@
 .markdown-body em,
 .markdown-body i {
   font-style: italic;
+  font-synthesis: style;
 }
 .markdown-editor-shell .tiptap strong,
 .markdown-editor-shell .tiptap b,
