@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, TextInput, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import type { Post } from '@/gen/api/schemas';
 import { Text } from '@/components/ui/text';
-import { LinkifiedText } from '@/components/ui/LinkifiedText';
+import { MarkdownComposer } from '@/components/markdown/MarkdownComposer';
+import { MarkdownView } from '@/components/markdown/MarkdownView';
 import { formatDateTime } from '@/lib/time';
 
 export function ThreadReplyRow({
@@ -51,12 +52,12 @@ export function ThreadReplyRow({
     <View className="rounded-xl border border-border/35 bg-card/60 px-3 py-2.5">
       {editing ? (
         <>
-          <TextInput
+          <MarkdownComposer
             value={draft}
-            onChangeText={setDraft}
-            multiline
-            textAlignVertical="top"
-            className="min-h-[72px] rounded-lg border border-border/30 bg-background px-3 py-2 text-sm text-foreground"
+            onChange={setDraft}
+            minHeight={72}
+            showPreviewToggle
+            inputClassName="min-h-[72px] rounded-lg border border-border/30 bg-background px-3 py-2 text-sm text-foreground"
           />
           <View className="mt-2 flex-row justify-end gap-3">
             <Pressable onPress={() => setEditing(false)} disabled={saving}>
@@ -75,7 +76,7 @@ export function ThreadReplyRow({
         </>
       ) : (
         <>
-          <LinkifiedText text={reply.body} className="text-sm text-foreground" />
+          <MarkdownView content={reply.body} />
           <Text className="mt-1 text-[11px] text-muted-foreground">
             {formatDateTime(reply.posted_at)}
           </Text>

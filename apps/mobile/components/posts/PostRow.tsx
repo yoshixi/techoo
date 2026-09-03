@@ -3,7 +3,7 @@ import { Pressable, View } from 'react-native';
 import { ListPlus, MessageCircle, Star } from 'lucide-react-native';
 import type { Post } from '@/gen/api/schemas';
 import { Text } from '@/components/ui/text';
-import { LinkifiedText } from '@/components/ui/LinkifiedText';
+import { MarkdownView } from '@/components/markdown/MarkdownView';
 import { formatTodoClockTime } from '@/lib/time';
 import { usePostFavorite } from '@/hooks/usePostFavorite';
 import { usePostLists } from '@/hooks/usePostLists';
@@ -83,7 +83,7 @@ export function PostRow({
           ) : null}
         </View>
 
-        <LinkifiedText text={post.body} className="text-sm leading-snug text-foreground" />
+        <MarkdownView content={post.body} compact />
         <PostAssociationChips post={post} lists={lists} />
 
         {onOpenThread ? (

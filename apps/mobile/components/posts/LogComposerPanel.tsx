@@ -12,6 +12,7 @@ import {
 import { Hash, X } from 'lucide-react-native';
 import type { Todo } from '@/gen/api/schemas';
 import { Text } from '@/components/ui/text';
+import { MarkdownFormatToolbar } from '@/components/markdown/MarkdownFormatToolbar';
 import type { PostComposerContext } from '@/lib/postComposerContext';
 import {
   pickRunningTodo,
@@ -182,6 +183,14 @@ export function LogComposerPanel({
         </Pressable>
       </View>
 
+      <MarkdownFormatToolbar
+        value={draft}
+        selection={selection}
+        onChange={(next, nextSelection) => {
+          onDraftChange(next);
+          setSelection(nextSelection);
+        }}
+      />
       <TextInput
         ref={logInputRef}
         value={draft}

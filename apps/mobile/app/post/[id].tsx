@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
@@ -8,6 +8,7 @@ import { deleteApiV1PostsId } from '@/gen/api/endpoints/techooAPI.gen';
 import { formatTime } from '@/lib/time';
 import { showApiError } from '@/lib/showApiError';
 import { ThreadReplyRow } from '@/components/posts/ThreadReplyRow';
+import { MarkdownComposer } from '@/components/markdown/MarkdownComposer';
 import { revalidateAllPostLists } from '@/lib/revalidatePostLists';
 import { revalidateAllPostFeedCaches } from '@/lib/patchPostCaches';
 
@@ -141,14 +142,12 @@ export default function PostDetailScreen() {
             <Text className="mb-1 text-xs text-muted-foreground">
               {new Date(post.posted_at).toLocaleDateString()} at {formatTime(post.posted_at)}
             </Text>
-            <TextInput
+            <MarkdownComposer
               value={body}
-              onChangeText={setBody}
+              onChange={setBody}
               placeholder="What happened?"
-              placeholderTextColor="#9ca3af"
-              multiline
-              textAlignVertical="top"
-              className="min-h-[120px] rounded-xl border border-border/40 bg-card/70 px-3 py-3 text-sm text-foreground"
+              minHeight={120}
+              inputClassName="min-h-[120px] rounded-xl border border-border/40 bg-card/70 px-3 py-3 text-sm text-foreground"
             />
 
             <View className="mt-5">
@@ -173,14 +172,12 @@ export default function PostDetailScreen() {
 
             <View className="mt-5 rounded-xl border border-border/35 bg-card/60 px-3 py-3">
               <Text className="mb-1 text-xs text-muted-foreground">Reply</Text>
-              <TextInput
+              <MarkdownComposer
                 value={replyBody}
-                onChangeText={setReplyBody}
+                onChange={setReplyBody}
                 placeholder="Write a reply..."
-                placeholderTextColor="#9ca3af"
-                multiline
-                textAlignVertical="top"
-                className="min-h-[90px] rounded-lg border border-border/30 bg-background px-3 py-2 text-sm text-foreground"
+                minHeight={90}
+                inputClassName="min-h-[90px] rounded-lg border border-border/30 bg-background px-3 py-2 text-sm text-foreground"
               />
               <View className="mt-2 flex-row justify-end">
                 <Pressable onPress={() => void onReply()} disabled={postingReply || !replyBody.trim()}>

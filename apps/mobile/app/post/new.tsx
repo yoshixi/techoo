@@ -17,6 +17,8 @@ import { usePostLists } from '@/hooks/usePostLists';
 import { startOfLocalDay } from '@/lib/dayBounds';
 import { formatTime } from '@/lib/time';
 import { PostComposerAssociationsBar } from '@/components/posts/PostComposerAssociationsBar';
+import { MarkdownFormatToolbar } from '@/components/markdown/MarkdownFormatToolbar';
+import { MarkdownView } from '@/components/markdown/MarkdownView';
 import {
   PostHashSuggestions,
   applyHashSuggestion,
@@ -73,6 +75,7 @@ export default function NewPostScreen() {
   const [time, setTime] = useState(() => new Date());
   const [body, setBody] = useState('');
   const [selection, setSelection] = useState({ start: 0, end: 0 });
+  const [preview, setPreview] = useState(false);
   const [associations, setAssociations] = useState<PostComposerAssociations>(initialAssociations);
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -159,16 +162,33 @@ export default function NewPostScreen() {
         ) : null}
 
         <Text className="mb-1 text-xs text-muted-foreground">Content</Text>
-        <TextInput
+        <MarkdownFormatToolbar
           value={body}
-          onChangeText={setBody}
-          onSelectionChange={(event) => setSelection(event.nativeEvent.selection)}
-          placeholder="What's happening? Type # to link to-dos, lists, or favorites"
-          placeholderTextColor="#9ca3af"
-          multiline
-          className="mb-3 min-h-[130px] rounded-xl border border-border/40 bg-card/70 px-3 py-3 text-sm text-foreground"
-          textAlignVertical="top"
+          selection={selection}
+          onChange={(next, nextSelection) => {
+            setBody(next);
+            setSelection(nextSelection);
+          }}
+          showPreviewToggle
+          preview={preview}
+          onPreviewChange={setPreview}
         />
+        {preview ? (
+          <View className="mb-3 min-h-[130px] rounded-xl border border-border/40 bg-card/70 px-3 py-3">
+            <MarkdownView content={body} />
+          </View>
+        ) : (
+          <TextInput
+            value={body}
+            onChangeText={setBody}
+            onSelectionChange={(event) => setSelection(event.nativeEvent.selection)}
+            placeholder="What's happening? Type # to link to-dos, lists, or favorites"
+            placeholderTextColor="#9ca3af"
+            multiline
+            className="mb-3 min-h-[130px] rounded-xl border border-border/40 bg-card/70 px-3 py-3 text-sm text-foreground"
+            textAlignVertical="top"
+          />
+        )}
       </View>
 
       <Modal visible={pickerTarget !== null} transparent animationType="fade" onRequestClose={() => setPickerTarget(null)}>

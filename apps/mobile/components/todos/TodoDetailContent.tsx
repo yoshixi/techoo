@@ -4,7 +4,8 @@ import { useRouter } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 import { X, Trash2, CheckCircle, Check } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
-import { LinkifiedText } from '@/components/ui/LinkifiedText';
+import { MarkdownComposer } from '@/components/markdown/MarkdownComposer';
+import { MarkdownView } from '@/components/markdown/MarkdownView';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTodos } from '@/hooks/useTodos';
@@ -404,15 +405,15 @@ export function TodoDetailContent({ todoId }: TodoDetailContentProps) {
         />
 
         <Text className="mb-1 text-xs text-muted-foreground">Description</Text>
-        <TextInput
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Description, context, links..."
-          placeholderTextColor="#9ca3af"
-          multiline
-          textAlignVertical="top"
-          className="mb-4 min-h-[120px] rounded-xl border border-input/45 bg-card/60 px-3 py-2 text-base text-foreground"
-        />
+        <View className="mb-4">
+          <MarkdownComposer
+            value={description}
+            onChange={setDescription}
+            placeholder="Description, context, links..."
+            minHeight={120}
+            inputClassName="min-h-[120px] rounded-xl border border-input/45 bg-card/60 px-3 py-2 text-base text-foreground"
+          />
+        </View>
 
         <TodoScheduleFields
           mode={scheduleMode}
@@ -463,7 +464,7 @@ export function TodoDetailContent({ todoId }: TodoDetailContentProps) {
                   key={post.id}
                   className="rounded-lg border border-border/35 bg-card/60 px-3 py-2.5"
                 >
-                  <LinkifiedText text={post.body} className="text-sm text-foreground" />
+                  <MarkdownView content={post.body} />
                   <Text className="mt-1 text-[11px] text-muted-foreground">
                     {formatDateTime(post.posted_at)}
                   </Text>
@@ -473,14 +474,12 @@ export function TodoDetailContent({ todoId }: TodoDetailContentProps) {
           )}
           <View className="mt-3">
             <Text className="mb-1 text-xs text-muted-foreground">Add to thread</Text>
-            <TextInput
+            <MarkdownComposer
               value={threadDraft}
-              onChangeText={setThreadDraft}
+              onChange={setThreadDraft}
               placeholder="Write a related post..."
-              placeholderTextColor="#9ca3af"
-              multiline
-              textAlignVertical="top"
-              className="min-h-[76px] rounded-xl border border-input/45 bg-card/60 px-3 py-2 text-sm text-foreground"
+              minHeight={76}
+              inputClassName="min-h-[76px] rounded-xl border border-input/45 bg-card/60 px-3 py-2 text-sm text-foreground"
             />
             <Button
               className="mt-2 self-start"

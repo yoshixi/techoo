@@ -2,38 +2,14 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { X, Pencil, Check, MessageCircle } from 'lucide-react'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
-import { Textarea } from './ui/textarea'
 import { ThreadReplyComposer } from './ThreadReplyComposer'
 import { AddPostToListDialog, PostRowListAction } from './AddPostToListDialog'
 import { FavoriteStarButton } from './FavoriteStarButton'
 import { usePostLists } from '../hooks/usePostLists'
 import type { Post } from '../gen/api/schemas'
-
-const URL_REGEX = /(https?:\/\/[^\s]+)/g
-const URL_PART_REGEX = /^https?:\/\/[^\s]+$/
-
-function renderTextWithLinks(text: string): React.ReactNode[] {
-  const parts = text.split(URL_REGEX)
-  return parts.map((part, idx) => {
-    if (!URL_PART_REGEX.test(part))
-      return <React.Fragment key={`txt-${idx}`}>{part}</React.Fragment>
-    return (
-      <a
-        key={`url-${idx}`}
-        href={part}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="underline underline-offset-2 text-primary/90 hover:text-primary"
-        onClick={(event) => {
-          event.preventDefault()
-          window.open(part, '_blank', 'noopener,noreferrer')
-        }}
-      >
-        {part}
-      </a>
-    )
-  })
-}
+import { isMarkdownBlank } from '../lib/markdown'
+import { MarkdownView } from './markdown/MarkdownView'
+import { MarkdownEditor } from './markdown/MarkdownEditor'
 
 function PostRowActions({
   post,
@@ -184,7 +160,7 @@ export function PostRow({
   const handleSave = useCallback(async () => {
     if (!onUpdatePost) return
     const trimmed = draft.trim()
-    if (!trimmed) return
+    if (isMarkdownBlank(trimmed)) return
     setSaving(true)
     try {
       await onUpdatePost(post.id, trimmed)
@@ -202,9 +178,7 @@ export function PostRow({
     ? { borderColor: 'var(--border-l)' }
     : { background: 'color-mix(in srgb, var(--background) 70%, var(--card) 30%)' }
 
-  const bodyClass = compact
-    ? 'text-[11px] leading-snug whitespace-pre-wrap'
-    : 'text-[13px] leading-relaxed whitespace-pre-wrap'
+  const bodyClass = compact ? 'text-[11px] leading-snug' : 'text-[13px] leading-relaxed'
 
   const bodyStyle = compact ? undefined : { color: 'var(--text-dark)' }
 
@@ -225,25 +199,20 @@ export function PostRow({
             />
           ) : (
             <div className="space-y-2">
-              <Textarea
+              <MarkdownEditor
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                className="min-h-[100px] resize-y text-sm"
+                onChange={setDraft}
                 autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') handleCancel()
-                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                    e.preventDefault()
-                    void handleSave()
-                  }
-                }}
+                onSubmit={() => void handleSave()}
+                onEscape={handleCancel}
+                className="min-h-[100px] text-sm"
               />
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
                   size="sm"
                   className="h-8 gap-1 text-xs"
-                  disabled={saving || !draft.trim()}
+                  disabled={saving || isMarkdownBlank(draft)}
                   style={{ background: 'var(--amber)' }}
                   onClick={() => void handleSave()}
                 >
@@ -269,9 +238,9 @@ export function PostRow({
                 <span className="mb-1.5 block text-[11px] tabular-nums text-muted-foreground">
                   {timeStr}
                 </span>
-                <p className={`min-h-0 flex-1 ${bodyClass}`} style={bodyStyle}>
-                  {renderTextWithLinks(post.body)}
-                </p>
+                <div className={`min-h-0 flex-1 ${bodyClass}`} style={bodyStyle}>
+                  <MarkdownView content={post.body} compact={compact} />
+                </div>
               </div>
               <PostAssociationTags post={post} listEntries={listEntries} compact={compact} />
               {onOpenThread ? (
