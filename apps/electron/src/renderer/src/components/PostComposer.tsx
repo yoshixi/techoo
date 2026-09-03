@@ -264,8 +264,10 @@ export function PostComposer({
       return
     }
     setShowHashPanel(true)
-    setHashQuery(query)
-    setActiveHashIndex(0)
+    setHashQuery((prev) => {
+      if (prev !== query) setActiveHashIndex(0)
+      return query
+    })
   }, [])
 
   useEffect(() => {
