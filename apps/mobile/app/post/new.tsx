@@ -35,6 +35,7 @@ import {
 } from '@/lib/postComposerAssociations';
 import { parseTimelineTabParam } from '@/lib/timelineTab';
 import { showApiError } from '@/lib/showApiError';
+import { applyMarkdownShortcutFromKeyEvent } from '@/lib/markdownFormat';
 
 type PickerTarget = 'date' | 'time';
 
@@ -182,6 +183,13 @@ export default function NewPostScreen() {
             value={body}
             onChangeText={setBody}
             onSelectionChange={(event) => setSelection(event.nativeEvent.selection)}
+            onKeyPress={(event) => {
+              const result = applyMarkdownShortcutFromKeyEvent(body, selection, event.nativeEvent);
+              if (!result) return;
+              event.preventDefault();
+              setBody(result.text);
+              setSelection(result.selection);
+            }}
             placeholder="What's happening? Type # to link to-dos, lists, or favorites"
             placeholderTextColor="#9ca3af"
             multiline

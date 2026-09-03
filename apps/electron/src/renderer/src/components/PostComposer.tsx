@@ -401,7 +401,8 @@ export function PostComposer({
       </div>
 
       <span className="text-[11px] text-muted-foreground">
-        Press {isMac ? '⌘' : 'Ctrl'}+Enter to post
+        {isMac ? '⌘B' : 'Ctrl+B'} bold · {isMac ? '⌘I' : 'Ctrl+I'} italic ·{' '}
+        {isMac ? '⌘' : 'Ctrl'}+Enter to post
       </span>
     </div>
   )

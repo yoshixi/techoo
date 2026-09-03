@@ -20,7 +20,7 @@ Constraints:
 ## Decision
 
 - **Storage:** Keep Markdown source in the existing string fields. Treat historical plain text as Markdown.
-- **Desktop (Electron):** Tiptap 3 WYSIWYG editor with official `@tiptap/markdown` serialization. A compact toolbar (bold, italic, strike, heading, lists, quote, code, link, task list). Read views use `react-markdown` + `remark-gfm`.
+- **Desktop (Electron):** Tiptap 3 WYSIWYG editor with official `@tiptap/markdown` serialization. A compact toolbar (bold, italic, strike, heading, lists, quote, code, link, task list). Common formatting shortcuts work while the editor is focused (`⌘/Ctrl+B` bold, `⌘/Ctrl+I` italic, `⌘/Ctrl+Shift+X` strike, `⌘/Ctrl+E` code, `⌘/Ctrl+K` link, list/heading/quote variants). Read views use `react-markdown` + `remark-gfm`.
 - **Mobile:** Render Markdown with `react-native-markdown-display`. Compose/edit keep a text field (needed for `#` token / selection) plus a format toolbar that inserts Markdown, with an optional live preview.
 - **Backend:** Document that `body` / `description` are Markdown. No API shape change, no client regen required.
 - **Out of scope:** Notes stay a plain textarea (already labeled Markdown in the API, but not requested here). No image upload.

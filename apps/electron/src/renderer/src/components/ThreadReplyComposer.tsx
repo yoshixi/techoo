@@ -48,7 +48,8 @@ export function ThreadReplyComposer({
       />
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] text-muted-foreground">
-          Press {isMac ? '⌘' : 'Ctrl'}+Enter to {submitLabel.toLowerCase()}
+          {isMac ? '⌘B' : 'Ctrl+B'} bold · {isMac ? '⌘I' : 'Ctrl+I'} italic ·{' '}
+          {isMac ? '⌘' : 'Ctrl'}+Enter to {submitLabel.toLowerCase()}
         </span>
         <div className="flex items-center gap-2">
           {onCancel ? (

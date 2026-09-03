@@ -682,7 +682,8 @@ export function TodoDetailDialog({
               </Button>
             </div>
             <span className="mt-1.5 block text-[11px] text-muted-foreground">
-              Press {isMac ? '⌘' : 'Ctrl'}+Enter to post
+              Press {isMac ? '⌘B' : 'Ctrl+B'} bold · {isMac ? '⌘I' : 'Ctrl+I'} italic ·{' '}
+              {isMac ? '⌘' : 'Ctrl'}+Enter to post
             </span>
           </div>
         </div>

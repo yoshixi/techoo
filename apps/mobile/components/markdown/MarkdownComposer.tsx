@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { TextInput, type TextInputProps, View } from 'react-native';
 import { MarkdownFormatToolbar } from '@/components/markdown/MarkdownFormatToolbar';
 import { MarkdownView } from '@/components/markdown/MarkdownView';
-import type { TextSelection } from '@/lib/markdownFormat';
+import { applyMarkdownShortcutFromKeyEvent, type TextSelection } from '@/lib/markdownFormat';
 
 export function MarkdownComposer({
   value,
@@ -23,6 +23,7 @@ export function MarkdownComposer({
 }) {
   const [selection, setSelection] = useState<TextSelection>({ start: 0, end: 0 });
   const [preview, setPreview] = useState(false);
+  const { onKeyPress: onInputKeyPress, ...restInputProps } = inputProps ?? {};
 
   return (
     <View>
@@ -58,6 +59,16 @@ export function MarkdownComposer({
           value={value}
           onChangeText={onChange}
           onSelectionChange={(event) => setSelection(event.nativeEvent.selection)}
+          onKeyPress={(event) => {
+            const result = applyMarkdownShortcutFromKeyEvent(value, selection, event.nativeEvent);
+            if (result) {
+              event.preventDefault();
+              onChange(result.text);
+              setSelection(result.selection);
+              return;
+            }
+            onInputKeyPress?.(event);
+          }}
           placeholder={placeholder}
           placeholderTextColor="#9ca3af"
           multiline
@@ -67,7 +78,7 @@ export function MarkdownComposer({
             'rounded-xl border border-border/40 bg-card/70 px-3 py-3 text-sm text-foreground'
           }
           style={{ minHeight }}
-          {...inputProps}
+          {...restInputProps}
         />
       )}
     </View>

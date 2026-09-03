@@ -25,6 +25,12 @@ import {
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { getParagraphHashQuery, normalizeMarkdown } from '../../lib/markdown'
+import { isMacPlatform } from '../../lib/platform'
+import {
+  formatShortcutHint,
+  matchMarkdownShortcut,
+  type MarkdownShortcutAction
+} from '../../lib/markdownShortcuts'
 
 export type MarkdownEditorHandle = {
   focus: () => void
@@ -89,75 +95,104 @@ function promptForLink(editor: Editor): void {
   editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run()
 }
 
+function runMarkdownShortcut(editor: Editor, action: MarkdownShortcutAction): boolean {
+  switch (action) {
+    case 'bold':
+      return editor.chain().focus().toggleBold().run()
+    case 'italic':
+      return editor.chain().focus().toggleItalic().run()
+    case 'strike':
+      return editor.chain().focus().toggleStrike().run()
+    case 'code':
+      return editor.chain().focus().toggleCode().run()
+    case 'link':
+      promptForLink(editor)
+      return true
+    case 'heading':
+      return editor.chain().focus().toggleHeading({ level: 2 }).run()
+    case 'bulletList':
+      return editor.chain().focus().toggleBulletList().run()
+    case 'orderedList':
+      return editor.chain().focus().toggleOrderedList().run()
+    case 'taskList':
+      return editor.chain().focus().toggleTaskList().run()
+    case 'blockquote':
+      return editor.chain().focus().toggleBlockquote().run()
+  }
+}
+
 function MarkdownToolbar({ editor }: { editor: Editor }): React.JSX.Element {
   const icon = 'h-3.5 w-3.5'
+  const isMac = isMacPlatform()
+  const hint = (...parts: Array<'Mod' | 'Shift' | 'Alt' | string>): string =>
+    formatShortcutHint(isMac, parts)
   return (
     <div className="flex flex-wrap items-center gap-0.5 border-b border-border/50 px-1.5 py-1">
       <ToolbarButton
-        label="Bold"
+        label={`Bold (${hint('Mod', 'B')})`}
         active={editor.isActive('bold')}
         onClick={() => editor.chain().focus().toggleBold().run()}
       >
         <Bold className={icon} />
       </ToolbarButton>
       <ToolbarButton
-        label="Italic"
+        label={`Italic (${hint('Mod', 'I')})`}
         active={editor.isActive('italic')}
         onClick={() => editor.chain().focus().toggleItalic().run()}
       >
         <Italic className={icon} />
       </ToolbarButton>
       <ToolbarButton
-        label="Strikethrough"
+        label={`Strikethrough (${hint('Mod', 'Shift', 'X')})`}
         active={editor.isActive('strike')}
         onClick={() => editor.chain().focus().toggleStrike().run()}
       >
         <Strikethrough className={icon} />
       </ToolbarButton>
       <ToolbarButton
-        label="Heading"
+        label={`Heading (${hint('Mod', 'Alt', '2')})`}
         active={editor.isActive('heading', { level: 2 })}
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
       >
         <Heading2 className={icon} />
       </ToolbarButton>
       <ToolbarButton
-        label="Bullet list"
+        label={`Bullet list (${hint('Mod', 'Shift', '8')})`}
         active={editor.isActive('bulletList')}
         onClick={() => editor.chain().focus().toggleBulletList().run()}
       >
         <List className={icon} />
       </ToolbarButton>
       <ToolbarButton
-        label="Numbered list"
+        label={`Numbered list (${hint('Mod', 'Shift', '7')})`}
         active={editor.isActive('orderedList')}
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
       >
         <ListOrdered className={icon} />
       </ToolbarButton>
       <ToolbarButton
-        label="Checklist"
+        label={`Checklist (${hint('Mod', 'Shift', '9')})`}
         active={editor.isActive('taskList')}
         onClick={() => editor.chain().focus().toggleTaskList().run()}
       >
         <ListTodo className={icon} />
       </ToolbarButton>
       <ToolbarButton
-        label="Quote"
+        label={`Quote (${hint('Mod', 'Shift', 'B')})`}
         active={editor.isActive('blockquote')}
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
       >
         <Quote className={icon} />
       </ToolbarButton>
       <ToolbarButton
-        label="Code"
+        label={`Code (${hint('Mod', 'E')})`}
         active={editor.isActive('code')}
         onClick={() => editor.chain().focus().toggleCode().run()}
       >
         <Code className={icon} />
       </ToolbarButton>
       <ToolbarButton
-        label="Link"
+        label={`Link (${hint('Mod', 'K')})`}
         active={editor.isActive('link')}
         onClick={() => promptForLink(editor)}
       >
@@ -203,6 +238,7 @@ export function MarkdownEditor({
   const onEscapeRef = useRef(onEscape)
   const onHashQueryRef = useRef(onHashQuery)
   const onKeyDownRef = useRef(onKeyDown)
+  const instanceRef = useRef<Editor | null>(null)
   onChangeRef.current = onChange
   onSubmitRef.current = onSubmit
   onEscapeRef.current = onEscape
@@ -254,6 +290,12 @@ export function MarkdownEditor({
           onEscapeRef.current?.()
           return Boolean(onEscapeRef.current)
         }
+        const instance = instanceRef.current
+        const action = matchMarkdownShortcut(event)
+        if (instance && action) {
+          event.preventDefault()
+          return runMarkdownShortcut(instance, action)
+        }
         return false
       }
     },
@@ -265,6 +307,8 @@ export function MarkdownEditor({
       reportHash(instance)
     }
   })
+
+  instanceRef.current = editor
 
   useEffect(() => {
     if (!editor) return

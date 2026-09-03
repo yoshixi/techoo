@@ -78,3 +78,110 @@ export function applyLink(
     }
   }
 }
+
+export type MarkdownShortcutAction =
+  | 'bold'
+  | 'italic'
+  | 'strike'
+  | 'code'
+  | 'link'
+  | 'heading'
+  | 'bulletList'
+  | 'orderedList'
+  | 'taskList'
+  | 'blockquote'
+
+export type MarkdownShortcutEvent = {
+  key: string
+  code?: string
+  metaKey?: boolean
+  ctrlKey?: boolean
+  shiftKey?: boolean
+  altKey?: boolean
+}
+
+function hasCode(event: MarkdownShortcutEvent, code: string): boolean {
+  return event.code === code
+}
+
+export function matchMarkdownShortcut(event: MarkdownShortcutEvent): MarkdownShortcutAction | null {
+  const mod = Boolean(event.metaKey || event.ctrlKey)
+  if (!mod) return null
+  if (event.key === 'Enter') return null
+
+  const key = event.key.length === 1 ? event.key.toLowerCase() : event.key
+  const shift = Boolean(event.shiftKey)
+  const alt = Boolean(event.altKey)
+
+  if (!shift && !alt) {
+    if (key === 'b' || hasCode(event, 'KeyB')) return 'bold'
+    if (key === 'i' || hasCode(event, 'KeyI')) return 'italic'
+    if (key === 'e' || hasCode(event, 'KeyE')) return 'code'
+    if (key === 'k' || hasCode(event, 'KeyK')) return 'link'
+    return null
+  }
+
+  if (shift && !alt) {
+    if (key === 's' || key === 'x' || hasCode(event, 'KeyS') || hasCode(event, 'KeyX')) {
+      return 'strike'
+    }
+    if (hasCode(event, 'Digit8') || key === '8' || key === '*') return 'bulletList'
+    if (hasCode(event, 'Digit7') || key === '7' || key === '&') return 'orderedList'
+    if (hasCode(event, 'Digit9') || key === '9' || key === '(') return 'taskList'
+    if (key === 'b' || hasCode(event, 'KeyB')) return 'blockquote'
+    return null
+  }
+
+  if (alt && !shift && (hasCode(event, 'Digit2') || key === '2')) return 'heading'
+  return null
+}
+
+export function applyMarkdownShortcut(
+  text: string,
+  selection: TextSelection,
+  action: MarkdownShortcutAction
+): FormatResult {
+  switch (action) {
+    case 'bold':
+      return wrapSelection(text, selection, '**')
+    case 'italic':
+      return wrapSelection(text, selection, '*')
+    case 'strike':
+      return wrapSelection(text, selection, '~~')
+    case 'code':
+      return wrapSelection(text, selection, '`')
+    case 'link':
+      return applyLink(text, selection, 'https://')
+    case 'heading':
+      return toggleLinePrefix(text, selection, '## ')
+    case 'bulletList':
+      return toggleLinePrefix(text, selection, '- ')
+    case 'orderedList':
+      return toggleLinePrefix(text, selection, '1. ')
+    case 'taskList':
+      return toggleLinePrefix(text, selection, '- [ ] ')
+    case 'blockquote':
+      return toggleLinePrefix(text, selection, '> ')
+  }
+}
+
+export function applyMarkdownShortcutFromKeyEvent(
+  text: string,
+  selection: TextSelection,
+  nativeEvent: unknown
+): FormatResult | null {
+  if (!nativeEvent || typeof nativeEvent !== 'object') return null
+  const raw = nativeEvent as Record<string, unknown>
+  const key = typeof raw.key === 'string' ? raw.key : ''
+  if (!key) return null
+  const action = matchMarkdownShortcut({
+    key,
+    code: typeof raw.code === 'string' ? raw.code : undefined,
+    metaKey: Boolean(raw.metaKey),
+    ctrlKey: Boolean(raw.ctrlKey),
+    shiftKey: Boolean(raw.shiftKey),
+    altKey: Boolean(raw.altKey)
+  })
+  if (!action) return null
+  return applyMarkdownShortcut(text, selection, action)
+}
