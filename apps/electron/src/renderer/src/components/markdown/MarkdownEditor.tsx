@@ -21,6 +21,7 @@ import {
   ListTodo,
   Quote,
   Code,
+  SquareCode,
   Link as LinkIcon
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
@@ -28,6 +29,7 @@ import { getParagraphHashQuery, normalizeMarkdown } from '../../lib/markdown'
 import { isMacPlatform } from '../../lib/platform'
 import {
   formatShortcutHint,
+  isConflictingEditorShortcut,
   matchMarkdownShortcut,
   type MarkdownShortcutAction
 } from '../../lib/markdownShortcuts'
@@ -105,6 +107,8 @@ function runMarkdownShortcut(editor: Editor, action: MarkdownShortcutAction): bo
       return editor.chain().focus().toggleStrike().run()
     case 'code':
       return editor.chain().focus().toggleCode().run()
+    case 'codeBlock':
+      return editor.chain().focus().toggleCodeBlock().run()
     case 'link':
       promptForLink(editor)
       return true
@@ -171,28 +175,35 @@ function MarkdownToolbar({ editor }: { editor: Editor }): React.JSX.Element {
         <ListOrdered className={icon} />
       </ToolbarButton>
       <ToolbarButton
-        label={`Checklist (${hint('Mod', 'Shift', '9')})`}
+        label={`Checklist (${hint('Mod', 'Shift', '0')})`}
         active={editor.isActive('taskList')}
         onClick={() => editor.chain().focus().toggleTaskList().run()}
       >
         <ListTodo className={icon} />
       </ToolbarButton>
       <ToolbarButton
-        label={`Quote (${hint('Mod', 'Shift', 'B')})`}
+        label={`Quote (${hint('Mod', 'Shift', '9')})`}
         active={editor.isActive('blockquote')}
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
       >
         <Quote className={icon} />
       </ToolbarButton>
       <ToolbarButton
-        label={`Code (${hint('Mod', 'E')})`}
+        label={`Code (${hint('Mod', 'Shift', 'C')})`}
         active={editor.isActive('code')}
         onClick={() => editor.chain().focus().toggleCode().run()}
       >
         <Code className={icon} />
       </ToolbarButton>
       <ToolbarButton
-        label={`Link (${hint('Mod', 'K')})`}
+        label={`Code block (${hint('Mod', 'Alt', 'Shift', 'C')})`}
+        active={editor.isActive('codeBlock')}
+        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+      >
+        <SquareCode className={icon} />
+      </ToolbarButton>
+      <ToolbarButton
+        label={`Link (${hint('Mod', 'Shift', 'U')})`}
         active={editor.isActive('link')}
         onClick={() => promptForLink(editor)}
       >
@@ -295,6 +306,10 @@ export function MarkdownEditor({
         if (instance && action) {
           event.preventDefault()
           return runMarkdownShortcut(instance, action)
+        }
+        if (isConflictingEditorShortcut(event)) {
+          event.preventDefault()
+          return true
         }
         return false
       }

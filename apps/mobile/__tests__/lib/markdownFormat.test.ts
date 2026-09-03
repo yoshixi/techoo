@@ -73,17 +73,78 @@ describe('markdownFormat', () => {
       ).toBeNull()
     })
 
-    it('uses key codes for shifted list shortcuts', () => {
+    it('maps Slack-style code, link, and code-block shortcuts', () => {
       expect(
         matchMarkdownShortcut({
-          key: '*',
-          code: 'Digit8',
+          key: 'c',
           metaKey: true,
           ctrlKey: false,
           shiftKey: true,
           altKey: false
         })
-      ).toBe('bulletList')
+      ).toBe('code')
+      expect(
+        matchMarkdownShortcut({
+          key: 'u',
+          metaKey: true,
+          ctrlKey: false,
+          shiftKey: true,
+          altKey: false
+        })
+      ).toBe('link')
+      expect(
+        matchMarkdownShortcut({
+          key: 'c',
+          metaKey: true,
+          ctrlKey: false,
+          shiftKey: true,
+          altKey: true
+        })
+      ).toBe('codeBlock')
+    })
+
+    it('maps quote to shift+9 and checklist to shift+0', () => {
+      expect(
+        matchMarkdownShortcut({
+          key: '(',
+          code: 'Digit9',
+          metaKey: true,
+          ctrlKey: false,
+          shiftKey: true,
+          altKey: false
+        })
+      ).toBe('blockquote')
+      expect(
+        matchMarkdownShortcut({
+          key: ')',
+          code: 'Digit0',
+          metaKey: true,
+          ctrlKey: false,
+          shiftKey: true,
+          altKey: false
+        })
+      ).toBe('taskList')
+    })
+
+    it('does not use the old cmd+e / cmd+k bindings', () => {
+      expect(
+        matchMarkdownShortcut({
+          key: 'e',
+          metaKey: true,
+          ctrlKey: false,
+          shiftKey: false,
+          altKey: false
+        })
+      ).toBeNull()
+      expect(
+        matchMarkdownShortcut({
+          key: 'k',
+          ctrlKey: true,
+          metaKey: false,
+          shiftKey: false,
+          altKey: false
+        })
+      ).toBeNull()
     })
   })
 
@@ -92,6 +153,13 @@ describe('markdownFormat', () => {
       expect(applyMarkdownShortcut('hello', { start: 0, end: 5 }, 'bold')).toEqual({
         text: '**hello**',
         selection: { start: 2, end: 7 }
+      })
+    })
+
+    it('wraps the selection in a fenced code block', () => {
+      expect(applyMarkdownShortcut('hello', { start: 0, end: 5 }, 'codeBlock')).toEqual({
+        text: '```\nhello\n```',
+        selection: { start: 4, end: 9 }
       })
     })
   })

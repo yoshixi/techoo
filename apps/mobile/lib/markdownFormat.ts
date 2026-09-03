@@ -84,6 +84,7 @@ export type MarkdownShortcutAction =
   | 'italic'
   | 'strike'
   | 'code'
+  | 'codeBlock'
   | 'link'
   | 'heading'
   | 'bulletList'
@@ -113,26 +114,32 @@ export function matchMarkdownShortcut(event: MarkdownShortcutEvent): MarkdownSho
   const shift = Boolean(event.shiftKey)
   const alt = Boolean(event.altKey)
 
-  if (!shift && !alt) {
-    if (key === 'b' || hasCode(event, 'KeyB')) return 'bold'
-    if (key === 'i' || hasCode(event, 'KeyI')) return 'italic'
-    if (key === 'e' || hasCode(event, 'KeyE')) return 'code'
-    if (key === 'k' || hasCode(event, 'KeyK')) return 'link'
+  if (shift && alt) {
+    if (key === 'c' || hasCode(event, 'KeyC')) return 'codeBlock'
+    return null
+  }
+
+  if (alt && !shift) {
+    if (hasCode(event, 'Digit2') || key === '2') return 'heading'
     return null
   }
 
   if (shift && !alt) {
-    if (key === 's' || key === 'x' || hasCode(event, 'KeyS') || hasCode(event, 'KeyX')) {
-      return 'strike'
-    }
+    if (key === 'x' || hasCode(event, 'KeyX')) return 'strike'
+    if (key === 'c' || hasCode(event, 'KeyC')) return 'code'
+    if (key === 'u' || hasCode(event, 'KeyU')) return 'link'
     if (hasCode(event, 'Digit8') || key === '8' || key === '*') return 'bulletList'
     if (hasCode(event, 'Digit7') || key === '7' || key === '&') return 'orderedList'
-    if (hasCode(event, 'Digit9') || key === '9' || key === '(') return 'taskList'
-    if (key === 'b' || hasCode(event, 'KeyB')) return 'blockquote'
+    if (hasCode(event, 'Digit9') || key === '9' || key === '(') return 'blockquote'
+    if (hasCode(event, 'Digit0') || key === '0' || key === ')') return 'taskList'
     return null
   }
 
-  if (alt && !shift && (hasCode(event, 'Digit2') || key === '2')) return 'heading'
+  if (!shift && !alt) {
+    if (key === 'b' || hasCode(event, 'KeyB')) return 'bold'
+    if (key === 'i' || hasCode(event, 'KeyI')) return 'italic'
+  }
+
   return null
 }
 
@@ -150,6 +157,8 @@ export function applyMarkdownShortcut(
       return wrapSelection(text, selection, '~~')
     case 'code':
       return wrapSelection(text, selection, '`')
+    case 'codeBlock':
+      return wrapSelection(text, selection, '```\n', '\n```')
     case 'link':
       return applyLink(text, selection, 'https://')
     case 'heading':
