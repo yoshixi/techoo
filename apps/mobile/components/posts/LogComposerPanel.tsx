@@ -12,6 +12,8 @@ import {
 import { Hash, X } from 'lucide-react-native';
 import type { Todo } from '@/gen/api/schemas';
 import { Text } from '@/components/ui/text';
+import { MarkdownFormatToolbar } from '@/components/markdown/MarkdownFormatToolbar';
+import { applyMarkdownShortcutFromKeyEvent } from '@/lib/markdownFormat';
 import type { PostComposerContext } from '@/lib/postComposerContext';
 import {
   pickRunningTodo,
@@ -182,11 +184,26 @@ export function LogComposerPanel({
         </Pressable>
       </View>
 
+      <MarkdownFormatToolbar
+        value={draft}
+        selection={selection}
+        onChange={(next, nextSelection) => {
+          onDraftChange(next);
+          setSelection(nextSelection);
+        }}
+      />
       <TextInput
         ref={logInputRef}
         value={draft}
         onChangeText={handleDraftChange}
         onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
+        onKeyPress={(event) => {
+          const result = applyMarkdownShortcutFromKeyEvent(draft, selection, event.nativeEvent);
+          if (!result) return;
+          event.preventDefault();
+          onDraftChange(result.text);
+          setSelection(result.selection);
+        }}
         placeholder="What happened?"
         placeholderTextColor="#9ca3af"
         multiline

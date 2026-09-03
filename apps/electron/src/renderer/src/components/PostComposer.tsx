@@ -1,15 +1,16 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { Send, Hash, X, Star, List as ListIcon } from 'lucide-react'
 import { Button } from './ui/button'
-import { Textarea } from './ui/textarea'
 import { Card } from './ui/card'
 import { Badge } from './ui/badge'
 import type { PostList, Todo } from '../gen/api/schemas'
 import { isMacPlatform } from '../lib/platform'
+import { isMarkdownBlank } from '../lib/markdown'
 import {
   emptyPostComposerAssociations,
   type PostComposerAssociations
 } from '../lib/post-composer-associations'
+import { MarkdownEditor, type MarkdownEditorHandle } from './markdown/MarkdownEditor'
 
 export type { PostComposerAssociations }
 
@@ -159,16 +160,9 @@ export function PostComposer({
   const [showHashPanel, setShowHashPanel] = useState(false)
   const [hashQuery, setHashQuery] = useState('')
   const [activeHashIndex, setActiveHashIndex] = useState(0)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const editorRef = useRef<MarkdownEditorHandle>(null)
   const draftHydratedRef = useRef(false)
   const isMac = isMacPlatform()
-
-  useEffect(() => {
-    const el = textareaRef.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
-  }, [value])
 
   useEffect(() => {
     draftHydratedRef.current = false
@@ -231,17 +225,12 @@ export function PostComposer({
   }, [associations, hashQuery, listsForSuggestion, showHashPanel, todosForSuggestion])
 
   const removeHashToken = useCallback(() => {
-    const cursorPos = textareaRef.current?.selectionStart ?? value.length
-    const textBeforeCursor = value.slice(0, cursorPos)
-    const lastHash = textBeforeCursor.lastIndexOf('#')
-    if (lastHash !== -1) {
-      setValue(value.slice(0, lastHash) + value.slice(cursorPos))
-    }
+    editorRef.current?.removeHashToken()
     setShowHashPanel(false)
     setHashQuery('')
     setActiveHashIndex(0)
-    textareaRef.current?.focus()
-  }, [value])
+    editorRef.current?.focus()
+  }, [])
 
   const handleSelectHashItem = useCallback(
     (item: HashSuggestion) => {
@@ -263,22 +252,22 @@ export function PostComposer({
     [associations, onAssociationsChange, removeHashToken]
   )
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const v = e.target.value
-    setValue(v)
+  const handleChange = useCallback((next: string) => {
+    setValue(next)
+  }, [])
 
-    const cursorPos = e.target.selectionStart
-    const textBeforeCursor = v.slice(0, cursorPos)
-    const lastHash = textBeforeCursor.lastIndexOf('#')
-    if (lastHash !== -1 && !textBeforeCursor.slice(lastHash + 1).includes(' ')) {
-      setShowHashPanel(true)
-      setHashQuery(textBeforeCursor.slice(lastHash + 1).toLowerCase())
-      setActiveHashIndex(0)
-    } else {
+  const handleHashQuery = useCallback((query: string | null) => {
+    if (query == null) {
       setShowHashPanel(false)
       setHashQuery('')
       setActiveHashIndex(0)
+      return
     }
+    setShowHashPanel(true)
+    setHashQuery((prev) => {
+      if (prev !== query) setActiveHashIndex(0)
+      return query
+    })
   }, [])
 
   useEffect(() => {
@@ -291,7 +280,7 @@ export function PostComposer({
 
   const handleSubmit = useCallback(() => {
     const trimmed = value.trim()
-    if (!trimmed) return
+    if (isMarkdownBlank(trimmed)) return
     onSubmit(trimmed)
     setValue('')
     setShowHashPanel(false)
@@ -304,33 +293,30 @@ export function PostComposer({
     }
   }, [value, onSubmit, draftStorageKey])
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault()
-        handleSubmit()
-        return
-      }
+  const handleEditorKeyDown = useCallback(
+    (e: KeyboardEvent) => {
       if (showHashPanel && e.key === 'Enter' && hashSuggestions.length > 0) {
         e.preventDefault()
         handleSelectHashItem(hashSuggestions[activeHashIndex]!)
-        return
+        return true
       }
       if (showHashPanel && e.key === 'ArrowDown' && hashSuggestions.length > 0) {
         e.preventDefault()
         setActiveHashIndex((prev) => (prev + 1) % hashSuggestions.length)
-        return
+        return true
       }
       if (showHashPanel && e.key === 'ArrowUp' && hashSuggestions.length > 0) {
         e.preventDefault()
         setActiveHashIndex((prev) => (prev - 1 + hashSuggestions.length) % hashSuggestions.length)
-        return
+        return true
       }
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && showHashPanel) {
         setShowHashPanel(false)
+        return true
       }
+      return false
     },
-    [handleSubmit, showHashPanel, hashSuggestions, activeHashIndex, handleSelectHashItem]
+    [showHashPanel, hashSuggestions, activeHashIndex, handleSelectHashItem]
   )
 
   const hashItemIcon = (item: HashSuggestion): React.JSX.Element => {
@@ -356,23 +342,24 @@ export function PostComposer({
       <AssociationsBar associations={associations} onChange={onAssociationsChange} />
 
       <div className="relative">
-        <Textarea
-          ref={textareaRef}
+        <MarkdownEditor
+          editorRef={editorRef}
           value={value}
           onChange={handleChange}
-          onKeyDown={handleKeyDown}
+          onHashQuery={handleHashQuery}
+          onKeyDown={handleEditorKeyDown}
+          onSubmit={handleSubmit}
+          compact={compact}
           placeholder="Write something... (type # to link to-do, list, or favorite)"
-          rows={compact ? 2 : 2}
-          className={`resize-none pr-12 border-transparent bg-background/55 shadow-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
-            compact ? 'min-h-[52px] text-xs' : 'min-h-[148px] text-sm leading-relaxed'
-          }`}
+          className="border-transparent bg-background/55 shadow-none"
+          contentClassName={compact ? 'pr-12 pb-8' : 'is-composer-tall pr-12 pb-8'}
         />
         <Button
           size="sm"
           variant="default"
           className="absolute bottom-2 right-2 h-7 w-7 p-0 rounded-full"
           style={{ background: 'var(--amber)' }}
-          disabled={!value.trim()}
+          disabled={isMarkdownBlank(value)}
           onClick={handleSubmit}
           title="Send"
         >
@@ -414,7 +401,8 @@ export function PostComposer({
       </div>
 
       <span className="text-[11px] text-muted-foreground">
-        Press {isMac ? '⌘' : 'Ctrl'}+Enter to post
+        {isMac ? '⌘B' : 'Ctrl+B'} bold · {isMac ? '⌘I' : 'Ctrl+I'} italic ·{' '}
+        {isMac ? '⌘' : 'Ctrl'}+Enter to post
       </span>
     </div>
   )

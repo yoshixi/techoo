@@ -1,7 +1,8 @@
 import React, { useCallback } from 'react'
 import { Button } from './ui/button'
-import { ExpandingTextarea } from './ui/expanding-textarea'
 import { isMacPlatform } from '../lib/platform'
+import { isMarkdownBlank } from '../lib/markdown'
+import { MarkdownEditor } from './markdown/MarkdownEditor'
 
 export function ThreadReplyComposer({
   value,
@@ -27,37 +28,28 @@ export function ThreadReplyComposer({
   autoFocus?: boolean
 }): React.JSX.Element {
   const isMac = isMacPlatform()
-  const canSubmit = !submitting && !disabled && Boolean(value.trim())
+  const canSubmit = !submitting && !disabled && !isMarkdownBlank(value)
 
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (event.key === 'Escape' && onCancel) {
-        event.preventDefault()
-        onCancel()
-        return
-      }
-      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-        event.preventDefault()
-        if (canSubmit) onSubmit()
-      }
-    },
-    [canSubmit, onCancel, onSubmit]
-  )
+  const handleEscape = useCallback(() => {
+    onCancel?.()
+  }, [onCancel])
 
   return (
     <div className="space-y-2">
-      <ExpandingTextarea
+      <MarkdownEditor
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={handleKeyDown}
+        onChange={onChange}
+        onSubmit={canSubmit ? onSubmit : undefined}
+        onEscape={onCancel ? handleEscape : undefined}
         placeholder={placeholder}
-        rows={3}
         autoFocus={autoFocus}
+        disabled={disabled || submitting}
         className="min-h-[96px] text-sm leading-relaxed"
       />
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] text-muted-foreground">
-          Press {isMac ? '⌘' : 'Ctrl'}+Enter to {submitLabel.toLowerCase()}
+          {isMac ? '⌘B' : 'Ctrl+B'} bold · {isMac ? '⌘I' : 'Ctrl+I'} italic ·{' '}
+          {isMac ? '⌘' : 'Ctrl'}+Enter to {submitLabel.toLowerCase()}
         </span>
         <div className="flex items-center gap-2">
           {onCancel ? (

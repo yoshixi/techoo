@@ -5,7 +5,7 @@ import { ErrorResponseModel, IdSchema, Rfc3339Schema, Rfc3339InputSchema } from 
 export const TodoModel = z.object({
   id: IdSchema,
   title: z.string().openapi({ example: 'Reply to client email' }),
-  description: z.string().nullable().optional().openapi({ description: 'Optional longer notes for this todo' }),
+  description: z.string().nullable().optional().openapi({ description: 'Optional Markdown notes for this todo' }),
   starts_at: Rfc3339Schema.nullable().openapi({ description: 'Start time (nullable for unscheduled todos)' }),
   ends_at: Rfc3339Schema.nullable().openapi({ description: 'End time (nullable)' }),
   is_all_day: z.number().int().min(0).max(1).openapi({ description: '1 = all-day todo' }),

@@ -15,7 +15,7 @@ const LinkedTodoModel = z.object({
 export const PostModel = z.object({
   id: IdSchema,
   parent_post_id: IdSchema.nullable(),
-  body: z.string(),
+  body: z.string().openapi({ description: 'Markdown body' }),
   posted_at: Rfc3339Schema,
   events: z.array(LinkedEventModel),
   todos: z.array(LinkedTodoModel),
@@ -25,7 +25,7 @@ export const PostModel = z.object({
 }).openapi('Post')
 
 export const CreatePostModel = z.object({
-  body: z.string().min(1),
+  body: z.string().min(1).openapi({ description: 'Markdown body' }),
   parent_post_id: IdSchema.optional(),
   posted_at: Rfc3339InputSchema.optional().openapi({ description: 'Defaults to now if omitted' }),
   event_ids: z.array(z.number().int()).optional().default([]),
@@ -33,7 +33,7 @@ export const CreatePostModel = z.object({
 }).openapi('CreatePost')
 
 export const UpdatePostModel = z.object({
-  body: z.string().min(1).optional(),
+  body: z.string().min(1).optional().openapi({ description: 'Markdown body' }),
   event_ids: z.array(z.number().int()).optional(),
   todo_ids: z.array(IdSchema).optional(),
 }).openapi('UpdatePost')

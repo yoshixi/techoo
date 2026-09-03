@@ -7,12 +7,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { Label } from './ui/label'
 import { Switch } from './ui/switch'
 import { Separator } from './ui/separator'
-import { Textarea } from './ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { useTodos } from '../hooks/useTodos'
 import { usePosts } from '../hooks/usePosts'
 import type { Todo } from '../gen/api/schemas'
 import { isMacPlatform } from '../lib/platform'
+import { isMarkdownBlank } from '../lib/markdown'
+import { MarkdownEditor } from './markdown/MarkdownEditor'
+import { MarkdownView } from './markdown/MarkdownView'
 
 const DEFAULT_BLOCK_SEC = 30 * 60
 
@@ -443,7 +445,7 @@ export function TodoDetailDialog({
 
   const handleAddThreadPost = useCallback(async () => {
     const trimmed = threadReply.trim()
-    if (!trimmed) return
+    if (isMarkdownBlank(trimmed)) return
     setPostingThread(true)
     try {
       await createPost(trimmed, [], [todo.id])
@@ -498,13 +500,11 @@ export function TodoDetailDialog({
         </div>
 
         <div className="space-y-0.5 rounded-2xl bg-card/85 px-3 py-1">
-          <Textarea
-            id="todo-detail-description"
+          <MarkdownEditor
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={setDescription}
             placeholder="Add notes, context, links…"
-            rows={4}
-            className="min-h-[92px] resize-y text-sm border-transparent bg-background/60 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
+            className="min-h-[92px] border-transparent bg-background/60 shadow-none"
           />
         </div>
 
@@ -642,9 +642,9 @@ export function TodoDetailDialog({
                     background: 'color-mix(in srgb, var(--background) 70%, var(--card) 30%)'
                   }}
                 >
-                  <p className="whitespace-pre-wrap text-[13px] leading-relaxed" style={{ color: 'var(--text-dark)' }}>
-                    {post.body}
-                  </p>
+                  <div className="text-[13px] leading-relaxed" style={{ color: 'var(--text-dark)' }}>
+                    <MarkdownView content={post.body} />
+                  </div>
                   <span className="mt-1 block text-[10px] text-muted-foreground/90">
                     {formatTime(post.posted_at)} · {formatDate(post.posted_at)}
                   </span>
@@ -660,19 +660,13 @@ export function TodoDetailDialog({
             }}
           >
             <div className="relative">
-              <Textarea
-                id="todo-thread-reply"
+              <MarkdownEditor
                 value={threadReply}
-                onChange={(e) => setThreadReply(e.target.value)}
+                onChange={setThreadReply}
                 placeholder="Write something... (this will be posted to thread)"
-                rows={2}
-                className="min-h-[96px] resize-none pr-12 border-transparent bg-background/55 shadow-none focus-visible:ring-2 focus-visible:ring-primary/30 text-sm leading-relaxed"
-                onKeyDown={(e) => {
-                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                    e.preventDefault()
-                    void handleAddThreadPost()
-                  }
-                }}
+                onSubmit={() => void handleAddThreadPost()}
+                className="border-transparent bg-background/55 shadow-none"
+                contentClassName="pr-12 pb-8"
               />
               <Button
                 type="button"
@@ -680,7 +674,7 @@ export function TodoDetailDialog({
                 variant="default"
                 className="absolute bottom-2 right-2 h-7 w-7 p-0 rounded-full"
                 style={{ background: 'var(--amber)' }}
-                disabled={postingThread || !threadReply.trim()}
+                disabled={postingThread || isMarkdownBlank(threadReply)}
                 onClick={() => void handleAddThreadPost()}
                 title={postingThread ? 'Posting…' : 'Post to thread'}
               >
@@ -688,7 +682,8 @@ export function TodoDetailDialog({
               </Button>
             </div>
             <span className="mt-1.5 block text-[11px] text-muted-foreground">
-              Press {isMac ? '⌘' : 'Ctrl'}+Enter to post
+              Press {isMac ? '⌘B' : 'Ctrl+B'} bold · {isMac ? '⌘I' : 'Ctrl+I'} italic ·{' '}
+              {isMac ? '⌘' : 'Ctrl'}+Enter to post
             </span>
           </div>
         </div>

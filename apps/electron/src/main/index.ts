@@ -9,6 +9,25 @@ import { TrayManager } from './tray'
 import { NotificationScheduler, type NotificationPermissionStatus } from './notificationScheduler'
 import { readSessionToken, writeSessionToken, clearSessionToken } from './sessionTokenStore'
 
+if (process.platform === 'linux') {
+  process.env.GTK_IM_MODULE ??= 'simple'
+}
+
+function interceptLinuxSlackLinkShortcut(window: BrowserWindow): void {
+  if (process.platform !== 'linux') return
+  window.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown' || input.alt) return
+    if (!input.shift || !input.control) return
+    const isU = input.code === 'KeyU' || input.key.toLowerCase() === 'u'
+    if (!isU) return
+    // Linux IBus uses Ctrl+Shift+U for Unicode input and swallows Slack's hyperlink shortcut.
+    event.preventDefault()
+    void window.webContents.executeJavaScript(
+      `window.dispatchEvent(new CustomEvent('techoo-markdown-shortcut', { detail: 'link' }))`
+    )
+  })
+}
+
 function setupContentSecurityPolicy(): void {
   const apiUrl = import.meta.env.MAIN_VITE_API_BASE_URL || 'http://localhost:8787'
 
@@ -391,6 +410,7 @@ app.whenReady().then(() => {
   // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
+    interceptLinuxSlackLinkShortcut(window)
   })
 
   // IPC test
