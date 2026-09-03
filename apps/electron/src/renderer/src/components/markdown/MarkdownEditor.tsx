@@ -266,6 +266,7 @@ export function MarkdownEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [2, 3] },
+        underline: false,
         link: {
           openOnClick: false,
           autolink: true,

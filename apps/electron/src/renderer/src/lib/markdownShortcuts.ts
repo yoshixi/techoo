@@ -77,6 +77,7 @@ export function isConflictingEditorShortcut(event: MarkdownShortcutEvent): boole
   const alt = event.altKey
   if (!shift && !alt && (key === 'e' || hasCode(event, 'KeyE'))) return true
   if (!shift && !alt && (key === 'k' || hasCode(event, 'KeyK'))) return true
+  if (!shift && !alt && (key === 'u' || hasCode(event, 'KeyU'))) return true
   if (shift && !alt && (key === 's' || hasCode(event, 'KeyS'))) return true
   if (shift && !alt && (key === 'b' || hasCode(event, 'KeyB'))) return true
   if (!shift && alt && (key === 'c' || hasCode(event, 'KeyC'))) return true
