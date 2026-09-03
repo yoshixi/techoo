@@ -327,6 +327,17 @@ export function MarkdownEditor({
   instanceRef.current = editor
 
   useEffect(() => {
+    const onShortcut = (event: Event): void => {
+      const instance = instanceRef.current
+      const action = (event as CustomEvent<MarkdownShortcutAction>).detail
+      if (!instance?.isFocused || action !== 'link') return
+      runMarkdownShortcut(instance, 'link')
+    }
+    window.addEventListener('techoo-markdown-shortcut', onShortcut)
+    return () => window.removeEventListener('techoo-markdown-shortcut', onShortcut)
+  }, [])
+
+  useEffect(() => {
     if (!editor) return
     editor.setEditable(!disabled)
   }, [disabled, editor])
