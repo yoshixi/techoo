@@ -9,6 +9,10 @@ import { TrayManager } from './tray'
 import { NotificationScheduler, type NotificationPermissionStatus } from './notificationScheduler'
 import { readSessionToken, writeSessionToken, clearSessionToken } from './sessionTokenStore'
 
+if (process.platform === 'linux') {
+  process.env.GTK_IM_MODULE ??= 'simple'
+}
+
 function interceptLinuxSlackLinkShortcut(window: BrowserWindow): void {
   if (process.platform !== 'linux') return
   window.webContents.on('before-input-event', (event, input) => {

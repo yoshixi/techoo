@@ -3,6 +3,7 @@ import React, {
   useEffect,
   useImperativeHandle,
   useRef,
+  useState,
   type KeyboardEvent as ReactKeyboardEvent
 } from 'react'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
@@ -86,15 +87,16 @@ function findHashRange(editor: Editor): { from: number; to: number } | null {
   return { from: $from.start() + lastHash, to: $from.pos }
 }
 
-function promptForLink(editor: Editor): void {
-  const previous = (editor.getAttributes('link').href as string | undefined) ?? 'https://'
-  const url = window.prompt('Link URL', previous)
-  if (url === null) return
-  if (url.trim() === '') {
+function applyLinkHref(editor: Editor, href: string): void {
+  if (href.trim() === '') {
     editor.chain().focus().extendMarkRange('link').unsetLink().run()
     return
   }
-  editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run()
+  editor.chain().focus().extendMarkRange('link').setLink({ href: href.trim() }).run()
+}
+
+function currentLinkHref(editor: Editor): string {
+  return (editor.getAttributes('link').href as string | undefined) ?? 'https://'
 }
 
 function runMarkdownShortcut(editor: Editor, action: MarkdownShortcutAction): boolean {
@@ -110,8 +112,7 @@ function runMarkdownShortcut(editor: Editor, action: MarkdownShortcutAction): bo
     case 'codeBlock':
       return editor.chain().focus().toggleCodeBlock().run()
     case 'link':
-      promptForLink(editor)
-      return true
+      return false
     case 'heading':
       return editor.chain().focus().toggleHeading({ level: 2 }).run()
     case 'bulletList':
@@ -125,7 +126,13 @@ function runMarkdownShortcut(editor: Editor, action: MarkdownShortcutAction): bo
   }
 }
 
-function MarkdownToolbar({ editor }: { editor: Editor }): React.JSX.Element {
+function MarkdownToolbar({
+  editor,
+  onRequestLink
+}: {
+  editor: Editor
+  onRequestLink: () => void
+}): React.JSX.Element {
   const icon = 'h-3.5 w-3.5'
   const isMac = isMacPlatform()
   const hint = (...parts: Array<'Mod' | 'Shift' | 'Alt' | string>): string =>
@@ -205,7 +212,7 @@ function MarkdownToolbar({ editor }: { editor: Editor }): React.JSX.Element {
       <ToolbarButton
         label={`Link (${hint('Mod', 'Shift', 'U')})`}
         active={editor.isActive('link')}
-        onClick={() => promptForLink(editor)}
+        onClick={onRequestLink}
       >
         <LinkIcon className={icon} />
       </ToolbarButton>
@@ -250,6 +257,8 @@ export function MarkdownEditor({
   const onHashQueryRef = useRef(onHashQuery)
   const onKeyDownRef = useRef(onKeyDown)
   const instanceRef = useRef<Editor | null>(null)
+  const openLinkPromptRef = useRef<() => void>(() => {})
+  const [linkHref, setLinkHref] = useState<string | null>(null)
   onChangeRef.current = onChange
   onSubmitRef.current = onSubmit
   onEscapeRef.current = onEscape
@@ -304,6 +313,11 @@ export function MarkdownEditor({
         }
         const instance = instanceRef.current
         const action = matchMarkdownShortcut(event)
+        if (action === 'link') {
+          event.preventDefault()
+          openLinkPromptRef.current()
+          return true
+        }
         if (instance && action) {
           event.preventDefault()
           return runMarkdownShortcut(instance, action)
@@ -325,13 +339,17 @@ export function MarkdownEditor({
   })
 
   instanceRef.current = editor
+  openLinkPromptRef.current = () => {
+    const instance = instanceRef.current
+    if (!instance) return
+    setLinkHref(currentLinkHref(instance))
+  }
 
   useEffect(() => {
     const onShortcut = (event: Event): void => {
-      const instance = instanceRef.current
       const action = (event as CustomEvent<MarkdownShortcutAction>).detail
-      if (!instance?.isFocused || action !== 'link') return
-      runMarkdownShortcut(instance, 'link')
+      if (action !== 'link') return
+      openLinkPromptRef.current()
     }
     window.addEventListener('techoo-markdown-shortcut', onShortcut)
     return () => window.removeEventListener('techoo-markdown-shortcut', onShortcut)
@@ -380,7 +398,53 @@ export function MarkdownEditor({
       )}
       onKeyDown={handleDomKeyDown}
     >
-      {showToolbar && editor ? <MarkdownToolbar editor={editor} /> : null}
+      {showToolbar && editor ? (
+        <MarkdownToolbar editor={editor} onRequestLink={() => openLinkPromptRef.current()} />
+      ) : null}
+      {linkHref !== null ? (
+        <form
+          className="flex items-center gap-1.5 border-b border-border/50 px-2 py-1.5"
+          onSubmit={(event) => {
+            event.preventDefault()
+            const instance = instanceRef.current
+            if (instance) applyLinkHref(instance, linkHref)
+            setLinkHref(null)
+          }}
+          onKeyDown={(event) => {
+            event.stopPropagation()
+            if (event.key === 'Escape') {
+              event.preventDefault()
+              setLinkHref(null)
+              instanceRef.current?.commands.focus()
+            }
+          }}
+        >
+          <input
+            autoFocus
+            value={linkHref}
+            onChange={(event) => setLinkHref(event.target.value)}
+            placeholder="https://"
+            aria-label="Link URL"
+            className="h-7 min-w-0 flex-1 rounded-md border border-border/60 bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          <button
+            type="submit"
+            className="h-7 rounded-md bg-primary px-2 text-[11px] font-medium text-primary-foreground"
+          >
+            Apply
+          </button>
+          <button
+            type="button"
+            className="h-7 rounded-md px-2 text-[11px] text-muted-foreground hover:bg-muted/70"
+            onClick={() => {
+              setLinkHref(null)
+              instanceRef.current?.commands.focus()
+            }}
+          >
+            Cancel
+          </button>
+        </form>
+      ) : null}
       <EditorContent editor={editor} className={cn('markdown-editor-shell', contentClassName)} />
     </div>
   )
