@@ -45,7 +45,12 @@ export function MarkdownView({
                 {children}
               </a>
             )
-          }
+          },
+          em: ({ children }) => <em className="italic">{children}</em>,
+          i: ({ children }) => <i className="italic">{children}</i>,
+          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+          b: ({ children }) => <b className="font-semibold">{children}</b>,
+          del: ({ children }) => <del className="line-through">{children}</del>
         }}
       >
         {content}

@@ -306,6 +306,23 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+.markdown-editor-shell .tiptap em,
+.markdown-editor-shell .tiptap i,
+.markdown-body em,
+.markdown-body i {
+  font-style: italic;
+}
+.markdown-editor-shell .tiptap strong,
+.markdown-editor-shell .tiptap b,
+.markdown-body strong,
+.markdown-body b {
+  font-weight: 700;
+}
+.markdown-editor-shell .tiptap s,
+.markdown-body del,
+.markdown-body s {
+  text-decoration: line-through;
+}
 .markdown-body {
   font-size: 13px;
   line-height: 1.55;
