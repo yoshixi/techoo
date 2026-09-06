@@ -36,5 +36,11 @@ export default defineConfig(
       '@typescript-eslint/explicit-function-return-type': 'off',
       'react-refresh/only-export-components': 'off'
     }
+  },
+  {
+    files: ['**/*.test.ts'],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off'
+    }
   }
 )
