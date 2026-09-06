@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { authClient, clearAuthState, getJwt, getSessionToken, invalidateAuthSession } from '../lib/auth'
+import { authClient, clearAuthState, getJwt, userFromJwt } from '../lib/auth'
 import {
   onAuthSessionInvalidated,
   SESSION_INVALID_REASON,
@@ -48,45 +48,22 @@ export function useAuth(): UseAuthReturn {
 
   const checkAuth = useCallback(async () => {
     try {
-      // Try to get a valid JWT (will use cached or refresh from session token)
+      // Relaunch: JWT is memory-only, so this exchanges the persisted session token.
       const jwt = await getJwt()
       if (!jwt) {
         setUser(null)
         return
       }
 
-      const sessionToken = await getSessionToken()
-      if (!sessionToken) {
-        setUser(null)
-        invalidateAuthSession(SESSION_INVALID_REASON.SESSION_CHECK_FAILED)
-        return
-      }
-
-      const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'}/api/session`,
-        {
-          headers: { Authorization: `Bearer ${sessionToken}` }
-        }
-      )
-      if (!res.ok) {
-        setUser(null)
-        invalidateAuthSession(SESSION_INVALID_REASON.SESSION_CHECK_FAILED)
-        return
-      }
-      const session = await res.json()
-      if (session?.user) {
-        setUser({
-          id: String(session.user.id),
-          email: session.user.email,
-          name: session.user.name
-        })
+      const authUser = userFromJwt(jwt)
+      if (authUser) {
+        setUser(authUser)
       } else {
         setUser(null)
-        invalidateAuthSession(SESSION_INVALID_REASON.SESSION_CHECK_FAILED)
       }
     } catch {
+      // Transient errors must not wipe the stored session token.
       setUser(null)
-      invalidateAuthSession(SESSION_INVALID_REASON.SESSION_CHECK_FAILED)
     } finally {
       setIsLoading(false)
     }

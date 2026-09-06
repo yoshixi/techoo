@@ -1,25 +1,18 @@
 import { createAuthClient } from 'better-auth/client'
 
-import {
-  notifyAuthSessionInvalidated,
-  SESSION_INVALID_REASON,
-  type SessionInvalidReason
-} from './session-invalidation'
+import { peekSessionToken, setSessionToken } from './auth-tokens'
+
+export {
+  clearAuthState,
+  getJwt,
+  getSessionToken,
+  invalidateAuthSession,
+  setSessionToken,
+  userFromJwt,
+  type GetJwtOptions
+} from './auth-tokens'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'
-const API_BASE_URL = `${BASE_URL}/api`
-let sessionTokenCache: string | null = null
-
-export async function getSessionToken(): Promise<string | null> {
-  if (sessionTokenCache !== null) return sessionTokenCache
-  sessionTokenCache = await window.api.getSessionToken()
-  return sessionTokenCache
-}
-
-export async function setSessionToken(token: string): Promise<void> {
-  sessionTokenCache = token
-  await window.api.setSessionToken(token)
-}
 
 export const authClient = createAuthClient({
   baseURL: BASE_URL,
@@ -33,55 +26,7 @@ export const authClient = createAuthClient({
     },
     auth: {
       type: 'Bearer',
-      token: () => sessionTokenCache || ''
+      token: () => peekSessionToken()
     }
   }
 })
-
-// JWT Token Manager
-let jwtToken: string | null = null
-let jwtExpiresAt: number = 0
-
-export async function getJwt(): Promise<string | null> {
-  // Return cached JWT if still valid (with 60s safety buffer)
-  if (jwtToken && Date.now() < jwtExpiresAt - 60_000) {
-    return jwtToken
-  }
-
-  // Exchange session token for a new JWT
-  const sessionToken = await getSessionToken()
-  if (!sessionToken) return null
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/token`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${sessionToken}` }
-    })
-    if (!res.ok) throw new Error('Token exchange failed')
-
-    const { token } = await res.json()
-    jwtToken = token
-    jwtExpiresAt = Date.now() + 14 * 60 * 1000 // ~14 min (conservative)
-    window.api.updateAuthToken(jwtToken)
-    return jwtToken
-  } catch {
-    // Session expired — clear all auth state so stale tokens don't
-    // cause repeated 401s from tray/notification requests
-    invalidateAuthSession(SESSION_INVALID_REASON.TOKEN_EXCHANGE_FAILED)
-    return null
-  }
-}
-
-export function clearAuthState(): void {
-  sessionTokenCache = null
-  void window.api.clearSessionToken()
-  jwtToken = null
-  jwtExpiresAt = 0
-  window.api.updateAuthToken(null)
-}
-
-/** Clears stored credentials and notifies the UI (sign-out uses {@link clearAuthState} only). */
-export function invalidateAuthSession(reason: SessionInvalidReason): void {
-  clearAuthState()
-  notifyAuthSessionInvalidated(reason)
-}

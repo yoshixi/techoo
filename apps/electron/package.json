@@ -30,7 +30,7 @@
     "orval:watch": "orval --config ./orval.config.js --watch",
     "gen:openapi": "pnpm --filter @scripts/openapischema-generator generate --path apps/electron",
     "api:generate": "pnpm run gen:openapi && pnpm run orval:generate",
-    "test": "echo 'No tests for electron yet'"
+    "test": "vitest run"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
@@ -76,6 +76,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "typescript": "^5.9.2",
-    "vite": "^7.1.6"
+    "vite": "^7.1.6",
+    "vitest": "^4.1.5"
   }
 }
