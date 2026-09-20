@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Techoo journal capture mock</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --background: #F5F3EF;
+      --foreground: #1C1C1C;
+      --card: #FBFAF8;
+      --muted: #8E8A84;
+      --border: #E7E2D9;
+      --primary: #D4953A;
+      --primary-fg: #FFFFFF;
+      --amber-light: #FEF5E6;
+      --amber-dark: #854F0B;
+      --panel: #F2EEE7;
+      --success: #2E7D32;
+      --radius: 1rem;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: "DM Sans", system-ui, sans-serif;
+      background: var(--background);
+      color: var(--foreground);
+    }
+    button, input, textarea { font-family: inherit; }
+    button { cursor: pointer; }
+    .desk {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(240px, 340px) 430px minmax(240px, 1fr);
+      gap: 28px;
+      padding: 32px 28px;
+      align-items: start;
+      justify-content: center;
+    }
+    .notes, .assess {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px 20px 16px;
+    }
+    .notes h1, .assess h2 { margin: 0 0 8px; font-size: 18px; letter-spacing: -0.03em; }
+    .notes p, .assess p, .notes li, .assess li { font-size: 13px; line-height: 1.5; color: #5a534c; }
+    .notes ol { margin: 8px 0 0; padding-left: 18px; }
+    .notes kbd {
+      font-size: 11px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1px 5px;
+      background: var(--panel);
+    }
+    .stat {
+      display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap;
+    }
+    .stat span {
+      background: var(--amber-light);
+      color: var(--amber-dark);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .phone-label { font-size: 12px; color: var(--muted); }
+    .phone {
+      width: 390px;
+      height: 844px;
+      background: #1c1c1c;
+      border-radius: 44px;
+      padding: 12px;
+      box-shadow: 0 0 0 1px #2a2a2a;
+    }
+    .screen {
+      position: relative;
+      height: 100%;
+      background: var(--background);
+      border-radius: 34px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .status {
+      height: 44px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 0 22px 8px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .app { flex: 1; display: flex; flex-direction: column; min-height: 0; position: relative; }
+    header.top {
+      padding: 4px 16px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    header.top .brand { font-size: 20px; font-weight: 600; letter-spacing: -0.03em; color: color-mix(in srgb, var(--foreground) 72%, var(--muted)); }
+    header.top .when { font-size: 11px; color: var(--amber-dark); background: var(--amber-light); padding: 4px 10px; border-radius: 999px; }
+    .chips {
+      display: flex; gap: 6px; padding: 0 16px 10px; overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip {
+      flex: 0 0 auto;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 12px;
+    }
+    .chip.on { background: var(--foreground); color: var(--card); font-weight: 500; }
+    .chip.add { color: var(--amber-dark); }
+    .feed { flex: 1; overflow-y: auto; padding: 0 16px 108px; }
+    .empty { text-align: center; color: var(--muted); padding: 48px 12px; font-size: 14px; }
+    .card {
+      background: color-mix(in srgb, var(--card) 86%, transparent);
+      border-radius: 18px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .card .meta {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 12px 0; font-size: 11px; color: var(--muted);
+    }
+    .card .body { padding: 8px 12px 12px; font-size: 15px; line-height: 1.45; }
+    .card .gloss { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .card .source { font-size: 12px; color: var(--amber-dark); margin-top: 6px; }
+    .photo {
+      height: 240px; display: flex; align-items: flex-end; padding: 12px;
+      color: #fff; font-size: 13px; font-weight: 500;
+    }
+    .photo.cafe { background: linear-gradient(180deg, #c9a078 0%, #8a5a32 55%, #4a2e18 100%); }
+    .photo.page { background: linear-gradient(180deg, #efe6d4 0%, #e4d5b8 100%); color: #4a3e2e; }
+    .photo.sign { background: linear-gradient(180deg, #9aa7b0 0%, #4d5d68 100%); }
+    .photo.page .jp { font-size: 22px; font-weight: 600; letter-spacing: 0.04em; }
+    .actions { display: flex; gap: 4px; }
+    .icon-btn {
+      border: 0; background: transparent; width: 32px; height: 32px;
+      border-radius: 999px; color: var(--muted); font-size: 16px;
+    }
+    .icon-btn.starred { color: #d4953a; }
+    .fab {
+      position: absolute; right: 16px; bottom: 72px;
+      width: 56px; height: 56px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--amber-dark) 30%, transparent);
+      background: #c47a22; color: #FFF7ED; font-size: 28px; line-height: 1;
+    }
+    .tabs {
+      height: 58px; display: flex; border-top: 1px solid color-mix(in srgb, var(--foreground) 9%, transparent);
+      background: var(--card);
+    }
+    .tabs button {
+      flex: 1; border: 0; background: transparent; color: var(--muted); font-size: 11px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    }
+    .tabs button.on { color: var(--primary); font-weight: 600; }
+    .scrim {
+      position: absolute; inset: 0; background: rgba(28,28,28,.35);
+      display: none; align-items: flex-end;
+    }
+    .scrim.show { display: flex; }
+    .sheet {
+      width: 100%; background: var(--card); border-radius: 24px 24px 0 0;
+      padding: 10px 16px 28px;
+    }
+    .handle { width: 40px; height: 4px; background: var(--border); border-radius: 99px; margin: 6px auto 12px; }
+    .sheet h3 { margin: 0 0 12px; font-size: 16px; letter-spacing: -0.02em; }
+    .jobs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .job {
+      border: 1px solid var(--border); background: var(--background); border-radius: 16px;
+      padding: 16px 8px; text-align: center;
+    }
+    .job .g { font-size: 22px; display: block; margin-bottom: 6px; }
+    .job .l { font-size: 12px; font-weight: 600; }
+    .type-line { margin-top: 10px; }
+    .type-line input, .compose input, .compose textarea {
+      width: 100%; border: 1px solid var(--border); background: var(--background);
+      border-radius: 12px; padding: 11px 12px; font-size: 15px; color: var(--foreground);
+      outline: none;
+    }
+    .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .ghost, .primary, .text-btn {
+      border: 0; background: transparent; font-size: 15px;
+    }
+    .text-btn { color: var(--muted); }
+    .primary { color: var(--primary); font-weight: 600; }
+    .primary:disabled { color: var(--muted); }
+    .preview { border-radius: 16px; overflow: hidden; margin-bottom: 10px; }
+    .preview .photo { height: 180px; }
+    .hint { font-size: 12px; color: var(--muted); margin: 6px 0 10px; }
+    .samples { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+    .sample {
+      text-align: left; border: 1px solid var(--border); background: var(--background);
+      border-radius: 14px; padding: 10px 12px;
+    }
+    .sample b { display: block; font-size: 13px; }
+    .sample span { font-size: 12px; color: var(--muted); }
+    .chips-pick { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 14px; }
+    .pick {
+      border: 1px solid var(--border); background: var(--card); border-radius: 999px;
+      padding: 8px 12px; font-size: 13px;
+    }
+    .pick.on { background: var(--amber-light); border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); color: var(--amber-dark); font-weight: 600; }
+    .lib { padding: 16px; }
+    .lib-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 0; border-bottom: 1px solid var(--border); font-size: 15px;
+    }
+    .lib-row span { color: var(--muted); font-size: 12px; }
+    .toast {
+      position: absolute; left: 50%; bottom: 78px; transform: translateX(-50%);
+      background: var(--foreground); color: var(--card); font-size: 12px;
+      padding: 8px 12px; border-radius: 999px; display: none; white-space: nowrap;
+    }
+    .detail { position: absolute; inset: 44px 0 0; background: var(--background); overflow: auto; display: none; }
+    .detail.show { display: block; }
+    .clip-card { padding: 12px; }
+    .clip-card .site { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .clip-card h4 { margin: 4px 0 6px; font-size: 16px; letter-spacing: -0.02em; }
+    .clip-card .excerpt { font-size: 14px; line-height: 1.45; color: #3a342e; }
+    .clip-card .saved { margin-top: 8px; font-size: 11px; color: var(--amber-dark); }
+    .reader { padding: 8px 16px 88px; }
+    .reader .back { border: 0; background: transparent; color: var(--muted); font-size: 15px; padding: 8px 0 12px; }
+    .reader .site { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .reader h2 { margin: 6px 0 8px; font-size: 22px; letter-spacing: -0.03em; }
+    .reader .by { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+    .reader p { font-size: 16px; line-height: 1.55; margin: 0 0 12px; }
+    .scraping { font-size: 13px; color: var(--amber-dark); padding: 10px 0; }
+    .phrase-hero { font-size: 28px; font-weight: 600; letter-spacing: -0.03em; padding: 8px 4px 4px; }
+    @media (max-width: 980px) {
+      .desk { grid-template-columns: 1fr; }
+      .assess { order: 3; }
+    }
+  </style>
+</head>
+<body>
+  <div class="desk">
+    <aside class="notes">
+      <h1>Try the mock</h1>
+      <p>Single-file click-through of journal-first Techoo. Posting should take one intent, then Post.</p>
+      <ol>
+        <li>Tap <b>+</b> → Photo → book page → Post, then tap chips to keep words.</li>
+        <li>Tap <b>+</b> → Webclip, paste or pick a URL, wait for scrape, Post. Tap the card to read the saved copy.</li>
+        <li>Open the <b>Vocabulary</b> list, then + → Phrase.</li>
+        <li>Star a card. Filter Favorites.</li>
+      </ol>
+      <p style="margin-top:12px">Library is the demoted planner (todos stay, not the front door).</p>
+      <div class="stat">
+        <span id="tapCount">0 taps</span>
+        <span id="lastPath">No posts yet</span>
+      </div>
+    </aside>
+
+    <div class="phone-wrap">
+      <div class="phone-label">Mobile journal · interactive mock</div>
+      <div class="phone">
+        <div class="screen" id="screen">
+          <div class="status"><span>9:41</span><span>Techo</span></div>
+          <div class="app" id="app"></div>
+          <div class="toast" id="toast"></div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="assess" id="liveAssess">
+      <h2>Watch while you click</h2>
+      <p>This panel updates from the mock. A fuller assessment is in the plan after this file.</p>
+      <p id="liveNote">Start on Journal. Notice there is no todo on the home tab.</p>
+    </aside>
+  </div>
+
+<script>
+const PHOTOS = {
+  cafe: { cls: "cafe", label: "Evening window" },
+  page: { cls: "page", label: "Book page", extract: true },
+  sign: { cls: "sign", label: "Station sign" },
+};
+const EXTRACT = [
+  { id: "aware", body: "物の哀れ", gloss: "mono no aware — the pathos of things" },
+  { id: "yoru", body: "夜のピクニック", gloss: "night picnic" },
+  { id: "sotto", body: "そっと", gloss: "gently / quietly" },
+  { id: "hikari", body: "残光", gloss: "afterglow" },
+];
+const CLIPS = [
+  {
+    slug: "notebook",
+    title: "The notebook as a way of walking",
+    site: "The New Yorker",
+    byline: "A. Walker",
+    url: "https://example.com/notebook",
+    excerpt: "A page is not a plan. It is a place you return to when the day has already happened.",
+    content: [
+      "A page is not a plan. It is a place you return to when the day has already happened.",
+      "The techo does not ask what you meant to do. It holds what caught you: a window, a sentence, a URL you might never open again if you only saved the link.",
+      "Clipping is not browsing. You take a copy, the way you used to tear a column from the paper, and you put it in the book.",
+    ],
+  },
+  {
+    slug: "phrases",
+    title: "How phrases stick when you meet them outside class",
+    site: "Aeon",
+    byline: "M. Sato",
+    url: "https://example.com/phrases",
+    excerpt: "Vocabulary grows at the edge of a day, not in a deck: a sign, a paragraph, a line you underline once.",
+    content: [
+      "Vocabulary grows at the edge of a day, not in a deck: a sign, a paragraph, a line you underline once.",
+      "If the article disappears behind a login next month, the sentence you needed is gone — unless you clipped the page when you had it.",
+      "Save the readable copy first. Pick words from it later, the same way you tap chips on a photograph of a book.",
+    ],
+  },
+];
+
+const state = {
+  tab: "journal",
+  list: "all",
+  sheet: null, // capture | photo | webclip | phrase | extract
+  photoKey: null,
+  caption: "",
+  phrase: "",
+  gloss: "",
+  clipUrl: "",
+  clipStatus: "idle", // idle | scraping | ready | fail
+  clip: null,
+  extractParent: null,
+  picked: new Set(),
+  taps: 0,
+  lastPath: "No posts yet",
+  toast: "",
+  detail: null,
+  entries: [
+    { id: "e1", type: "moment", photo: "cafe", body: "Late dinner. Still raining.", at: "Yesterday · 21:14", lists: [], fav: true },
+    { id: "e2", type: "webclip", title: CLIPS[0].title, site: CLIPS[0].site, byline: CLIPS[0].byline, url: CLIPS[0].url, excerpt: CLIPS[0].excerpt, content: CLIPS[0].content, at: "Yesterday · 18:02", lists: ["newyorker"], fav: false },
+    { id: "e3", type: "phrase", body: "残響", gloss: "lingering sound; reverberation", at: "Today · 8:11", lists: ["vocab"], fav: false },
+    { id: "e4", type: "moment", photo: "page", body: "From the train copy of 夜のピクニック", at: "Today · 8:40", lists: ["murakami"], fav: false, page: true },
+  ],
+};
+
+function tap(note) {
+  state.taps += 1;
+  if (note) state.lastPath = note;
+  document.getElementById("tapCount").textContent = state.taps + " taps";
+  document.getElementById("lastPath").textContent = state.lastPath;
+  const live = {
+    capture: "Capture sheet: three jobs, not a form. Typing a line is also Post.",
+    photo: "Photo path. Caption is optional — Post is already available.",
+    webclip: "Webclip: paste or pick a URL. We scrape the readable page and save a copy — not just a bookmark.",
+    phrase: "Phrase path. Keyboard should be the first thing. Meaning can wait.",
+    extract: "Page already saved. Chips are pick-to-keep. Do not dump the whole page.",
+    posted: "Posted. Date, time, and todos never appeared. If a list was open, it inherited.",
+    library: "Library is where todos went. Extra tap. That is the cost of journal-first.",
+  };
+  document.getElementById("liveNote").textContent = live[note] || live[state.sheet] || document.getElementById("liveNote").textContent;
+}
+
+function startScrape(url) {
+  const trimmed = (url || "").trim();
+  state.clipUrl = trimmed;
+  state.clip = null;
+  if (!trimmed) {
+    state.clipStatus = "idle";
+    render();
+    return;
+  }
+  state.clipStatus = "scraping";
+  tap("webclip");
+  render();
+  const token = trimmed;
+  setTimeout(() => {
+    if (state.sheet !== "webclip" || state.clipUrl !== token) return;
+    const hit = CLIPS.find((c) => token.includes(c.slug) || token === c.url);
+    if (hit) {
+      state.clip = hit;
+      state.clipStatus = "ready";
+    } else {
+      state.clip = {
+        title: token.replace(/^https?:\/\//, ""),
+        site: "Unknown",
+        byline: "",
+        url: token,
+        excerpt: "Couldn’t extract a readable body. The URL is kept.",
+        content: [],
+      };
+      state.clipStatus = "fail";
+    }
+    render();
+  }, 700);
+}
+
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.style.display = "block";
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { el.style.display = "none"; }, 1600);
+}
+
+function filtered() {
+  const { list, entries } = state;
+  if (list === "all") return entries;
+  if (list === "fav") return entries.filter(e => e.fav);
+  return entries.filter(e => e.lists.includes(list));
+}
+
+function nowLabel() {
+  const d = new Date();
+  return "Today · " + d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
+
+function inheritList() {
+  if (state.list === "all" || state.list === "fav") return [];
+  return [state.list];
+}
+
+function postEntry(entry) {
+  state.entries.unshift({ id: "n" + Date.now(), at: nowLabel(), lists: inheritList(), fav: false, ...entry });
+  state.sheet = null;
+  state.tab = "journal";
+  tap("posted");
+  toast(inheritList().length ? "Saved to this list" : "Saved to Journal");
+}
+
+function photoBlock(key, extra = "") {
+  const p = PHOTOS[key];
+  if (key === "page") {
+    return `<div class="photo page ${extra}"><div><div class="jp">夜のピクニック</div><div>A page from the book, marked in pencil</div></div></div>`;
+  }
+  if (key === "sign") {
+    return `<div class="photo sign ${extra}"><div><div class="jp" style="font-size:28px">出口</div><div>Ikebukuro, north ticket gate</div></div></div>`;
+  }
+  return `<div class="photo cafe ${extra}"><div>Warm window · rain on the glass</div></div>`;
+}
+
+function cardHtml(e) {
+  const star = e.fav ? "★" : "☆";
+  let inner = "";
+  if (e.type === "moment") {
+    inner = photoBlock(e.photo) + `<div class="body">${escapeHtml(e.body || "")}</div>`;
+  } else if (e.type === "webclip") {
+    inner = `<div class="clip-card" data-open-entry="${e.id}"><div class="site">${escapeHtml(e.site)}</div><h4>${escapeHtml(e.title)}</h4><div class="excerpt">${escapeHtml(e.excerpt || "")}</div><div class="saved">Full clip saved · tap to read</div></div>`;
+  } else {
+    inner = `<div class="body"><div class="phrase-hero">${escapeHtml(e.body)}</div><div class="gloss">${escapeHtml(e.gloss || "")}</div></div>`;
+  }
+  return `<article class="card" data-id="${e.id}">
+    <div class="meta"><span>${e.at}</span>
+      <div class="actions">
+        <button class="icon-btn ${e.fav ? "starred" : ""}" data-star="${e.id}" aria-label="Favorite">${star}</button>
+      </div>
+    </div>
+    ${inner}
+  </article>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+function sheetHtml() {
+  if (!state.sheet) return "";
+  if (state.sheet === "capture") {
+    return `<div class="scrim show" data-close="1"><div class="sheet" data-stop="1">
+      <div class="handle"></div>
+      <h3>Keep something</h3>
+      <div class="jobs">
+        <button class="job" data-open="photo"><span class="g">▣</span><span class="l">Photo</span></button>
+        <button class="job" data-open="webclip"><span class="g">⎘</span><span class="l">Webclip</span></button>
+        <button class="job" data-open="phrase"><span class="g">あ</span><span class="l">Phrase</span></button>
+      </div>
+      <div class="type-line" style="margin-top:12px">
+        <input id="freeLine" placeholder="Or write a line…" />
+      </div>
+      <div class="hint">Date, time, and to-dos are not here. If a list is open, this files there.</div>
+    </div></div>`;
+  }
+  if (state.sheet === "photo") {
+    return `<div class="scrim show" data-close="1"><div class="sheet" data-stop="1">
+      <div class="row"><button class="text-btn" data-back="capture">Back</button><b>Photo</b>
+        <button class="primary" data-post-photo="1">Post</button></div>
+      <p class="hint">Pick a shot. Caption can wait.</p>
+      ${state.photoKey ? `<div class="preview">${photoBlock(state.photoKey)}</div>
+        <input id="caption" placeholder="A brief thought" value="${escapeHtml(state.caption)}" />` : `<div class="samples">
+        <button class="sample" data-photo="cafe"><b>Evening window</b><span>Moment · cafe</span></button>
+        <button class="sample" data-photo="page"><b>Book page</b><span>Will offer extract after Post</span></button>
+        <button class="sample" data-photo="sign"><b>Station sign</b><span>Language in the wild</span></button>
+      </div>`}
+    </div></div>`;
+  }
+  if (state.sheet === "webclip") {
+    const ready = state.clip && (state.clipStatus === "ready" || state.clipStatus === "fail");
+    const preview = ready ? `<div class="card" style="margin:8px 0 12px"><div class="clip-card">
+      <div class="site">${escapeHtml(state.clip.site)}</div><h4>${escapeHtml(state.clip.title)}</h4>
+      <div class="excerpt">${escapeHtml(state.clip.excerpt)}</div>
+      <div class="saved">${state.clip.content.length} paragraphs clipped</div>
+    </div></div>` : "";
+    return `<div class="scrim show" data-close="1"><div class="sheet" data-stop="1">
+      <div class="row"><button class="text-btn" data-back="capture">Back</button><b>Webclip</b>
+        <button class="primary" data-post-clip="1" ${ready ? "" : "disabled"}>Post</button></div>
+      <p class="hint">Paste a URL. We scrape the readable page and save a copy.</p>
+      <input id="clipUrl" placeholder="https://" value="${escapeHtml(state.clipUrl)}" />
+      <div class="samples" style="margin-top:8px">
+        ${CLIPS.map((c) => `<button class="sample" data-clip-url="${escapeHtml(c.url)}"><b>${escapeHtml(c.site)}</b><span>${escapeHtml(c.url)}</span></button>`).join("")}
+      </div>
+      ${state.clipStatus === "scraping" ? `<div class="scraping">Clipping the page…</div>` : ""}
+      ${state.clipStatus === "fail" ? `<div class="scraping">Couldn’t clip the body. URL will still save.</div>` : ""}
+      ${preview}
+      ${ready ? `<input id="caption" placeholder="A thought (optional)" value="${escapeHtml(state.caption)}" />` : ""}
+    </div></div>`;
+  }
+  if (state.sheet === "phrase") {
+    const can = state.phrase.trim();
+    return `<div class="scrim show" data-close="1"><div class="sheet" data-stop="1">
+      <div class="row"><button class="text-btn" data-back="capture">Back</button><b>Phrase</b>
+        <button class="primary" data-post-phrase="1" ${can ? "" : "disabled"}>Post</button></div>
+      <p class="hint">Language last used: Japanese. Meaning is optional.</p>
+      <input id="phrase" placeholder="Phrase" value="${escapeHtml(state.phrase)}" style="font-size:22px;font-weight:600;margin-bottom:8px" />
+      <input id="gloss" placeholder="Meaning (optional)" value="${escapeHtml(state.gloss)}" />
+    </div></div>`;
+  }
+  if (state.sheet === "extract") {
+    return `<div class="scrim show" data-close="1"><div class="sheet" data-stop="1">
+      <div class="row"><button class="text-btn" data-skip-extract="1">Skip</button><b>Keep words</b>
+        <button class="primary" data-keep-extract="1">Keep ${state.picked.size || ""}</button></div>
+      <p class="hint">The page is already in your journal. Tap chips to file as vocabulary.</p>
+      <div class="chips-pick">
+        ${EXTRACT.map(w => `<button class="pick ${state.picked.has(w.id) ? "on" : ""}" data-pick="${w.id}">${escapeHtml(w.body)}</button>`).join("")}
+      </div>
+    </div></div>`;
+  }
+  return "";
+}
+
+function render() {
+  const app = document.getElementById("app");
+  if (state.tab === "library") {
+    app.innerHTML = `
+      <header class="top"><span class="brand">Library</span></header>
+      <div class="lib">
+        <div class="lib-row">To-dos <span>optional · not home</span></div>
+        <div class="lib-row">Calendar <span>Google events</span></div>
+        <div class="lib-row">Notes <span>long pages</span></div>
+      </div>
+      <nav class="tabs">
+        <button data-tab="journal">Journal</button>
+        <button class="on" data-tab="library">Library</button>
+      </nav>`;
+    app.insertAdjacentHTML("beforeend", sheetHtml());
+    return;
+  }
+  const items = filtered();
+  const open = state.detail && state.entries.find((x) => x.id === state.detail);
+  app.innerHTML = `
+    <header class="top"><span class="brand">Techo</span><span class="when">Sun 20 Sep</span></header>
+    <div class="chips">
+      <button class="chip ${state.list==="all"?"on":""}" data-list="all">All</button>
+      <button class="chip ${state.list==="fav"?"on":""}" data-list="fav">Favorites</button>
+      <button class="chip ${state.list==="vocab"?"on":""}" data-list="vocab">Vocabulary</button>
+      <button class="chip ${state.list==="murakami"?"on":""}" data-list="murakami">Murakami</button>
+      <button class="chip ${state.list==="newyorker"?"on":""}" data-list="newyorker">New Yorker</button>
+    </div>
+    ${open && open.type === "webclip" ? `
+      <div class="reader">
+        <button class="back" data-close-detail="1">Back</button>
+        <div class="site">${escapeHtml(open.site)}</div>
+        <h2>${escapeHtml(open.title)}</h2>
+        <div class="by">${escapeHtml(open.byline || "")} · saved copy</div>
+        ${(open.content || []).map((p) => `<p>${escapeHtml(p)}</p>`).join("")}
+      </div>
+    ` : `<div class="feed">
+      ${items.length ? items.map(cardHtml).join("") : `<div class="empty">Nothing in this list yet. + to keep something.</div>`}
+    </div>
+    <button class="fab" data-open="capture" aria-label="Keep something">+</button>`}
+    <nav class="tabs">
+      <button class="on" data-tab="journal">Journal</button>
+      <button data-tab="library">Library</button>
+    </nav>
+    ${sheetHtml()}
+  `;
+  const caption = document.getElementById("caption");
+  if (caption) {
+    caption.addEventListener("input", e => { state.caption = e.target.value; });
+    setTimeout(() => caption.focus(), 30);
+  }
+  const clipUrl = document.getElementById("clipUrl");
+  if (clipUrl) {
+    clipUrl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") startScrape(clipUrl.value);
+    });
+    clipUrl.addEventListener("blur", () => {
+      if (clipUrl.value.trim() && clipUrl.value.trim() !== (state.clip && state.clip.url)) startScrape(clipUrl.value);
+    });
+    if (state.clipStatus === "idle") setTimeout(() => clipUrl.focus(), 30);
+  }
+  const quote = document.getElementById("quote");
+  if (quote) quote.addEventListener("input", e => { state.quote = e.target.value; });
+  const phrase = document.getElementById("phrase");
+  if (phrase) {
+    phrase.addEventListener("input", e => {
+      state.phrase = e.target.value;
+      const btn = document.querySelector("[data-post-phrase]");
+      if (btn) btn.disabled = !state.phrase.trim();
+    });
+    setTimeout(() => phrase.focus(), 30);
+  }
+  const gloss = document.getElementById("gloss");
+  if (gloss) gloss.addEventListener("input", e => { state.gloss = e.target.value; });
+  const free = document.getElementById("freeLine");
+  if (free) free.addEventListener("keydown", e => {
+    if (e.key === "Enter" && free.value.trim()) {
+      postEntry({ type: "phrase", body: free.value.trim(), gloss: "" });
+      render();
+    }
+  });
+}
+
+document.getElementById("app").addEventListener("click", (e) => {
+  const inSheet = e.target.closest("[data-stop]");
+  const t = e.target.closest("[data-tab],[data-list],[data-open],[data-back],[data-photo],[data-clip-url],[data-post-photo],[data-post-clip],[data-post-phrase],[data-pick],[data-keep-extract],[data-skip-extract],[data-star],[data-open-entry],[data-close-detail]");
+  if (inSheet) {
+    if (!t) return;
+  } else if (e.target.closest("[data-close]")) {
+    state.sheet = null;
+    tap();
+    render();
+    return;
+  }
+  if (!t) return;
+  if (t.dataset.tab) { state.tab = t.dataset.tab; tap(t.dataset.tab === "library" ? "library" : ""); render(); return; }
+  if (t.dataset.list) { state.list = t.dataset.list; tap(); render(); return; }
+  if (t.dataset.open) {
+    state.sheet = t.dataset.open;
+    if (t.dataset.open === "photo") { state.photoKey = null; state.caption = ""; }
+    if (t.dataset.open === "webclip") { state.clip = null; state.clipUrl = ""; state.clipStatus = "idle"; state.caption = ""; }
+    if (t.dataset.open === "phrase") { state.phrase = ""; state.gloss = ""; }
+    tap(t.dataset.open);
+    render();
+    return;
+  }
+  if (t.dataset.back) { state.sheet = t.dataset.back; tap(); render(); return; }
+  if (t.dataset.photo) { state.photoKey = t.dataset.photo; tap(); render(); return; }
+  if (t.dataset.clipUrl) { startScrape(t.dataset.clipUrl); return; }
+  if (t.dataset.closeDetail) { state.detail = null; tap(); render(); return; }
+  if (t.dataset.openEntry) { state.detail = t.dataset.openEntry; tap("webclip"); render(); return; }
+  if (t.dataset.postPhoto) {
+    if (!state.photoKey) { toast("Pick a photo first"); return; }
+    const isPage = PHOTOS[state.photoKey].extract;
+    postEntry({ type: "moment", photo: state.photoKey, body: state.caption, page: isPage });
+    if (isPage) {
+      state.sheet = "extract";
+      state.extractParent = state.entries[0].id;
+      state.picked = new Set();
+      tap("extract");
+    }
+    render();
+    return;
+  }
+  if (t.dataset.postClip) {
+    if (!state.clip) return;
+    postEntry({
+      type: "webclip",
+      title: state.clip.title,
+      site: state.clip.site,
+      byline: state.clip.byline,
+      url: state.clip.url,
+      excerpt: state.clip.excerpt,
+      content: state.clip.content,
+      body: state.caption,
+      lists: inheritList().length ? inheritList() : ["newyorker"],
+    });
+    render();
+    return;
+  }
+  if (t.dataset.postPhrase) {
+    if (!state.phrase.trim()) return;
+    const lists = inheritList().length ? inheritList() : ["vocab"];
+    postEntry({ type: "phrase", body: state.phrase.trim(), gloss: state.gloss.trim(), lists });
+    render();
+    return;
+  }
+  if (t.dataset.pick) {
+    const id = t.dataset.pick;
+    if (state.picked.has(id)) state.picked.delete(id); else state.picked.add(id);
+    tap("extract");
+    render();
+    return;
+  }
+  if (t.dataset.skipExtract) { state.sheet = null; tap(); render(); return; }
+  if (t.dataset.keepExtract) {
+    EXTRACT.filter(w => state.picked.has(w.id)).reverse().forEach(w => {
+      state.entries.unshift({ id: "x"+w.id+Date.now(), type: "phrase", body: w.body, gloss: w.gloss, at: nowLabel(), lists: ["vocab", "murakami"], fav: false, parent: state.extractParent });
+    });
+    state.sheet = null;
+    tap("posted");
+    toast(state.picked.size ? "Words saved to Vocabulary" : "Page kept, no words");
+    render();
+    return;
+  }
+  if (t.dataset.star) {
+    const e = state.entries.find(x => x.id === t.dataset.star);
+    if (e) e.fav = !e.fav;
+    tap();
+    render();
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { state.sheet = null; state.detail = null; render(); }
+});
+
+render();
+</script>
+</body>
+</html>
