@@ -43,6 +43,79 @@ The 手帳 metaphor still fits, and actually fits *this* better than the planner
 
 Todos and calendar remain available. They are no longer the home screen, and a journal entry does not need a todo to be valid.
 
+### Diagrams
+
+#### Today vs journal-first
+
+```mermaid
+flowchart LR
+    subgraph todayApp ["Today"]
+        direction TB
+        tHome[Home is Todos]
+        tForm[New Post form]
+        tHome --> tForm
+        tForm --> tDate[Date and time]
+        tForm --> tTodo[Todo links]
+        tForm --> tBody[Required text]
+    end
+    subgraph nextApp ["Journal-first"]
+        direction TB
+        jHome[Home is Journal]
+        jPlus[Capture sheet]
+        jHome --> jPlus
+        jPlus --> jPhoto[Photo]
+        jPlus --> jArticle[Article]
+        jPlus --> jPhrase[Phrase]
+    end
+```
+
+#### How you post
+
+```mermaid
+flowchart TD
+    plus([Plus])
+    plus --> photo[Photo]
+    plus --> article[Article]
+    plus --> phrase[Phrase]
+    plus -.-> typeLine[Or just type]
+    photo --> cam[Camera]
+    cam --> cap[Optional caption]
+    cap --> postPhoto([Post])
+    article --> share[Share or paste URL]
+    share --> quote[Optional quote]
+    quote --> postArticle([Post])
+    phrase --> fields[Phrase plus optional meaning]
+    fields --> postPhrase([Post])
+    typeLine --> postType([Post])
+```
+
+#### Page photo to vocabulary
+
+```mermaid
+flowchart TD
+    page[Page photo or screenshot]
+    page --> saveClip[Save clipping now]
+    saveClip --> extract[Extract words]
+    extract --> chips[Tap chips to keep]
+    chips --> vocab[Phrase cards]
+    saveClip --> sameList[Same list]
+    vocab --> sameList
+    vocab --> thread[Threaded to the page]
+```
+
+#### One entry, grouped by lists
+
+```mermaid
+flowchart TD
+    entry[One journal entry]
+    entry --> allTab[All]
+    entry --> favTab[Favorites if starred]
+    entry --> named[Named lists]
+    named --> vocabList[Vocabulary]
+    named --> bookList[A book]
+    named --> magList[A magazine]
+```
+
 ### One primitive: journal entry (evolve `posts`)
 
 Do **not** add three new resources (moments / highlights / language cards). Evolve `posts` into journal entries with optional attachments and optional structured fields.
@@ -280,5 +353,5 @@ Slice 2 is the real UX test. If posting a phrase from a list tab is not faster t
 
 ### Docs
 
-- `docs/CONCEPT.md` — product thesis (this reconsideration).
+- `docs/CONCEPT.md` — product thesis plus “How you post” (capture jobs and list grouping).
 - Mobile README still points at CONCEPT; update its one-liner when chrome actually changes (slice 1).
