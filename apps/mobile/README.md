@@ -1,6 +1,6 @@
 # Techo — mobile companion
 
-Expo app aligned with [`docs/CONCEPT.md`](../../docs/CONCEPT.md): **today’s to-dos**, **posts** (day log), **calendar** (to-dos + Google events), **notes** (off-timeline), and **settings** (OAuth / calendars).
+Expo app aligned with [`docs/CONCEPT.md`](../../docs/CONCEPT.md): a **private journal** (dated entries, photos, highlights, language scraps). To-dos, calendar, and notes stay available and are secondary. Current chrome is still todo-first until the journal-home slice in [`agents/plans/2026-09-20-techoo-journal-reconsider.md`](../../agents/plans/2026-09-20-techoo-journal-reconsider.md).
 
 ## API client
 
