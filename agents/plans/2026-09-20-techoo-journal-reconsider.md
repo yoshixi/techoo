@@ -47,6 +47,8 @@ Todos and calendar remain available. They are no longer the home screen, and a j
 
 #### Today vs journal-first
 
+![Today vs journal-first](./assets/2026-09-20/diagram_today_vs_journal.png)
+
 ```mermaid
 flowchart LR
     subgraph todayApp ["Today"]
@@ -71,6 +73,8 @@ flowchart LR
 
 #### How you post
 
+![How you post](./assets/2026-09-20/diagram_how_you_post.png)
+
 ```mermaid
 flowchart TD
     plus([Plus])
@@ -91,6 +95,8 @@ flowchart TD
 
 #### Page photo to vocabulary
 
+![Page photo to vocabulary](./assets/2026-09-20/diagram_page_to_vocab.png)
+
 ```mermaid
 flowchart TD
     page[Page photo or screenshot]
@@ -104,6 +110,8 @@ flowchart TD
 ```
 
 #### One entry, grouped by lists
+
+![One entry grouped by lists](./assets/2026-09-20/diagram_lists_grouping.png)
 
 ```mermaid
 flowchart TD
@@ -321,6 +329,55 @@ This PR is the product decision only. Suggested build order when we implement �
 
 Slice 2 is the real UX test. If posting a phrase from a list tab is not faster than today’s form, the rest of the schema will not save the product.
 
+### Interactive mock
+
+Single HTML file, click through on desktop:
+
+[`agents/plans/assets/2026-09-20/journal-capture-mock.html`](./assets/2026-09-20/journal-capture-mock.html)
+
+Open in a browser (or `python3 -m http.server` in that folder). Phone-sized Journal with Photo / Article / Phrase, extract chips, list inheritance, and Library for demoted todos.
+
+### Mock assessment (after clicking through)
+
+Clicked every capture path on the mock. Verdict: **the product idea holds; the three-job sheet is the right front door; two UX traps showed up immediately.**
+
+**What felt right**
+
+- Home as Journal, with no todo, already feels like a different app. Library as the extra tap is an acceptable cost.
+- Phrase cards (large Japanese + gloss) are the strongest object. They read as a techo, not as a log line.
+- List chips + inheritance work. Opening Vocabulary then Phrase files there without a folder picker.
+- Extract-after-save is the correct order. Skip is available. Tap-to-keep chips match “don’t dump the page.”
+- Post is always one tap away once the intent is chosen. Date/time/todos never appeared. That is the whole point.
+
+**Friction the mock made obvious**
+
+1. **Photo is still too many taps.** `+` → Photo → pick a shot → Post is 3–4 steps. “Take a photo and a thought” wants shutter first (long-press `+`, or Photo opens the camera). The in-mock picker (cafe / page / sign) is a stand-in; in product, camera *is* the first screen of Photo.
+2. **All-feed gets noisy after extract.** Kept words land as sibling cards above the page. Lists group them (Vocabulary, Murakami), but All looks like a vocab quiz, not a journal. Prefer: All shows the **page clipping** with “2 words kept”; the words live in Vocabulary (and in the page thread).
+3. **Article “click” is fake here.** Tapping a sample title is not how catching-your-eye works. The real gesture is Share from Safari. The in-app sheet should be paste-URL / recent clip, not a fake magazine rack.
+4. **Mixed card rhythm is not Instagram yet.** Phrase cards are type-forward (good). Photo cards will only feel Instagram-ish with real photos, full-bleed, caption under — gradients in the mock don’t prove that. Article cards should be clippings (preview image + title), not only italic quotes.
+5. **`+` covers the last card.** Classic FAB overlap. More feed padding, or a capture bar above the tab.
+6. **Stars are small.** Easy to miss on a real phone.
+7. **Sheet vs input (fixed in the mock).** First pass closed the sheet when tapping the caption field (scrim ate the click). Capture sheets must treat the sheet as a trap for taps; only the dimmed area dismisses.
+
+**Changes to the decision from using it**
+
+- Keep the three-job sheet. Do **not** make Home a camera-only Instagram. Phrase and article would lose.
+- Add **long-press `+` = camera** so the photo+thought path is one gesture.
+- Extracted words default into **Vocabulary** (and the book list), not into All as peer posts. All keeps the page.
+- Article v1 is share-in, not in-app discovery.
+
+**Tap budget we actually saw** (happy path, after the input bug fix)
+
+| Job | Taps to saved | Notes |
+|---|---|---|
+| Phrase from Vocabulary | 4 | + , Phrase, type, Post |
+| Article (sample click) | 4 | + , Article, sample, Post |
+| Book page + 2 words | ~8 | + , Photo, page, Post, 2 chips, Keep |
+
+Phrase and article are close to the budget. Book+extract is allowed to be longer because extract is a second beat after the clipping exists.
+
+## Consequences
+
 ## Consequences
 
 ### What gets better
@@ -353,5 +410,6 @@ Slice 2 is the real UX test. If posting a phrase from a list tab is not faster t
 
 ### Docs
 
-- `docs/CONCEPT.md` — product thesis plus “How you post” (capture jobs and list grouping).
+- `docs/CONCEPT.md` — product thesis plus “How you post”.
+- Interactive mock: `agents/plans/assets/2026-09-20/journal-capture-mock.html`
 - Mobile README still points at CONCEPT; update its one-liner when chrome actually changes (slice 1).
