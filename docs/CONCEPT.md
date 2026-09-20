@@ -80,15 +80,31 @@ Save the sentence where you met it. Filter by language. Spaced repetition and qu
 
 Prefer a few optional fields (source, language, gloss, images) over new databases for books, decks, or projects. Richness comes from days and lists.
 
+### 7. Posting is the easy thing
+
+If keeping something takes a form, people will not keep it. Capture is **one intent and Post**. Caption, meaning, source, and extract are optional. Date, time, and to-dos are edit-later. If you are already in a list, the new card files there.
+
+## How you post
+
+Home `+` is a **capture sheet**, not a “New Post” form. Three jobs:
+
+1. **Photo + a thought** — shutter, then an optional caption. The feed is the photo with the thought under it.
+2. **Article that caught your eye** — Share from the browser, or paste a URL. Techoo is the pocket, not the reader. A quote is optional; the link is enough.
+3. **A new phrase** — large phrase field, optional meaning. Language defaults to the last one you used. This is how vocabulary grows: record the phrase when you meet it.
+
+A **page photo or screenshot** is the photo path plus extract: the clipping saves first, then you tap chips for the words you want. Those words become phrase cards, grouped with the page (same list, and threaded to the photo). You pick; the whole page is not dumped into vocabulary.
+
+**Grouping** stays the current Timeline lists: All, Favorites, and names you create (“Vocabulary”, a book, a magazine). No second folder system.
+
 ## Primary surfaces (conceptual)
 
-- **Journal / home** — Visual chronological feed. This is the front door.
-- **Composer** — Presets for moment, highlight, language, and free writing. Share-in lands here.
-- **Lists & favorites** — Collections you name.
+- **Journal / home** — Visual chronological feed. This is the front door. List chips stay.
+- **Capture** — Photo, article, phrase. Share-in lands here.
+- **Lists & favorites** — Collections you name — same idea as today’s Timeline tabs.
 - **Library** — To-dos, calendar, notes: available, secondary.
 - **Settings** — Account, calendars, later defaults (e.g. a preferred language).
 
-Exact layouts may evolve; the **roles** stay: journal first, planner optional.
+Exact layouts may evolve; the **roles** stay: journal first, capture easy, planner optional.
 
 ## What Techo Is Not
 
@@ -117,8 +133,8 @@ Product decision record: [`agents/plans/2026-09-20-techoo-journal-reconsider.md`
 
 Possible extensions—used to test whether ideas still fit the techo metaphor.
 
-- **Share-in from other apps** — photo or selected text becomes an entry in one step.
+- **Share-in from other apps** — article URL, selected text, or a screenshot becomes an entry in one step.
+- **Extract words from a page photo** — OCR/assist, then tap-to-keep chips. Never a gate on saving the photo.
 - **Language filter that feels like a section of the notebook** — not a flashcard deck.
 - **Deeper “day review”** — a single evening read of the day’s cards (and, if you used them, the plan).
-- **Lightweight AI assistance** — transcription of a page photo, or a gloss suggestion, that stays private and optional.
 - **Richer linking** — entries that point at a book or a language without becoming a graph database.

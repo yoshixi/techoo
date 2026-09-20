@@ -128,23 +128,125 @@ Notes stay the **long page**: drafts, reference, writing that is not a dated car
 
 | Surface | Role after this shift |
 |---|---|
-| **Home / Journal** | Visual chronological feed. Primary tab. |
-| **Composer** | Photo / highlight / language / free presets. Share-in lands here. |
-| **Lists & favorites** | Collections (books, languages, themes). Already built. |
+| **Home / Journal** | Visual chronological feed. Primary tab. List chips stay (All / Favorites / named lists). |
+| **Capture** | The product. Photo, article, phrase — not a generic “New Post” form. |
+| **Lists & favorites** | Grouping. Same primitive as today’s Timeline tabs. |
 | **Library** | Todos, calendar, notes — available, not the front door. |
 | **Settings** | Auth, calendars, later: default language, storage. |
 
+### Capture UX — posting must be the easy thing
+
+The product succeeds or fails on **how little work it is to keep something**. Today’s mobile composer (`app/post/new.tsx`) is a planner form: date, time, todo/list associations, `#` mentions, and a required body before Post is enabled. That is the opposite of a journal you actually use on the street or in a book.
+
+**Friction budget**
+
+- A complete entry in **one intent + Post** (two interactions). A third interaction is allowed for a caption, a meaning, or picking extracted words.
+- Optional fields never block Post. Empty caption is fine if there is a photo. Empty meaning is fine if there is a phrase. Empty extract is fine if the page photo is saved.
+- Date, time, and todo links are **edit-later**. They do not appear on capture.
+- If the user is already on a Timeline list tab, the new entry **inherits that list** (this already works via `associationsFromTimelineTab`). No extra “pick a folder” step.
+
+**+ is a capture sheet, not a form**
+
+Home `+` opens a short sheet with three jobs that match how people actually post. Typing in the sheet with no job selected is still allowed (free line).
+
+| Action | Opens | Done when |
+|---|---|---|
+| **Photo** | Camera (long-press / secondary: library) | Photo is on the card; caption optional; Post |
+| **Article** | Paste URL / accept a share | Title + link are on the card; quote optional; Post |
+| **Phrase** | Keyboard on a large phrase field | Phrase is there; meaning optional; Post |
+
+Do not put all three jobs on one scrolling form. Each job is its own small sheet so the first screen only asks for the one thing that job needs.
+
+#### 1. Photo + brief thought
+
+Instagram-ish **capture**, private **keep**.
+
+1. Tap Photo → shutter (or pick from library).
+2. Land on a sheet: large photo, one caption field (“a thought”), Post.
+3. Post immediately. Crop, filters, location, and todo links are out.
+
+The feed card is the photo with the thought under it. This is the default visual rhythm of Home.
+
+#### 2. Article that catches their eye
+
+“Click” means **one save when something in the world catches you**, not that Techoo becomes a reader or an article browser.
+
+Primary path: **Share → Techoo** from Safari / reader / any app (URL, and selected text if any).
+
+In-app path: Article → paste a URL. Unfurl title, site, and preview image so the card looks like a clipping, not a raw link.
+
+- `body` = selected quote, or empty until later.
+- `source.url` + `source.title` from the unfurl.
+- Tap the saved card later to reopen the article.
+
+We do not build a discover feed of articles. The world’s browsers already do “things that catch your eye.” Techoo is the pocket they fall into.
+
+#### 3. Record a new phrase (vocabulary)
+
+A two-field sheet. Keyboard up on open.
+
+- **Phrase** — large type, the only field that matters.
+- **Meaning** — one line, optional (gloss, translation, or a note to self).
+- Language defaults to **last used** (Settings can pin a default). No language picker on the first screen.
+
+Post creates a language entry. From a list tab named “Vocabulary” / “French”, it files there automatically.
+
+This is capture, not study. No “add example sentence / part of speech / deck” on the way in.
+
+#### 4. Book screenshot / page photo → extract words
+
+Same Photo path, plus an **extract** assist after the page is already saved.
+
+1. Photo of the page or a screenshot lands as a normal photo entry (the clipping).
+2. Extract runs in the background (OCR, later optional model assist). Failure still leaves the photo — extract is never a gate.
+3. A chip picker shows candidate words/phrases on the page. **Tap to keep.** Do not dump the whole page into vocabulary.
+4. Each kept item becomes a phrase entry: `body` = the word/phrase, image = crop or pointer back to the page, `parent_post_id` = the page photo (thread already exists).
+5. All of them inherit the current list (e.g. the book’s list).
+
+The page photo is the clipping; the chips are the vocabulary. Opening the page thread later shows which words came from it.
+
+#### 5. Group like today’s Timeline lists
+
+Do **not** invent folders, notebooks, or a second taxonomy.
+
+Keep the existing Timeline chrome:
+
+- **All** — the journal
+- **Favorites** — stars
+- **Named lists** — “Vocabulary”, a book title, “New Yorker”, a trip
+
+Rules that make grouping cheap:
+
+- Creating from a list tab files into that list (already true).
+- After Post, a single optional row of list chips if you are on All and want to file it. Skip = stays on All.
+- Long-press a list tab to rename/delete (already true).
+- Suggested first lists on an empty journal: `Vocabulary`, and whatever you name when you save the first book/article.
+
+Lists are how a techo has sections. They are not tags you must apply to every card.
+
+**What the capture sheets hide**
+
+Today’s New Post chrome that we drop from the happy path:
+
+- Date and time pickers (default: now)
+- `PostComposerAssociationsBar` and “Type `#` to link to-dos…”
+- Required non-empty `body` when an image or URL is present
+- Full-screen title “New Post”
+
+Power users can still edit those on the entry after it exists.
+
 ### Implementation slices (not this PR)
 
-This PR is the product decision only. Suggested build order when we implement:
+This PR is the product decision only. Suggested build order when we implement — **capture ease first**:
 
-1. **Journal-first chrome** — swap default tab to Timeline/journal; hide todos from the primary tab bar; no schema change.
-2. **Images on posts** — `post_images` + R2 + attach in mobile/desktop composers + visual feed cards.
-3. **Highlight fields** — `source_*` columns (or a JSON `source` blob) + highlight composer preset + list-oriented "reading" empty states.
-4. **Language fields** — `language`, `gloss` + filter tab.
-5. **Share-in** — iOS/Android share extension creating a post from image or selected text.
+1. **Journal-first chrome** — Home = Timeline/journal; todos off the primary tab bar. Keep list chips.
+2. **Capture sheet** — Photo / Article / Phrase instead of the current New Post form. Phrase can ship as text-only (`body` + later `gloss`). Inherit the active list.
+3. **Images + visual feed** — `post_images` + R2; photo+thought path; Instagram-like cards.
+4. **Article share / unfurl** — share-in URL + selected text; in-app paste + preview card.
+5. **Highlight / language fields** — `source_*`, `language`, `gloss` so article and phrase sheets persist structure.
+6. **Extract from page** — OCR on a saved photo; chip-picker; child phrase posts via `parent_post_id`.
 
-Slice 1 is the cheapest test of the thesis. If the app feels right as a journal without photos, slices 2–5 are extensions. If it feels empty, images were the missing object, not more todo UX.
+Slice 2 is the real UX test. If posting a phrase from a list tab is not faster than today’s form, the rest of the schema will not save the product.
 
 ## Consequences
 
@@ -160,6 +262,7 @@ Slice 1 is the cheapest test of the thesis. If the app feels right as a journal 
 - Planner-first identity in `CONCEPT.md` and the home screen. Calendar-centric users will take an extra tap to reach todos.
 - A dedicated SRS / Readwise-class highlight manager. Capture quality first.
 - Public sharing. "Instagram-ish" will be misunderstood if we are sloppy in copy; UI chrome must stay private and warm.
+- Auto-dumping a whole book page into vocabulary. Extract is tap-to-keep, not ingest-everything.
 
 ### Rejected alternatives
 
@@ -170,6 +273,9 @@ Slice 1 is the cheapest test of the thesis. If the app feels right as a journal 
 | Notes as the journal | Notes have no feed rhythm, no `posted_at` story, no visual card. |
 | Full social Instagram | Conflicts with single-user / private techo. |
 | Anki-in-Techoo | Different habit (review vs capture). Revisit only after capture works. |
+| Build an in-app article reader / discover feed | “Caught my eye” happens in the browser. Share-in is the click. |
+| New folder/notebook taxonomy | Timeline lists already group. Inherit the active list on capture. |
+| Extract-before-save | OCR failure would lose the clipping. Save the photo first; chips second. |
 | Second big-bang revamp | Auth, tenant DBs, posts, lists are fine. Evolve posts; do not replace the domain layer. |
 
 ### Docs
