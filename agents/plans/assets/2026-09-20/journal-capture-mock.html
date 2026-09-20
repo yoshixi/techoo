@@ -223,10 +223,18 @@
     }
     .detail { position: absolute; inset: 44px 0 0; background: var(--background); overflow: auto; display: none; }
     .detail.show { display: block; }
-    .article-card { padding: 12px; }
-    .article-card .site { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-    .article-card h4 { margin: 4px 0 8px; font-size: 16px; }
-    .quote { font-size: 15px; font-style: italic; color: #3a342e; }
+    .clip-card { padding: 12px; }
+    .clip-card .site { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .clip-card h4 { margin: 4px 0 6px; font-size: 16px; letter-spacing: -0.02em; }
+    .clip-card .excerpt { font-size: 14px; line-height: 1.45; color: #3a342e; }
+    .clip-card .saved { margin-top: 8px; font-size: 11px; color: var(--amber-dark); }
+    .reader { padding: 8px 16px 88px; }
+    .reader .back { border: 0; background: transparent; color: var(--muted); font-size: 15px; padding: 8px 0 12px; }
+    .reader .site { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .reader h2 { margin: 6px 0 8px; font-size: 22px; letter-spacing: -0.03em; }
+    .reader .by { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+    .reader p { font-size: 16px; line-height: 1.55; margin: 0 0 12px; }
+    .scraping { font-size: 13px; color: var(--amber-dark); padding: 10px 0; }
     .phrase-hero { font-size: 28px; font-weight: 600; letter-spacing: -0.03em; padding: 8px 4px 4px; }
     @media (max-width: 980px) {
       .desk { grid-template-columns: 1fr; }
@@ -241,7 +249,7 @@
       <p>Single-file click-through of journal-first Techoo. Posting should take one intent, then Post.</p>
       <ol>
         <li>Tap <b>+</b> → Photo → book page → Post, then tap chips to keep words.</li>
-        <li>Tap <b>+</b> → Article and click a sample that “caught your eye.”</li>
+        <li>Tap <b>+</b> → Webclip, paste or pick a URL, wait for scrape, Post. Tap the card to read the saved copy.</li>
         <li>Open the <b>Vocabulary</b> list, then + → Phrase.</li>
         <li>Star a card. Filter Favorites.</li>
       </ol>
@@ -282,21 +290,46 @@ const EXTRACT = [
   { id: "sotto", body: "そっと", gloss: "gently / quietly" },
   { id: "hikari", body: "残光", gloss: "afterglow" },
 ];
-const ARTICLES = [
-  { title: "The notebook as a way of walking", site: "The New Yorker", url: "https://example.com/notebook", quote: "A page is not a plan. It is a place you return to." },
-  { title: "How phrases stick when you meet them outside class", site: "Aeon", url: "https://example.com/phrases", quote: "Vocabulary grows at the edge of a day, not in a deck." },
+const CLIPS = [
+  {
+    slug: "notebook",
+    title: "The notebook as a way of walking",
+    site: "The New Yorker",
+    byline: "A. Walker",
+    url: "https://example.com/notebook",
+    excerpt: "A page is not a plan. It is a place you return to when the day has already happened.",
+    content: [
+      "A page is not a plan. It is a place you return to when the day has already happened.",
+      "The techo does not ask what you meant to do. It holds what caught you: a window, a sentence, a URL you might never open again if you only saved the link.",
+      "Clipping is not browsing. You take a copy, the way you used to tear a column from the paper, and you put it in the book.",
+    ],
+  },
+  {
+    slug: "phrases",
+    title: "How phrases stick when you meet them outside class",
+    site: "Aeon",
+    byline: "M. Sato",
+    url: "https://example.com/phrases",
+    excerpt: "Vocabulary grows at the edge of a day, not in a deck: a sign, a paragraph, a line you underline once.",
+    content: [
+      "Vocabulary grows at the edge of a day, not in a deck: a sign, a paragraph, a line you underline once.",
+      "If the article disappears behind a login next month, the sentence you needed is gone — unless you clipped the page when you had it.",
+      "Save the readable copy first. Pick words from it later, the same way you tap chips on a photograph of a book.",
+    ],
+  },
 ];
 
 const state = {
   tab: "journal",
   list: "all",
-  sheet: null, // capture | photo | article | phrase | extract
+  sheet: null, // capture | photo | webclip | phrase | extract
   photoKey: null,
   caption: "",
   phrase: "",
   gloss: "",
-  article: null,
-  quote: "",
+  clipUrl: "",
+  clipStatus: "idle", // idle | scraping | ready | fail
+  clip: null,
   extractParent: null,
   picked: new Set(),
   taps: 0,
@@ -305,7 +338,7 @@ const state = {
   detail: null,
   entries: [
     { id: "e1", type: "moment", photo: "cafe", body: "Late dinner. Still raining.", at: "Yesterday · 21:14", lists: [], fav: true },
-    { id: "e2", type: "article", title: ARTICLES[0].title, site: ARTICLES[0].site, url: ARTICLES[0].url, body: ARTICLES[0].quote, at: "Yesterday · 18:02", lists: ["newyorker"], fav: false },
+    { id: "e2", type: "webclip", title: CLIPS[0].title, site: CLIPS[0].site, byline: CLIPS[0].byline, url: CLIPS[0].url, excerpt: CLIPS[0].excerpt, content: CLIPS[0].content, at: "Yesterday · 18:02", lists: ["newyorker"], fav: false },
     { id: "e3", type: "phrase", body: "残響", gloss: "lingering sound; reverberation", at: "Today · 8:11", lists: ["vocab"], fav: false },
     { id: "e4", type: "moment", photo: "page", body: "From the train copy of 夜のピクニック", at: "Today · 8:40", lists: ["murakami"], fav: false, page: true },
   ],
@@ -319,13 +352,47 @@ function tap(note) {
   const live = {
     capture: "Capture sheet: three jobs, not a form. Typing a line is also Post.",
     photo: "Photo path. Caption is optional — Post is already available.",
-    article: "Article path. Clicking a sample is the ‘caught my eye’ gesture. Real app = Share from Safari.",
+    webclip: "Webclip: paste or pick a URL. We scrape the readable page and save a copy — not just a bookmark.",
     phrase: "Phrase path. Keyboard should be the first thing. Meaning can wait.",
     extract: "Page already saved. Chips are pick-to-keep. Do not dump the whole page.",
     posted: "Posted. Date, time, and todos never appeared. If a list was open, it inherited.",
     library: "Library is where todos went. Extra tap. That is the cost of journal-first.",
   };
   document.getElementById("liveNote").textContent = live[note] || live[state.sheet] || document.getElementById("liveNote").textContent;
+}
+
+function startScrape(url) {
+  const trimmed = (url || "").trim();
+  state.clipUrl = trimmed;
+  state.clip = null;
+  if (!trimmed) {
+    state.clipStatus = "idle";
+    render();
+    return;
+  }
+  state.clipStatus = "scraping";
+  tap("webclip");
+  render();
+  const token = trimmed;
+  setTimeout(() => {
+    if (state.sheet !== "webclip" || state.clipUrl !== token) return;
+    const hit = CLIPS.find((c) => token.includes(c.slug) || token === c.url);
+    if (hit) {
+      state.clip = hit;
+      state.clipStatus = "ready";
+    } else {
+      state.clip = {
+        title: token.replace(/^https?:\/\//, ""),
+        site: "Unknown",
+        byline: "",
+        url: token,
+        excerpt: "Couldn’t extract a readable body. The URL is kept.",
+        content: [],
+      };
+      state.clipStatus = "fail";
+    }
+    render();
+  }, 700);
 }
 
 function toast(msg) {
@@ -377,8 +444,8 @@ function cardHtml(e) {
   let inner = "";
   if (e.type === "moment") {
     inner = photoBlock(e.photo) + `<div class="body">${escapeHtml(e.body || "")}</div>`;
-  } else if (e.type === "article") {
-    inner = `<div class="article-card"><div class="site">${escapeHtml(e.site)}</div><h4>${escapeHtml(e.title)}</h4><div class="quote">${escapeHtml(e.body || "")}</div></div>`;
+  } else if (e.type === "webclip") {
+    inner = `<div class="clip-card" data-open-entry="${e.id}"><div class="site">${escapeHtml(e.site)}</div><h4>${escapeHtml(e.title)}</h4><div class="excerpt">${escapeHtml(e.excerpt || "")}</div><div class="saved">Full clip saved · tap to read</div></div>`;
   } else {
     inner = `<div class="body"><div class="phrase-hero">${escapeHtml(e.body)}</div><div class="gloss">${escapeHtml(e.gloss || "")}</div></div>`;
   }
@@ -404,7 +471,7 @@ function sheetHtml() {
       <h3>Keep something</h3>
       <div class="jobs">
         <button class="job" data-open="photo"><span class="g">▣</span><span class="l">Photo</span></button>
-        <button class="job" data-open="article"><span class="g">🔗</span><span class="l">Article</span></button>
+        <button class="job" data-open="webclip"><span class="g">⎘</span><span class="l">Webclip</span></button>
         <button class="job" data-open="phrase"><span class="g">あ</span><span class="l">Phrase</span></button>
       </div>
       <div class="type-line" style="margin-top:12px">
@@ -426,18 +493,25 @@ function sheetHtml() {
       </div>`}
     </div></div>`;
   }
-  if (state.sheet === "article") {
-    const preview = state.article ? `<div class="card" style="margin:8px 0 12px"><div class="article-card">
-      <div class="site">${escapeHtml(state.article.site)}</div><h4>${escapeHtml(state.article.title)}</h4>
+  if (state.sheet === "webclip") {
+    const ready = state.clip && (state.clipStatus === "ready" || state.clipStatus === "fail");
+    const preview = ready ? `<div class="card" style="margin:8px 0 12px"><div class="clip-card">
+      <div class="site">${escapeHtml(state.clip.site)}</div><h4>${escapeHtml(state.clip.title)}</h4>
+      <div class="excerpt">${escapeHtml(state.clip.excerpt)}</div>
+      <div class="saved">${state.clip.content.length} paragraphs clipped</div>
     </div></div>` : "";
     return `<div class="scrim show" data-close="1"><div class="sheet" data-stop="1">
-      <div class="row"><button class="text-btn" data-back="capture">Back</button><b>Article</b>
-        <button class="primary" data-post-article="1" ${state.article ? "" : "disabled"}>Post</button></div>
-      <p class="hint">Click something that caught your eye. In the real app this is Share from Safari.</p>
-      ${state.article ? `${preview}
-      <textarea id="quote" rows="3" placeholder="Optional quote">${escapeHtml(state.quote)}</textarea>` : `<div class="samples">
-        ${ARTICLES.map((a,i) => `<button class="sample" data-article="${i}"><b>${escapeHtml(a.title)}</b><span>${escapeHtml(a.site)}</span></button>`).join("")}
-      </div>`}
+      <div class="row"><button class="text-btn" data-back="capture">Back</button><b>Webclip</b>
+        <button class="primary" data-post-clip="1" ${ready ? "" : "disabled"}>Post</button></div>
+      <p class="hint">Paste a URL. We scrape the readable page and save a copy.</p>
+      <input id="clipUrl" placeholder="https://" value="${escapeHtml(state.clipUrl)}" />
+      <div class="samples" style="margin-top:8px">
+        ${CLIPS.map((c) => `<button class="sample" data-clip-url="${escapeHtml(c.url)}"><b>${escapeHtml(c.site)}</b><span>${escapeHtml(c.url)}</span></button>`).join("")}
+      </div>
+      ${state.clipStatus === "scraping" ? `<div class="scraping">Clipping the page…</div>` : ""}
+      ${state.clipStatus === "fail" ? `<div class="scraping">Couldn’t clip the body. URL will still save.</div>` : ""}
+      ${preview}
+      ${ready ? `<input id="caption" placeholder="A thought (optional)" value="${escapeHtml(state.caption)}" />` : ""}
     </div></div>`;
   }
   if (state.sheet === "phrase") {
@@ -481,6 +555,7 @@ function render() {
     return;
   }
   const items = filtered();
+  const open = state.detail && state.entries.find((x) => x.id === state.detail);
   app.innerHTML = `
     <header class="top"><span class="brand">Techo</span><span class="when">Sun 20 Sep</span></header>
     <div class="chips">
@@ -490,10 +565,18 @@ function render() {
       <button class="chip ${state.list==="murakami"?"on":""}" data-list="murakami">Murakami</button>
       <button class="chip ${state.list==="newyorker"?"on":""}" data-list="newyorker">New Yorker</button>
     </div>
-    <div class="feed">
+    ${open && open.type === "webclip" ? `
+      <div class="reader">
+        <button class="back" data-close-detail="1">Back</button>
+        <div class="site">${escapeHtml(open.site)}</div>
+        <h2>${escapeHtml(open.title)}</h2>
+        <div class="by">${escapeHtml(open.byline || "")} · saved copy</div>
+        ${(open.content || []).map((p) => `<p>${escapeHtml(p)}</p>`).join("")}
+      </div>
+    ` : `<div class="feed">
       ${items.length ? items.map(cardHtml).join("") : `<div class="empty">Nothing in this list yet. + to keep something.</div>`}
     </div>
-    <button class="fab" data-open="capture" aria-label="Keep something">+</button>
+    <button class="fab" data-open="capture" aria-label="Keep something">+</button>`}
     <nav class="tabs">
       <button class="on" data-tab="journal">Journal</button>
       <button data-tab="library">Library</button>
@@ -504,6 +587,16 @@ function render() {
   if (caption) {
     caption.addEventListener("input", e => { state.caption = e.target.value; });
     setTimeout(() => caption.focus(), 30);
+  }
+  const clipUrl = document.getElementById("clipUrl");
+  if (clipUrl) {
+    clipUrl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") startScrape(clipUrl.value);
+    });
+    clipUrl.addEventListener("blur", () => {
+      if (clipUrl.value.trim() && clipUrl.value.trim() !== (state.clip && state.clip.url)) startScrape(clipUrl.value);
+    });
+    if (state.clipStatus === "idle") setTimeout(() => clipUrl.focus(), 30);
   }
   const quote = document.getElementById("quote");
   if (quote) quote.addEventListener("input", e => { state.quote = e.target.value; });
@@ -529,7 +622,7 @@ function render() {
 
 document.getElementById("app").addEventListener("click", (e) => {
   const inSheet = e.target.closest("[data-stop]");
-  const t = e.target.closest("[data-tab],[data-list],[data-open],[data-back],[data-photo],[data-article],[data-post-photo],[data-post-article],[data-post-phrase],[data-pick],[data-keep-extract],[data-skip-extract],[data-star]");
+  const t = e.target.closest("[data-tab],[data-list],[data-open],[data-back],[data-photo],[data-clip-url],[data-post-photo],[data-post-clip],[data-post-phrase],[data-pick],[data-keep-extract],[data-skip-extract],[data-star],[data-open-entry],[data-close-detail]");
   if (inSheet) {
     if (!t) return;
   } else if (e.target.closest("[data-close]")) {
@@ -544,7 +637,7 @@ document.getElementById("app").addEventListener("click", (e) => {
   if (t.dataset.open) {
     state.sheet = t.dataset.open;
     if (t.dataset.open === "photo") { state.photoKey = null; state.caption = ""; }
-    if (t.dataset.open === "article") { state.article = null; state.quote = ""; }
+    if (t.dataset.open === "webclip") { state.clip = null; state.clipUrl = ""; state.clipStatus = "idle"; state.caption = ""; }
     if (t.dataset.open === "phrase") { state.phrase = ""; state.gloss = ""; }
     tap(t.dataset.open);
     render();
@@ -552,13 +645,9 @@ document.getElementById("app").addEventListener("click", (e) => {
   }
   if (t.dataset.back) { state.sheet = t.dataset.back; tap(); render(); return; }
   if (t.dataset.photo) { state.photoKey = t.dataset.photo; tap(); render(); return; }
-  if (t.dataset.article) {
-    state.article = ARTICLES[Number(t.dataset.article)];
-    state.quote = state.article.quote;
-    tap("article");
-    render();
-    return;
-  }
+  if (t.dataset.clipUrl) { startScrape(t.dataset.clipUrl); return; }
+  if (t.dataset.closeDetail) { state.detail = null; tap(); render(); return; }
+  if (t.dataset.openEntry) { state.detail = t.dataset.openEntry; tap("webclip"); render(); return; }
   if (t.dataset.postPhoto) {
     if (!state.photoKey) { toast("Pick a photo first"); return; }
     const isPage = PHOTOS[state.photoKey].extract;
@@ -572,9 +661,19 @@ document.getElementById("app").addEventListener("click", (e) => {
     render();
     return;
   }
-  if (t.dataset.postArticle) {
-    if (!state.article) return;
-    postEntry({ type: "article", title: state.article.title, site: state.article.site, url: state.article.url, body: state.quote, lists: inheritList().length ? inheritList() : ["newyorker"] });
+  if (t.dataset.postClip) {
+    if (!state.clip) return;
+    postEntry({
+      type: "webclip",
+      title: state.clip.title,
+      site: state.clip.site,
+      byline: state.clip.byline,
+      url: state.clip.url,
+      excerpt: state.clip.excerpt,
+      content: state.clip.content,
+      body: state.caption,
+      lists: inheritList().length ? inheritList() : ["newyorker"],
+    });
     render();
     return;
   }
@@ -612,7 +711,7 @@ document.getElementById("app").addEventListener("click", (e) => {
 });
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") { state.sheet = null; render(); }
+  if (e.key === "Escape") { state.sheet = null; state.detail = null; render(); }
 });
 
 render();

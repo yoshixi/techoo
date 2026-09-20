@@ -36,7 +36,8 @@ Techo is built around **one kind of dated card**, with optional structure. Other
 An entry is a dated card. It may be:
 
 - a **moment** — photo and a short caption (Instagram-like *layout*, private)
-- a **highlight** — a passage from an article or book, with enough source to find it again
+- a **webclip** — a URL you share or paste; Techoo scrapes the readable page and **saves a copy**
+- a **highlight** — a passage from a book (or a mark inside a webclip), with enough source to find it again
 - a **language scrap** — a sentence or phrase plus a gloss, tagged by language
 - **free writing** — the day’s words with no extra fields
 
@@ -89,7 +90,7 @@ If keeping something takes a form, people will not keep it. Capture is **one int
 Home `+` is a **capture sheet**, not a “New Post” form. Three jobs:
 
 1. **Photo + a thought** — shutter, then an optional caption. The feed is the photo with the thought under it.
-2. **Article that caught your eye** — Share from the browser, or paste a URL. Techoo is the pocket, not the reader. A quote is optional; the link is enough.
+2. **Webclip** — Share from the browser, or paste a URL. Techoo scrapes the readable page and saves it. The feed shows title + excerpt; tap to read the copy. A thought from you is optional. The original link is kept, but the body is yours.
 3. **A new phrase** — large phrase field, optional meaning. Language defaults to the last one you used. This is how vocabulary grows: record the phrase when you meet it.
 
 A **page photo or screenshot** is the photo path plus extract: the clipping saves first, then you tap chips for the words you want. Those words become phrase cards, grouped with the page (same list, and threaded to the photo). You pick; the whole page is not dumped into vocabulary.
@@ -99,7 +100,7 @@ A **page photo or screenshot** is the photo path plus extract: the clipping save
 ## Primary surfaces (conceptual)
 
 - **Journal / home** — Visual chronological feed. This is the front door. List chips stay.
-- **Capture** — Photo, article, phrase. Share-in lands here.
+- **Capture** — Photo, webclip, phrase. Share-in lands here.
 - **Lists & favorites** — Collections you name — same idea as today’s Timeline tabs.
 - **Library** — To-dos, calendar, notes: available, secondary.
 - **Settings** — Account, calendars, later defaults (e.g. a preferred language).
@@ -111,6 +112,7 @@ Exact layouts may evolve; the **roles** stay: journal first, capture easy, plann
 - **Not a team tool.** Single-user: your techo, not a shared workspace.
 - **Not a social network.** No followers, public profiles, or engagement counts. “Share” means share *into* your journal.
 - **Not a required task manager.** To-dos exist; they are not the product.
+- **Not a web browser or magazine.** We do not discover articles. We **webclip**: scrape and keep a readable copy of a page you sent.
 - **Not Anki or Readwise.** No review engine and no bibliographic warehouse as the core loop.
 - **Not a replacement for every specialist app.** Deep study, publishing, or photo libraries may still live elsewhere.
 
@@ -122,6 +124,7 @@ Exact layouts may evolve; the **roles** stay: journal first, capture easy, plann
 - **Auto-generated API client** from OpenAPI spec keeps frontend and backend in sync
 - **SWR** for data fetching with optimistic updates so the UI stays responsive
 - Journal images (when added) belong in object storage, not as blobs in SQLite
+- Webclips are fetched on the Worker, extracted to readable markdown, and stored on the post (a copy, not a bookmark)
 
 ## Lineage
 
@@ -133,7 +136,7 @@ Product decision record: [`agents/plans/2026-09-20-techoo-journal-reconsider.md`
 
 Possible extensions—used to test whether ideas still fit the techo metaphor.
 
-- **Share-in from other apps** — article URL, selected text, or a screenshot becomes an entry in one step.
+- **Share-in from other apps** — URL, selected text, or a screenshot becomes an entry in one step. URLs are scraped and saved as webclips.
 - **Extract words from a page photo** — OCR/assist, then tap-to-keep chips. Never a gate on saving the photo.
 - **Language filter that feels like a section of the notebook** — not a flashcard deck.
 - **Deeper “day review”** — a single evening read of the day’s cards (and, if you used them, the plan).

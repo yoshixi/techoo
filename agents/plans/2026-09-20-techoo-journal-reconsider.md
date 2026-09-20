@@ -66,7 +66,7 @@ flowchart LR
         jPlus[Capture sheet]
         jHome --> jPlus
         jPlus --> jPhoto[Photo]
-        jPlus --> jArticle[Article]
+        jPlus --> jClip[Webclip]
         jPlus --> jPhrase[Phrase]
     end
 ```
@@ -79,15 +79,15 @@ flowchart LR
 flowchart TD
     plus([Plus])
     plus --> photo[Photo]
-    plus --> article[Article]
+    plus --> webclip[Webclip]
     plus --> phrase[Phrase]
     plus -.-> typeLine[Or just type]
     photo --> cam[Camera]
     cam --> cap[Optional caption]
     cap --> postPhoto([Post])
-    article --> share[Share or paste URL]
-    share --> quote[Optional quote]
-    quote --> postArticle([Post])
+    webclip --> paste[Share or paste URL]
+    paste --> scrape[Scrape readable page]
+    scrape --> postClip([Post])
     phrase --> fields[Phrase plus optional meaning]
     fields --> postPhrase([Post])
     typeLine --> postType([Post])
@@ -133,7 +133,9 @@ Do **not** add three new resources (moments / highlights / language cards). Evol
 | `body` | Caption, quote, or free writing | Soft — empty allowed if an image is present |
 | `posted_at` | When it belongs on the day | Yes (defaults to now) |
 | images | One or more photos | No |
-| `source` | Book / article title, author, URL, page | No — used for highlights |
+| `source` | Book title, URL, page | No — highlights and webclips |
+| `clipped_content` | Scraped readable page (markdown) | Webclip — saved copy, not a bookmark |
+| `clipped_excerpt` | First lines for the feed card | Webclip |
 | `language` | BCP-47 tag of the captured text (e.g. `ja`, `en`, `fr`) | No — used for language learning |
 | `gloss` | Translation or note on the captured text | No |
 | lists / favorite | Existing collections | Unchanged |
@@ -142,7 +144,7 @@ Do **not** add three new resources (moments / highlights / language cards). Evol
 Soft **intents** (composer presets, not schema enums) so the UI can be specific without fragmenting storage:
 
 - **Moment** — photo-first, short caption.
-- **Highlight** — quoted `body` + `source` (+ optional page photo).
+- **Webclip** — paste or share a URL; scrape and save the readable page.
 - **Language** — `body` in the target language + `gloss` + `language` (+ optional photo of the sign/page).
 - **Free** — writing with no extra fields.
 
@@ -210,7 +212,7 @@ Notes stay the **long page**: drafts, reference, writing that is not a dated car
 | Surface | Role after this shift |
 |---|---|
 | **Home / Journal** | Visual chronological feed. Primary tab. List chips stay (All / Favorites / named lists). |
-| **Capture** | The product. Photo, article, phrase — not a generic “New Post” form. |
+| **Capture** | The product. Photo, webclip, phrase — not a generic “New Post” form. |
 | **Lists & favorites** | Grouping. Same primitive as today’s Timeline tabs. |
 | **Library** | Todos, calendar, notes — available, not the front door. |
 | **Settings** | Auth, calendars, later: default language, storage. |
@@ -233,7 +235,7 @@ Home `+` opens a short sheet with three jobs that match how people actually post
 | Action | Opens | Done when |
 |---|---|---|
 | **Photo** | Camera (long-press / secondary: library) | Photo is on the card; caption optional; Post |
-| **Article** | Paste URL / accept a share | Title + link are on the card; quote optional; Post |
+| **Webclip** | Paste URL / accept a share | Readable page is scraped and saved; optional thought; Post |
 | **Phrase** | Keyboard on a large phrase field | Phrase is there; meaning optional; Post |
 
 Do not put all three jobs on one scrolling form. Each job is its own small sheet so the first screen only asks for the one thing that job needs.
@@ -248,19 +250,38 @@ Instagram-ish **capture**, private **keep**.
 
 The feed card is the photo with the thought under it. This is the default visual rhythm of Home.
 
-#### 2. Article that catches their eye
+#### 2. Webclip — scrape the page and keep it
 
-“Click” means **one save when something in the world catches you**, not that Techoo becomes a reader or an article browser.
+The job is **clip**, not bookmark. A URL that dies, paywalls, or rearranges tomorrow is useless. Techoo fetches the page, extracts the readable article (title, byline, body, lead image), and **stores that copy** on the journal entry.
 
-Primary path: **Share → Techoo** from Safari / reader / any app (URL, and selected text if any).
+**Term:** **Webclip** on the capture sheet. Not “Article” (sounds like a CMS) and not “bookmark” (sounds like a link).
 
-In-app path: Article → paste a URL. Unfurl title, site, and preview image so the card looks like a clipping, not a raw link.
+Primary path: **Share → Techoo** from Safari with the page URL.
 
-- `body` = selected quote, or empty until later.
-- `source.url` + `source.title` from the unfurl.
-- Tap the saved card later to reopen the article.
+In-app path: Webclip → paste a URL → Clipping… → preview → Post.
 
-We do not build a discover feed of articles. The world’s browsers already do “things that catch your eye.” Techoo is the pocket they fall into.
+What we save:
+
+| Field | Role |
+|---|---|
+| `source.url` | Original link, to reopen on the web |
+| `source.title`, `source.site`, `source.byline` | From the extracted document |
+| `clipped_content` | Readable body as markdown (the copy you own) |
+| `clipped_excerpt` | First ~280 characters for the feed card |
+| `lead_image` | Optional hero, stored like other post images |
+| `body` | Optional thought from you, not the article |
+
+Feed card: lead image or site chip, title, excerpt, “Full clip saved”. Tap opens a **reader of the saved copy** inside Techoo — not Safari. That is still not a discover feed; we only read what you clipped.
+
+**Scrape behavior**
+
+- Run on the backend (Worker `fetch` + readability-style extraction). Do not ask the phone to parse HTML.
+- Cap size (on the order of a long essay, not a whole site). Strip chrome, nav, ads, comments.
+- If scrape fails (login wall, bot block): still save the URL + any `og:` title we got, and say “Couldn’t clip the body.” The entry is valid; you can retry.
+- Selected text from the share sheet becomes a highlight *inside* the clip when we also have the URL; it is not a substitute for the saved page.
+- Later: the same tap-to-keep chips as book photos, run on `clipped_content`, for vocabulary.
+
+We do not crawl the web looking for articles. The world’s browsers already do “things that catch your eye.” Techoo keeps a **copy**.
 
 #### 3. Record a new phrase (vocabulary)
 
@@ -301,7 +322,7 @@ Rules that make grouping cheap:
 - Creating from a list tab files into that list (already true).
 - After Post, a single optional row of list chips if you are on All and want to file it. Skip = stays on All.
 - Long-press a list tab to rename/delete (already true).
-- Suggested first lists on an empty journal: `Vocabulary`, and whatever you name when you save the first book/article.
+- Suggested first lists on an empty journal: `Vocabulary`, and whatever you name when you save the first book or webclip.
 
 Lists are how a techo has sections. They are not tags you must apply to every card.
 
@@ -321,11 +342,11 @@ Power users can still edit those on the entry after it exists.
 This PR is the product decision only. Suggested build order when we implement — **capture ease first**:
 
 1. **Journal-first chrome** — Home = Timeline/journal; todos off the primary tab bar. Keep list chips.
-2. **Capture sheet** — Photo / Article / Phrase instead of the current New Post form. Phrase can ship as text-only (`body` + later `gloss`). Inherit the active list.
+2. **Capture sheet** — Photo / Webclip / Phrase instead of the current New Post form. Phrase can ship as text-only (`body` + later `gloss`). Inherit the active list.
 3. **Images + visual feed** — `post_images` + R2; photo+thought path; Instagram-like cards.
-4. **Article share / unfurl** — share-in URL + selected text; in-app paste + preview card.
-5. **Highlight / language fields** — `source_*`, `language`, `gloss` so article and phrase sheets persist structure.
-6. **Extract from page** — OCR on a saved photo; chip-picker; child phrase posts via `parent_post_id`.
+4. **Webclip scrape + save** — share-in or paste URL; Worker fetch + readability extract; store `clipped_content`; reader of the saved copy.
+5. **Highlight / language fields** — `source_*`, `language`, `gloss` so webclip and phrase sheets persist structure.
+6. **Extract from page** — OCR on a saved photo (and later on a webclip); chip-picker; child phrase posts via `parent_post_id`.
 
 Slice 2 is the real UX test. If posting a phrase from a list tab is not faster than today’s form, the rest of the schema will not save the product.
 
@@ -335,7 +356,7 @@ Single HTML file, click through on desktop:
 
 [`agents/plans/assets/2026-09-20/journal-capture-mock.html`](./assets/2026-09-20/journal-capture-mock.html)
 
-Open in a browser (or `python3 -m http.server` in that folder). Phone-sized Journal with Photo / Article / Phrase, extract chips, list inheritance, and Library for demoted todos.
+Open in a browser (or `python3 -m http.server` in that folder). Phone-sized Journal with Photo / Webclip / Phrase, extract chips, list inheritance, and Library for demoted todos.
 
 ### Mock assessment (after clicking through)
 
@@ -353,28 +374,28 @@ Clicked every capture path on the mock. Verdict: **the product idea holds; the t
 
 1. **Photo is still too many taps.** `+` → Photo → pick a shot → Post is 3–4 steps. “Take a photo and a thought” wants shutter first (long-press `+`, or Photo opens the camera). The in-mock picker (cafe / page / sign) is a stand-in; in product, camera *is* the first screen of Photo.
 2. **All-feed gets noisy after extract.** Kept words land as sibling cards above the page. Lists group them (Vocabulary, Murakami), but All looks like a vocab quiz, not a journal. Prefer: All shows the **page clipping** with “2 words kept”; the words live in Vocabulary (and in the page thread).
-3. **Article “click” is fake here.** Tapping a sample title is not how catching-your-eye works. The real gesture is Share from Safari. The in-app sheet should be paste-URL / recent clip, not a fake magazine rack.
-4. **Mixed card rhythm is not Instagram yet.** Phrase cards are type-forward (good). Photo cards will only feel Instagram-ish with real photos, full-bleed, caption under — gradients in the mock don’t prove that. Article cards should be clippings (preview image + title), not only italic quotes.
+3. **Webclip must paste/share a URL, then scrape.** A fake magazine rack of titles is the wrong gesture. Preview the extracted title + excerpt; Post stores the full readable copy. Tap the card to read it in Techoo.
+4. **Mixed card rhythm is not Instagram yet.** Phrase cards are type-forward (good). Photo cards will only feel Instagram-ish with real photos, full-bleed, caption under — gradients in the mock don’t prove that. Webclip cards should look like clippings (lead image + title + excerpt), then a reader.
 5. **`+` covers the last card.** Classic FAB overlap. More feed padding, or a capture bar above the tab.
 6. **Stars are small.** Easy to miss on a real phone.
 7. **Sheet vs input (fixed in the mock).** First pass closed the sheet when tapping the caption field (scrim ate the click). Capture sheets must treat the sheet as a trap for taps; only the dimmed area dismisses.
 
 **Changes to the decision from using it**
 
-- Keep the three-job sheet. Do **not** make Home a camera-only Instagram. Phrase and article would lose.
+- Keep the three-job sheet. Do **not** make Home a camera-only Instagram. Phrase and webclip would lose.
 - Add **long-press `+` = camera** so the photo+thought path is one gesture.
 - Extracted words default into **Vocabulary** (and the book list), not into All as peer posts. All keeps the page.
-- Article v1 is share-in, not in-app discovery.
+- Webclip v1 is **scrape and save**, then a reader of that copy. Share-in URL is the capture gesture.
 
 **Tap budget we actually saw** (happy path, after the input bug fix)
 
 | Job | Taps to saved | Notes |
 |---|---|---|
 | Phrase from Vocabulary | 4 | + , Phrase, type, Post |
-| Article (sample click) | 4 | + , Article, sample, Post |
+| Webclip (paste URL, wait for scrape) | ~4 | + , Webclip, paste or sample URL, Post |
 | Book page + 2 words | ~8 | + , Photo, page, Post, 2 chips, Keep |
 
-Phrase and article are close to the budget. Book+extract is allowed to be longer because extract is a second beat after the clipping exists.
+Phrase and webclip are close to the budget. Book+extract is allowed to be longer because extract is a second beat after the clipping exists.
 
 ## Consequences
 
@@ -403,7 +424,8 @@ Phrase and article are close to the budget. Book+extract is allowed to be longer
 | Notes as the journal | Notes have no feed rhythm, no `posted_at` story, no visual card. |
 | Full social Instagram | Conflicts with single-user / private techo. |
 | Anki-in-Techoo | Different habit (review vs capture). Revisit only after capture works. |
-| Build an in-app article reader / discover feed | “Caught my eye” happens in the browser. Share-in is the click. |
+| Build a discover feed of the web | Catching your eye happens in the browser. Webclip only saves what you send. |
+| Bookmark-only (URL, no body) | Pages rot and paywall. The product is a saved readable copy. |
 | New folder/notebook taxonomy | Timeline lists already group. Inherit the active list on capture. |
 | Extract-before-save | OCR failure would lose the clipping. Save the photo first; chips second. |
 | Second big-bang revamp | Auth, tenant DBs, posts, lists are fine. Evolve posts; do not replace the domain layer. |
