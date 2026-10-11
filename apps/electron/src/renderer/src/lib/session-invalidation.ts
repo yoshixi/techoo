@@ -1,7 +1,8 @@
 /**
- * Cross-cutting handling when remote auth is rejected or tokens cannot be refreshed.
- * API transport (`customInstance`) and auth/token helpers emit here; hooks subscribe to
- * sync React auth UI without scattering listeners across generated API clients.
+ * Cross-cutting handling when the Techoo session is actually dead.
+ * Only `/api/token` 401/403 (session token rejected) should emit this.
+ * API 401s from JWT expiry or Google OAuth must refresh and retry first;
+ * they must not notify here or the user is bounced to sign-in spuriously.
  */
 export const SESSION_INVALID_REASON = {
   API_UNAUTHORIZED: 'api-unauthorized',

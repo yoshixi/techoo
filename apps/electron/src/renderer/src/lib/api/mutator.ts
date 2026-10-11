@@ -1,5 +1,4 @@
-import { getJwt, invalidateAuthSession } from '../auth'
-import { SESSION_INVALID_REASON } from '../session-invalidation'
+import { getJwt } from '../auth-tokens'
 
 // API Configuration
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'}/api`
@@ -18,6 +17,10 @@ export interface CustomRequestConfig {
  * This function will be used by the generated API client
  */
 export const customInstance = async <T>(config: CustomRequestConfig): Promise<T> => {
+  return requestWithAuthRetry<T>(config, false)
+}
+
+async function requestWithAuthRetry<T>(config: CustomRequestConfig, retried: boolean): Promise<T> {
   const url = new URL(config.url, API_BASE_URL)
   if (config.params) {
     Object.entries(config.params).forEach(([key, value]) => {
@@ -34,10 +37,10 @@ export const customInstance = async <T>(config: CustomRequestConfig): Promise<T>
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    Accept: 'application/json'
+    Accept: 'application/json',
+    ...config.headers
   }
 
-  // Add JWT authorization header
   const jwt = await getJwt()
   if (jwt) {
     headers['Authorization'] = `Bearer ${jwt}`
@@ -51,10 +54,15 @@ export const customInstance = async <T>(config: CustomRequestConfig): Promise<T>
 
   const response = await fetch(url.toString(), requestConfig)
 
-  // Central auth middleware: any API 401 clears credentials and drives AuthGate → AuthScreen
-  if (response.status === 401) {
-    invalidateAuthSession(SESSION_INVALID_REASON.API_UNAUTHORIZED)
-    throw new Error('Unauthorized')
+  // JWT middleware 401s when the access token is expired. Google Calendar
+  // routes also return 401 when *Google* tokens expire. Always try one
+  // session→JWT refresh before giving up; never wipe the Techoo session on
+  // a 401 that is not from `/api/token`.
+  if (response.status === 401 && !retried) {
+    const refreshed = await getJwt({ forceRefresh: true })
+    if (refreshed) {
+      return requestWithAuthRetry<T>(config, true)
+    }
   }
 
   if (!response.ok) {
