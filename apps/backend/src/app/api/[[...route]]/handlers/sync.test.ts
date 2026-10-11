@@ -6,7 +6,7 @@ import { getVaultRoute, putVaultRoute, resetVaultRoute } from '../routes/vault'
 import { getSyncHeadRoute, pullSyncOpsRoute, pushSyncOpsRoute } from '../routes/sync'
 import { getVaultHandler, putVaultHandler, resetVaultHandler } from './vault'
 import { getSyncHeadHandler, pullSyncOpsHandler, pushSyncOpsHandler } from './sync'
-import { GENESIS_HASH } from '../../../core/sync.core'
+import { GENESIS_HASH, isEncryptedSyncPath } from '../../../core/sync.core'
 import { chainHash, deleteUserSyncData, type SyncDatabase } from '../../../core/sync.db'
 import { createMemorySyncDatabase } from '../../../db/tests/memorySyncDatabase'
 
@@ -53,6 +53,17 @@ function createTestApp(getUser: () => { id: number; email: string; name: string 
   app.openapi(pullSyncOpsRoute, pullSyncOpsHandler)
   return app
 }
+
+describe('encrypted sync paths', () => {
+  it('matches the vault and sync API only', () => {
+    expect(isEncryptedSyncPath('/api/v1/vault')).toBe(true)
+    expect(isEncryptedSyncPath('/api/v1/vault/reset')).toBe(true)
+    expect(isEncryptedSyncPath('/api/v1/sync')).toBe(true)
+    expect(isEncryptedSyncPath('/api/v1/sync/ops')).toBe(true)
+    expect(isEncryptedSyncPath('/api/v1/todos')).toBe(false)
+    expect(isEncryptedSyncPath('/api/v1/notes')).toBe(false)
+  })
+})
 
 describe('Encrypted sync service', () => {
   let syncDb: SyncDatabase

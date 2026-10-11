@@ -3,6 +3,13 @@ import { z } from '@hono/zod-openapi'
 /** SHA-256 hex of an empty chain. The first op stores this as prevHash. */
 export const GENESIS_HASH = '0'.repeat(64)
 
+const ENCRYPTED_SYNC_PREFIXES = ['/api/v1/vault', '/api/v1/sync'] as const
+
+/** Vault and sync routes never open a Turso tenant database. */
+export function isEncryptedSyncPath(path: string): boolean {
+  return ENCRYPTED_SYNC_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))
+}
+
 export const SYNC_ERROR = {
   unavailable: 'sync_unavailable',
   vaultExists: 'vault_exists',

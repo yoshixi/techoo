@@ -1,6 +1,7 @@
 import type { OpenAPIHono } from '@hono/zod-openapi'
 import type { AppBindings } from '../types'
 import { verifyJwt, type JwtPayload } from '../../../core/jwt'
+import { isEncryptedSyncPath } from '../../../core/sync.core'
 import { getTenantDbForUser } from '../../../core/common.db'
 import { createOAuthService } from '../../../core/oauth.service'
 
@@ -56,8 +57,12 @@ export function registerJwtAuthMiddleware(app: OpenAPIHono<AppBindings>) {
       email: payload.email,
       name: payload.name,
     })
-    c.set('db', getTenantDbForUser(userId))
-    c.set('oauth', createOAuthService(userId))
+    // Encrypted sync reads D1 only. Opening a tenant database here would
+    // require Turso configuration for a request that never uses it.
+    if (!isEncryptedSyncPath(path)) {
+      c.set('db', getTenantDbForUser(userId))
+      c.set('oauth', createOAuthService(userId))
+    }
     const logger = c.get('logger')
     if (logger) {
       c.set('logger', logger.child({ userId }))
