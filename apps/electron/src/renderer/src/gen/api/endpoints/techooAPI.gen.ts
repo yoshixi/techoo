@@ -32,6 +32,7 @@ import type {
   GetApiOauthGoogleStatusParams,
   GetApiV1NotesParams,
   GetApiV1PostsParams,
+  GetApiV1SyncOpsParams,
   GetApiV1TodosParams,
   HealthResponse,
   NoteListResponse,
@@ -45,9 +46,14 @@ import type {
   PostListsResponse,
   PostResponse,
   PostThreadResponse,
+  PullSyncOpsResponse,
+  PushSyncOps,
+  PushSyncOpsResponse,
+  PutVault,
   SessionCodeResponse,
   SessionResponse,
   StopWatchResponse,
+  SyncHead,
   TodoListResponse,
   TodoResponse,
   TokenRequest,
@@ -57,6 +63,7 @@ import type {
   UpdatePost,
   UpdatePostList,
   UpdateTodo,
+  Vault,
   WatchChannelResponse,
   WatchChannelStatus,
   WebhookResponse
@@ -2030,6 +2037,293 @@ export const useDeleteApiAccount = <TError = ErrorResponse>(options?: {
   const swrFn = getDeleteApiAccountMutationFetcher()
 
   const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * Stores the wrapped data key for this account. The passphrase never reaches the server. Fails when an active vault already exists.
+ * @summary Create the encrypted sync vault
+ */
+export const putApiV1Vault = (putVault: PutVault) => {
+  return customInstance<Vault>({
+    url: `/api/v1/vault`,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    data: putVault
+  })
+}
+
+export const getPutApiV1VaultMutationFetcher = () => {
+  return (_: Key, { arg }: { arg: PutVault }) => {
+    return putApiV1Vault(arg)
+  }
+}
+export const getPutApiV1VaultMutationKey = () => [`/api/v1/vault`] as const
+
+export type PutApiV1VaultMutationResult = NonNullable<Awaited<ReturnType<typeof putApiV1Vault>>>
+export type PutApiV1VaultMutationError =
+  | ErrorResponse
+  | ErrorResponse
+  | ErrorResponse
+  | ErrorResponse
+
+/**
+ * @summary Create the encrypted sync vault
+ */
+export const usePutApiV1Vault = <
+  TError = ErrorResponse | ErrorResponse | ErrorResponse | ErrorResponse
+>(options?: {
+  swr?: SWRMutationConfiguration<
+    Awaited<ReturnType<typeof putApiV1Vault>>,
+    TError,
+    Key,
+    PutVault,
+    Awaited<ReturnType<typeof putApiV1Vault>>
+  > & { swrKey?: string }
+}) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getPutApiV1VaultMutationKey()
+  const swrFn = getPutApiV1VaultMutationFetcher()
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * Returns the wrapped data key and the current sync head. The server cannot unwrap the key.
+ * @summary Read the encrypted sync vault
+ */
+export const getApiV1Vault = () => {
+  return customInstance<Vault>({ url: `/api/v1/vault`, method: 'GET' })
+}
+
+export const getGetApiV1VaultKey = () => [`/api/v1/vault`] as const
+
+export type GetApiV1VaultQueryResult = NonNullable<Awaited<ReturnType<typeof getApiV1Vault>>>
+export type GetApiV1VaultQueryError = ErrorResponse | ErrorResponse | ErrorResponse
+
+/**
+ * @summary Read the encrypted sync vault
+ */
+export const useGetApiV1Vault = <TError = ErrorResponse | ErrorResponse | ErrorResponse>(options?: {
+  swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiV1Vault>>, TError> & {
+    swrKey?: Key
+    enabled?: boolean
+  }
+}) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const isEnabled = swrOptions?.enabled !== false
+  const swrKey = swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiV1VaultKey() : null))
+  const swrFn = () => getApiV1Vault()
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * Retires the active vault, deletes its ciphertext log, and stores a new wrapped key. Devices that still hold the old vault id must join this vault.
+ * @summary Replace the encrypted sync vault
+ */
+export const postApiV1VaultReset = (putVault: PutVault) => {
+  return customInstance<Vault>({
+    url: `/api/v1/vault/reset`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: putVault
+  })
+}
+
+export const getPostApiV1VaultResetMutationFetcher = () => {
+  return (_: Key, { arg }: { arg: PutVault }) => {
+    return postApiV1VaultReset(arg)
+  }
+}
+export const getPostApiV1VaultResetMutationKey = () => [`/api/v1/vault/reset`] as const
+
+export type PostApiV1VaultResetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof postApiV1VaultReset>>
+>
+export type PostApiV1VaultResetMutationError =
+  | ErrorResponse
+  | ErrorResponse
+  | ErrorResponse
+  | ErrorResponse
+  | ErrorResponse
+
+/**
+ * @summary Replace the encrypted sync vault
+ */
+export const usePostApiV1VaultReset = <
+  TError = ErrorResponse | ErrorResponse | ErrorResponse | ErrorResponse | ErrorResponse
+>(options?: {
+  swr?: SWRMutationConfiguration<
+    Awaited<ReturnType<typeof postApiV1VaultReset>>,
+    TError,
+    Key,
+    PutVault,
+    Awaited<ReturnType<typeof postApiV1VaultReset>>
+  > & { swrKey?: string }
+}) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getPostApiV1VaultResetMutationKey()
+  const swrFn = getPostApiV1VaultResetMutationFetcher()
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * Returns the active vault id and the hash chain head. Clients compare this with their cursor before pulling.
+ * @summary Read the sync log head
+ */
+export const getApiV1Sync = () => {
+  return customInstance<SyncHead>({ url: `/api/v1/sync`, method: 'GET' })
+}
+
+export const getGetApiV1SyncKey = () => [`/api/v1/sync`] as const
+
+export type GetApiV1SyncQueryResult = NonNullable<Awaited<ReturnType<typeof getApiV1Sync>>>
+export type GetApiV1SyncQueryError = ErrorResponse | ErrorResponse | ErrorResponse
+
+/**
+ * @summary Read the sync log head
+ */
+export const useGetApiV1Sync = <TError = ErrorResponse | ErrorResponse | ErrorResponse>(options?: {
+  swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiV1Sync>>, TError> & {
+    swrKey?: Key
+    enabled?: boolean
+  }
+}) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const isEnabled = swrOptions?.enabled !== false
+  const swrKey = swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiV1SyncKey() : null))
+  const swrFn = () => getApiV1Sync()
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * Stores ciphertext snapshots. A repeated clientOpId returns the sequence already assigned. The server does not decrypt the payload.
+ * @summary Append encrypted sync ops
+ */
+export const postApiV1SyncOps = (pushSyncOps: PushSyncOps) => {
+  return customInstance<PushSyncOpsResponse>({
+    url: `/api/v1/sync/ops`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: pushSyncOps
+  })
+}
+
+export const getPostApiV1SyncOpsMutationFetcher = () => {
+  return (_: Key, { arg }: { arg: PushSyncOps }) => {
+    return postApiV1SyncOps(arg)
+  }
+}
+export const getPostApiV1SyncOpsMutationKey = () => [`/api/v1/sync/ops`] as const
+
+export type PostApiV1SyncOpsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof postApiV1SyncOps>>
+>
+export type PostApiV1SyncOpsMutationError =
+  | ErrorResponse
+  | ErrorResponse
+  | ErrorResponse
+  | ErrorResponse
+  | ErrorResponse
+
+/**
+ * @summary Append encrypted sync ops
+ */
+export const usePostApiV1SyncOps = <
+  TError = ErrorResponse | ErrorResponse | ErrorResponse | ErrorResponse | ErrorResponse
+>(options?: {
+  swr?: SWRMutationConfiguration<
+    Awaited<ReturnType<typeof postApiV1SyncOps>>,
+    TError,
+    Key,
+    PushSyncOps,
+    Awaited<ReturnType<typeof postApiV1SyncOps>>
+  > & { swrKey?: string }
+}) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getPostApiV1SyncOpsMutationKey()
+  const swrFn = getPostApiV1SyncOpsMutationFetcher()
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+/**
+ * Returns ciphertext ops with seq greater than `after`, in order.
+ * @summary Pull encrypted sync ops
+ */
+export const getApiV1SyncOps = (params: GetApiV1SyncOpsParams) => {
+  return customInstance<PullSyncOpsResponse>({ url: `/api/v1/sync/ops`, method: 'GET', params })
+}
+
+export const getGetApiV1SyncOpsKey = (params: GetApiV1SyncOpsParams) =>
+  [`/api/v1/sync/ops`, ...(params ? [params] : [])] as const
+
+export type GetApiV1SyncOpsQueryResult = NonNullable<Awaited<ReturnType<typeof getApiV1SyncOps>>>
+export type GetApiV1SyncOpsQueryError =
+  | ErrorResponse
+  | ErrorResponse
+  | ErrorResponse
+  | ErrorResponse
+  | ErrorResponse
+
+/**
+ * @summary Pull encrypted sync ops
+ */
+export const useGetApiV1SyncOps = <
+  TError = ErrorResponse | ErrorResponse | ErrorResponse | ErrorResponse | ErrorResponse
+>(
+  params: GetApiV1SyncOpsParams,
+  options?: {
+    swr?: SWRConfiguration<Awaited<ReturnType<typeof getApiV1SyncOps>>, TError> & {
+      swrKey?: Key
+      enabled?: boolean
+    }
+  }
+) => {
+  const { swr: swrOptions } = options ?? {}
+
+  const isEnabled = swrOptions?.enabled !== false
+  const swrKey = swrOptions?.swrKey ?? (() => (isEnabled ? getGetApiV1SyncOpsKey(params) : null))
+  const swrFn = () => getApiV1SyncOps(params)
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
 
   return {
     swrKey,

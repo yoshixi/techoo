@@ -1268,6 +1268,287 @@
           "message"
         ]
       },
+      "SyncKdfParams": {
+        "type": "object",
+        "properties": {
+          "N": {
+            "type": "integer",
+            "minimum": 1024,
+            "maximum": 1048576
+          },
+          "r": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 32
+          },
+          "p": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16
+          },
+          "keyLen": {
+            "type": "integer",
+            "minimum": 16,
+            "maximum": 64
+          }
+        },
+        "required": [
+          "N",
+          "r",
+          "p"
+        ]
+      },
+      "Vault": {
+        "type": "object",
+        "properties": {
+          "vaultId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "salt": {
+            "type": "string"
+          },
+          "kdf": {
+            "type": "string",
+            "enum": [
+              "scrypt"
+            ]
+          },
+          "kdfParams": {
+            "$ref": "#/components/schemas/SyncKdfParams"
+          },
+          "wrappedKey": {
+            "type": "string"
+          },
+          "wrappedKeyNonce": {
+            "type": "string"
+          },
+          "headSeq": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "headHash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "vaultId",
+          "salt",
+          "kdf",
+          "kdfParams",
+          "wrappedKey",
+          "wrappedKeyNonce",
+          "headSeq",
+          "headHash"
+        ]
+      },
+      "PutVault": {
+        "type": "object",
+        "properties": {
+          "salt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "kdf": {
+            "type": "string",
+            "enum": [
+              "scrypt"
+            ]
+          },
+          "kdfParams": {
+            "$ref": "#/components/schemas/SyncKdfParams"
+          },
+          "wrappedKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "wrappedKeyNonce": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "salt",
+          "kdf",
+          "kdfParams",
+          "wrappedKey",
+          "wrappedKeyNonce"
+        ]
+      },
+      "SyncHead": {
+        "type": "object",
+        "properties": {
+          "vaultId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "headSeq": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "headHash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "vaultId",
+          "headSeq",
+          "headHash"
+        ]
+      },
+      "PushedSyncOp": {
+        "type": "object",
+        "properties": {
+          "clientOpId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "seq": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "prevHash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientOpId",
+          "seq",
+          "prevHash"
+        ]
+      },
+      "PushSyncOpsResponse": {
+        "type": "object",
+        "properties": {
+          "ops": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PushedSyncOp"
+            }
+          }
+        },
+        "required": [
+          "ops"
+        ]
+      },
+      "SyncOpInput": {
+        "type": "object",
+        "properties": {
+          "clientOpId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "recordId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "deviceId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "nonce": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "ciphertext": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000000
+          }
+        },
+        "required": [
+          "clientOpId",
+          "recordId",
+          "deviceId",
+          "nonce",
+          "ciphertext"
+        ]
+      },
+      "PushSyncOps": {
+        "type": "object",
+        "properties": {
+          "vaultId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "ops": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SyncOpInput"
+            },
+            "minItems": 1,
+            "maxItems": 50
+          }
+        },
+        "required": [
+          "vaultId",
+          "ops"
+        ]
+      },
+      "SyncOp": {
+        "type": "object",
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "clientOpId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "recordId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "deviceId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+          },
+          "nonce": {
+            "type": "string"
+          },
+          "ciphertext": {
+            "type": "string"
+          },
+          "prevHash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "seq",
+          "clientOpId",
+          "recordId",
+          "deviceId",
+          "nonce",
+          "ciphertext",
+          "prevHash"
+        ]
+      },
+      "PullSyncOpsResponse": {
+        "type": "object",
+        "properties": {
+          "ops": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SyncOp"
+            }
+          },
+          "headSeq": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "ops",
+          "headSeq"
+        ]
+      },
       "WebhookResponse": {
         "type": "object",
         "properties": {}
@@ -3486,6 +3767,418 @@
           },
           "500": {
             "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vault": {
+      "put": {
+        "summary": "Create the encrypted sync vault",
+        "description": "Stores the wrapped data key for this account. The passphrase never reaches the server. Fails when an active vault already exists.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutVault"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Vault created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Vault"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An active vault already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Sync storage is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Read the encrypted sync vault",
+        "description": "Returns the wrapped data key and the current sync head. The server cannot unwrap the key.",
+        "responses": {
+          "200": {
+            "description": "Active vault",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Vault"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active vault",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Sync storage is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vault/reset": {
+      "post": {
+        "summary": "Replace the encrypted sync vault",
+        "description": "Retires the active vault, deletes its ciphertext log, and stores a new wrapped key. Devices that still hold the old vault id must join this vault.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutVault"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "New vault created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Vault"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active vault",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The active vault changed while resetting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Sync storage is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sync": {
+      "get": {
+        "summary": "Read the sync log head",
+        "description": "Returns the active vault id and the hash chain head. Clients compare this with their cursor before pulling.",
+        "responses": {
+          "200": {
+            "description": "Sync head",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncHead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active vault",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Sync storage is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sync/ops": {
+      "post": {
+        "summary": "Append encrypted sync ops",
+        "description": "Stores ciphertext snapshots. A repeated clientOpId returns the sequence already assigned. The server does not decrypt the payload.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushSyncOps"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ops appended or already stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushSyncOpsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active vault",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "vaultId is not the active vault",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Sync storage is not configured or the append lost a race",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Pull encrypted sync ops",
+        "description": "Returns ciphertext ops with seq greater than `after`, in order.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i"
+            },
+            "required": true,
+            "name": "vaultId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "nullable": true,
+              "minimum": 0
+            },
+            "required": false,
+            "name": "after",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ops after the cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PullSyncOpsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active vault",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "vaultId is not the active vault",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Sync storage is not configured",
             "content": {
               "application/json": {
                 "schema": {

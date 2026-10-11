@@ -14,6 +14,7 @@ declare namespace Cloudflare {
 		NODE_ENV: "production";
 		BETTER_AUTH_URL: "https://api.techoo.app";
 		GOOGLE_REDIRECT_URI: "https://api.techoo.app/api/auth/callback/google";
+		SYNC_DB: D1Database;
 		TURSO_MAIN_DB_URL?: "";
 		TURSO_MAIN_DB_AUTH_TOKEN?: "";
 		BETTER_AUTH_SECRET?: "your-random-secret-at-least-32-chars";
