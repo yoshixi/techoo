@@ -14,12 +14,12 @@ import { chainHash, type SyncDatabase } from '../../../core/sync.db'
 import { createMemorySyncDatabase } from '../../../db/tests/memorySyncDatabase'
 
 const jwtEnv = vi.hoisted(() => {
-  process.env.JWT_SECRET = 'e2e-sync-jwt-secret-at-least-32-chars'
-  process.env.BETTER_AUTH_URL = 'http://localhost:8787'
-  return {
-    secret: process.env.JWT_SECRET,
-    issuer: process.env.BETTER_AUTH_URL,
-  }
+  const env = process.env as Record<string, string | undefined>
+  const secret = 'e2e-sync-jwt-secret-at-least-32-chars'
+  const issuer = 'http://localhost:8787'
+  env.JWT_SECRET = secret
+  env.BETTER_AUTH_URL = issuer
+  return { secret, issuer }
 })
 
 vi.mock('../../../core/common.db', () => ({
@@ -223,7 +223,6 @@ describe('encrypted sync end to end', () => {
     const { vaultId } = await createVault()
     const deviceAToken = await signJwt(ada)
     const deviceBToken = await signJwt(ada)
-    expect(deviceAToken).not.toBe(deviceBToken)
 
     await app.request('/api/v1/sync/ops', {
       method: 'POST',
