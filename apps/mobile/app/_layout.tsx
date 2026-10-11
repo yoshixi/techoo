@@ -7,10 +7,13 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import { SWRConfig } from 'swr';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { ShareIntentProvider } from 'expo-share-intent';
 import { AuthContext, useAuthProvider } from '@/hooks/useAuth';
 import { isApiRequestError } from '@/lib/api/ApiRequestError';
+import { ShareIntentRedirect } from '@/components/share/ShareIntentRedirect';
 
 /**
  * SWR sometimes leaves revalidation promises floating; we already surface these in
@@ -20,8 +23,14 @@ import { isApiRequestError } from '@/lib/api/ApiRequestError';
 function SwallowTrackedApiRejections() {
   useEffect(() => {
     const g = globalThis as typeof globalThis & {
-      addEventListener?: (type: string, listener: (ev: { preventDefault?: () => void; reason?: unknown }) => void) => void
-      removeEventListener?: (type: string, listener: (ev: { preventDefault?: () => void; reason?: unknown }) => void) => void
+      addEventListener?: (
+        type: string,
+        listener: (ev: { preventDefault?: () => void; reason?: unknown }) => void
+      ) => void;
+      removeEventListener?: (
+        type: string,
+        listener: (ev: { preventDefault?: () => void; reason?: unknown }) => void
+      ) => void;
     };
     const handler = (event: { preventDefault?: () => void; reason?: unknown }) => {
       const r = event.reason;
@@ -43,83 +52,101 @@ export {
 export default function RootLayout() {
   const { colorScheme } = useColorScheme();
   const auth = useAuthProvider();
+  const shareIntentOptions = useMemo(
+    () => ({
+      // Keep the payload while the user picks a list or signs in.
+      resetOnBackground: false,
+      disabled: Platform.OS === 'web',
+    }),
+    []
+  );
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthContext.Provider value={auth}>
-        <SwallowTrackedApiRejections />
-        <SWRConfig
-          value={{
-            revalidateOnFocus: false,
-            revalidateOnReconnect: true,
-            dedupingInterval: 10_000,
-            shouldRetryOnError: false,
-            errorRetryCount: 0,
-          }}
-        >
-          <ThemeProvider value={NAV_THEME[colorScheme ?? 'light']}>
-            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="auth" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="todo/[id]"
-                options={{
-                  presentation: 'modal',
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="todo/new"
-                options={{
-                  presentation: 'modal',
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="post/new"
-                options={{
-                  presentation: 'modal',
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="post/[id]"
-                options={{
-                  presentation: 'modal',
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="note/[id]"
-                options={{
-                  presentation: 'modal',
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="posts/favorites"
-                options={{
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="posts/lists/index"
-                options={{
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="posts/lists/[id]"
-                options={{
-                  headerShown: false,
-                }}
-              />
-            </Stack>
-            <PortalHost />
-          </ThemeProvider>
-        </SWRConfig>
-      </AuthContext.Provider>
-    </GestureHandlerRootView>
+    <ShareIntentProvider options={shareIntentOptions}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <AuthContext.Provider value={auth}>
+          <SwallowTrackedApiRejections />
+          <SWRConfig
+            value={{
+              revalidateOnFocus: false,
+              revalidateOnReconnect: true,
+              dedupingInterval: 10_000,
+              shouldRetryOnError: false,
+              errorRetryCount: 0,
+            }}>
+            <ThemeProvider value={NAV_THEME[colorScheme ?? 'light']}>
+              <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+              <ShareIntentRedirect />
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="auth" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="todo/[id]"
+                  options={{
+                    presentation: 'modal',
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="todo/new"
+                  options={{
+                    presentation: 'modal',
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="post/new"
+                  options={{
+                    presentation: 'modal',
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="shareintent"
+                  options={{
+                    presentation: 'modal',
+                    headerShown: false,
+                    gestureEnabled: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="post/[id]"
+                  options={{
+                    presentation: 'modal',
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="note/[id]"
+                  options={{
+                    presentation: 'modal',
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="posts/favorites"
+                  options={{
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="posts/lists/index"
+                  options={{
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="posts/lists/[id]"
+                  options={{
+                    headerShown: false,
+                  }}
+                />
+              </Stack>
+              <PortalHost />
+            </ThemeProvider>
+          </SWRConfig>
+        </AuthContext.Provider>
+      </GestureHandlerRootView>
+    </ShareIntentProvider>
   );
 }

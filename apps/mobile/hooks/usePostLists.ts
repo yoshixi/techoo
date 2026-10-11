@@ -14,7 +14,7 @@ import {
   revalidatePostCollectionCaches,
 } from '@/lib/patchPostCaches';
 
-export function usePostLists(): {
+export function usePostLists(options?: { enabled?: boolean }): {
   lists: PostList[];
   isLoading: boolean;
   createList: (name: string) => Promise<PostList>;
@@ -23,23 +23,23 @@ export function usePostLists(): {
   togglePostInList: (post: Post, listId: number) => Promise<void>;
   refreshLists: () => Promise<void>;
 } {
-  const { data, isLoading, mutate } = useGetApiV1PostLists();
+  const enabled = options?.enabled !== false;
+  const { data, isLoading, mutate } = useGetApiV1PostLists({
+    swr: { enabled },
+  });
   const lists = data?.data ?? [];
 
   const refreshLists = useCallback(async () => {
     await mutate();
   }, [mutate]);
 
-  const createList = useCallback(
-    async (name: string) => {
-      const trimmed = name.trim();
-      if (!trimmed) throw new Error('List name is required');
-      const res = await postApiV1PostLists({ name: trimmed });
-      await revalidatePostCollectionCaches();
-      return res.data;
-    },
-    []
-  );
+  const createList = useCallback(async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error('List name is required');
+    const res = await postApiV1PostLists({ name: trimmed });
+    await revalidatePostCollectionCaches();
+    return res.data;
+  }, []);
 
   const renameList = useCallback(
     async (listId: number, name: string) => {

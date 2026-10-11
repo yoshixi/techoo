@@ -34,10 +34,10 @@ The API validates `redirect_uri` from `expo-linking` before starting OAuth. **Ex
 
 ## Navigation (two tabs)
 
-| Tab      | Role |
-|----------|------|
-| **Today** | **Plan** — to-dos for the selected day, week strip, “Next up” when viewing today. **Log** — that day’s posts + sticky composer. Mode is persisted (`AsyncStorage`). |
-| **Library** | Calendar, all open to-dos, **Logbook** (last 14 days of posts), Notes, Settings — same screens as before, opened from one list (hidden from the tab bar). |
+| Tab         | Role                                                                                                                                                                |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Today**   | **Plan** — to-dos for the selected day, week strip, “Next up” when viewing today. **Log** — that day’s posts + sticky composer. Mode is persisted (`AsyncStorage`). |
+| **Library** | Calendar, all open to-dos, **Logbook** (last 14 days of posts), Notes, Settings — same screens as before, opened from one list (hidden from the tab bar).           |
 
 ## Stack notes
 
@@ -45,6 +45,12 @@ The API validates `redirect_uri` from `expo-linking` before starting OAuth. **Ex
 - Modal routes: `todo/[id]`, `note/[id]`
 
 Legacy **tasks / timers / tags** UI has been removed in favor of **todos** and **posts**.
+
+## Share to timeline
+
+Text and links shared from other apps can be saved as a timeline post. Techoo appears in the iOS share sheet and the Android share menu. The share screen lets you edit the text and optionally attach one list.
+
+This target is native. After pulling the change, install a development or preview build (`eas build`, or `expo prebuild` then `expo run:ios` / `expo run:android`) so the share extension and Android intent filter are in the binary.
 
 ## Android builds (EAS)
 
