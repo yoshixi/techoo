@@ -9,6 +9,7 @@ import {
   accountsTable,
   usersTable,
 } from '../../../db/schema/schema'
+import { deleteUserSyncData, syncDatabaseFromD1 } from '../../../core/sync.db'
 
 export const deleteAccountHandler: RouteHandler<typeof deleteAccountRoute, AppBindings> = async (c) => {
   const user = c.get('user')
@@ -22,7 +23,18 @@ export const deleteAccountHandler: RouteHandler<typeof deleteAccountRoute, AppBi
       logger.warn({ err: error }, `tenant deletion failed (may not exist): ${error}`)
     }
 
-    // 2. Delete user records from main database
+    // 2. Delete the encrypted sync vault when D1 is bound. A missing binding
+    //    or a migration that has not been applied must not block account deletion.
+    const syncDb = c.get('syncDb') ?? (c.env.SYNC_DB ? syncDatabaseFromD1(c.env.SYNC_DB) : null)
+    if (syncDb) {
+      try {
+        await deleteUserSyncData(syncDb, user.id)
+      } catch (error) {
+        logger.warn({ err: error }, `sync vault deletion failed: ${error}`)
+      }
+    }
+
+    // 3. Delete user records from main database
     const mainDb = getMainDb()
     await mainDb.delete(sessionsTable).where(eq(sessionsTable.userId, user.id))
     await mainDb.delete(accountsTable).where(eq(accountsTable.userId, user.id))

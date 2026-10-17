@@ -6,6 +6,19 @@
 	],
 	"name": "techoo-backend",
 	"main": "./src/index.tsx",
+	// Encrypted sync log for `wrangler dev` and tests. `d1_databases` is not
+	// inherited by `--env prod`, so a production deploy keeps working without
+	// this binding. After `wrangler d1 create techoo-sync`, copy this block
+	// into `env.prod` with the real database_id, then run `d1:migrate:prod`.
+	// Until then the new routes answer 503 and the Turso API is unchanged.
+	"d1_databases": [
+		{
+			"binding": "SYNC_DB",
+			"database_name": "techoo-sync",
+			"database_id": "00000000-0000-0000-0000-000000000000",
+			"migrations_dir": "sync-migrations"
+		}
+	],
 	"vars": {
 		"NODE_ENV": "production",
 		"BETTER_AUTH_URL": "http://localhost:8787",
@@ -22,7 +35,8 @@
 				"NODE_ENV": "production",
 				"BETTER_AUTH_URL": "https://api.techoo.app",
 				"GOOGLE_REDIRECT_URI": "https://api.techoo.app/api/auth/callback/google",
-				// Secrets stored via `wrangler secret put --env prod`
+				// Secrets stored via `wrangler secret put --env prod`.
+				// SYNC_DB is added here after `wrangler d1 create techoo-sync`.
 			},
 			"placement": {
 				"mode": "targeted",
