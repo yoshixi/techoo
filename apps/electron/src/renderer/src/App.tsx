@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react'
-import { ListTodo, ScrollText, User } from 'lucide-react'
+import { ListTodo, NotebookPen, ScrollText, User } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import { TodoTabView } from './components/TodoTabView'
 import { TimelineView } from './components/TimelineView'
 import { AccountView } from './components/AccountView'
+import { SyncJournalView } from './components/SyncJournalView'
 
-type View = 'todo' | 'timeline' | 'account'
+type View = 'todo' | 'timeline' | 'journal' | 'account'
 
 const tabs: { id: View; label: string; icon: LucideIcon }[] = [
   { id: 'todo', label: 'Todo', icon: ListTodo },
   { id: 'timeline', label: 'Timeline', icon: ScrollText },
+  { id: 'journal', label: 'Journal', icon: NotebookPen },
   { id: 'account', label: 'Settings', icon: User }
 ]
 
@@ -45,6 +47,9 @@ function App(): React.JSX.Element {
       } else if (event.key === '3') {
         event.preventDefault()
         setCurrentView('account')
+      } else if (event.key === '4') {
+        event.preventDefault()
+        setCurrentView('journal')
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -63,7 +68,9 @@ function App(): React.JSX.Element {
       >
         <span
           className="font-sans text-lg font-semibold tracking-tight"
-          style={{ color: 'color-mix(in srgb, var(--text-dark) 72%, var(--text-muted-custom) 28%)' }}
+          style={{
+            color: 'color-mix(in srgb, var(--text-dark) 72%, var(--text-muted-custom) 28%)'
+          }}
         >
           Techo
         </span>
@@ -95,7 +102,9 @@ function App(): React.JSX.Element {
               style={{
                 fontWeight: isActive ? 500 : 400,
                 color: isActive ? 'var(--text-dark)' : 'var(--text-muted-custom)',
-                background: isActive ? 'color-mix(in srgb, var(--card) 86%, #fff 14%)' : 'transparent'
+                background: isActive
+                  ? 'color-mix(in srgb, var(--card) 86%, #fff 14%)'
+                  : 'transparent'
               }}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -109,6 +118,7 @@ function App(): React.JSX.Element {
       <main className="flex flex-col flex-1 min-h-0">
         {currentView === 'todo' && <TodoTabView />}
         {currentView === 'timeline' && <TimelineView />}
+        {currentView === 'journal' && <SyncJournalView />}
         {currentView === 'account' && <AccountView />}
       </main>
     </div>
