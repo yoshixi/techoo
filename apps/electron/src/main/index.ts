@@ -8,6 +8,7 @@ import oauthCallbackHtml from './oauth-callback.html?raw'
 import { TrayManager } from './tray'
 import { NotificationScheduler, type NotificationPermissionStatus } from './notificationScheduler'
 import { readSessionToken, writeSessionToken, clearSessionToken } from './sessionTokenStore'
+import { registerSyncIpc, type SyncController } from './sync/ipc'
 
 function setupContentSecurityPolicy(): void {
   const apiUrl = import.meta.env.MAIN_VITE_API_BASE_URL || 'http://localhost:8787'
@@ -220,6 +221,7 @@ let trayManager: TrayManager | null = null
 let notificationScheduler: NotificationScheduler | null = null
 let authToken: string | null = null
 let sessionTokenCache: string | null = null
+let syncController: SyncController | null = null
 
 export function getAuthToken(): string | null {
   return authToken
@@ -401,6 +403,7 @@ app.whenReady().then(() => {
     authToken = token
     trayManager?.setAuthToken(token)
     notificationScheduler?.setAuthToken(token)
+    if (token) syncController?.nudge()
   })
 
   ipcMain.handle('auth:get-session-token', () => {
@@ -418,6 +421,7 @@ app.whenReady().then(() => {
   ipcMain.handle('auth:clear-session-token', () => {
     sessionTokenCache = null
     clearSessionToken()
+    syncController?.lock()
   })
 
   // Notification permission handlers
@@ -507,6 +511,13 @@ app.whenReady().then(() => {
 
   createWindow()
 
+  syncController = registerSyncIpc({
+    userDataPath: app.getPath('userData'),
+    apiBaseUrl: `${import.meta.env.MAIN_VITE_API_BASE_URL || 'http://localhost:8787'}/api`,
+    getToken: () => authToken,
+    getWindow: () => mainWindow
+  })
+
   // Register global shortcuts for zoom (fallback for keyboard layouts where menu accelerators don't work)
   globalShortcut.register('CommandOrControl+-', () => {
     const focusedWindow = BrowserWindow.getFocusedWindow()
@@ -559,6 +570,8 @@ app.on('before-quit', () => {
   notificationScheduler = null
   trayManager?.destroy()
   trayManager = null
+  syncController?.dispose()
+  syncController = null
 })
 
 // In this file you can include the rest of your app's specific main process

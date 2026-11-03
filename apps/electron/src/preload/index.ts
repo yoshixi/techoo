@@ -47,7 +47,72 @@ const api = {
     ipcRenderer.invoke('auth:social-sign-in', provider),
   // Link additional social account for the current user
   linkSocialAccount: (provider: string, sessionToken: string): Promise<boolean> =>
-    ipcRenderer.invoke('auth:social-link', provider, sessionToken)
+    ipcRenderer.invoke('auth:social-link', provider, sessionToken),
+  syncPrepare: (): Promise<SyncCallResult> => ipcRenderer.invoke('sync:prepare'),
+  syncGetStatus: (): Promise<SyncCallResult> => ipcRenderer.invoke('sync:get-status'),
+  syncSetup: (passphrase: string): Promise<SyncCallResult> =>
+    ipcRenderer.invoke('sync:setup', passphrase),
+  syncUnlock: (passphrase: string): Promise<SyncCallResult> =>
+    ipcRenderer.invoke('sync:unlock', passphrase),
+  syncLock: (): Promise<SyncCallResult> => ipcRenderer.invoke('sync:lock'),
+  syncReset: (passphrase: string): Promise<SyncCallResult> =>
+    ipcRenderer.invoke('sync:reset', passphrase),
+  syncReplaceServer: (): Promise<SyncCallResult> => ipcRenderer.invoke('sync:replace-server'),
+  syncDiscardAndJoin: (passphrase: string): Promise<SyncCallResult> =>
+    ipcRenderer.invoke('sync:discard-and-join', passphrase),
+  syncNow: (): Promise<SyncCallResult> => ipcRenderer.invoke('sync:now'),
+  onSyncStatus: (callback: (status: SyncStatusPayload) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, status: SyncStatusPayload): void => {
+      callback(status)
+    }
+    ipcRenderer.on('sync:status', handler)
+    return () => {
+      ipcRenderer.removeListener('sync:status', handler)
+    }
+  },
+  journalList: (
+    kind: JournalKind
+  ): Promise<SyncCallResult & { records?: JournalRecordPayload[] }> =>
+    ipcRenderer.invoke('journal:list', kind),
+  journalSave: (draft: {
+    recordId?: string
+    kind: JournalKind
+    fields: Record<string, string | number | boolean>
+  }): Promise<SyncCallResult & { record?: JournalRecordPayload }> =>
+    ipcRenderer.invoke('journal:save', draft),
+  journalDelete: (recordId: string): Promise<SyncCallResult> =>
+    ipcRenderer.invoke('journal:delete', recordId)
+}
+
+type JournalKind = 'todo' | 'post' | 'note'
+
+interface SyncStatusPayload {
+  phase: 'setup' | 'locked' | 'ready' | 'offline' | 'conflict' | 'error'
+  unlocked: boolean
+  hasLocalVault: boolean
+  vaultId: string | null
+  deviceId: string
+  cursor: number
+  pendingCount: number
+  dirtyCount: number
+  lastSyncedAt: string | null
+  lastError: string | null
+}
+
+interface JournalRecordPayload {
+  recordId: string
+  kind: JournalKind
+  deleted: boolean
+  updatedAt: string
+  fields: Record<string, string | number | boolean>
+  dirty: boolean
+}
+
+interface SyncCallResult {
+  ok: boolean
+  code: string
+  reason: string | null
+  status: SyncStatusPayload
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
