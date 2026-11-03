@@ -20,13 +20,28 @@ const SessionCodeResponseModel = z.object({
   code: z.string().openapi({ description: 'Short-lived exchange code' })
 }).openapi('SessionCodeResponse')
 
+const TokenRequestModel = z.object({
+  code: z.string().optional().openapi({
+    description: 'Short-lived exchange code to trade for a session token',
+  }),
+}).openapi('TokenRequest')
+
 // POST /token - Exchange session/code for JWT
 export const tokenRoute = createRoute({
   method: 'post',
   path: '/token',
   summary: 'Exchange session or code for JWT',
   description: 'Accepts either a session token via Authorization header or a short-lived exchange code in the body. Returns a JWT token.',
-  request: {},
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: TokenRequestModel,
+        },
+      },
+      required: false,
+    },
+  },
   responses: {
     200: {
       content: {

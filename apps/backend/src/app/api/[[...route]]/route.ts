@@ -63,6 +63,13 @@ import {
   sessionCodeRoute,
   // Account routes
   deleteAccountRoute,
+  // Encrypted sync (D1). Domain routes above stay on Turso.
+  putVaultRoute,
+  getVaultRoute,
+  resetVaultRoute,
+  getSyncHeadRoute,
+  pushSyncOpsRoute,
+  pullSyncOpsRoute,
 } from './routes'
 
 // Import handlers from local handlers directory
@@ -122,6 +129,13 @@ import {
   createSessionCodeHandler,
   // Account handlers
   deleteAccountHandler,
+  // Encrypted sync handlers
+  putVaultHandler,
+  getVaultHandler,
+  resetVaultHandler,
+  getSyncHeadHandler,
+  pushSyncOpsHandler,
+  pullSyncOpsHandler,
 } from './handlers'
 
 // Import OAuth route registration (not a handler, so imported directly)
@@ -313,6 +327,14 @@ export function createApp(deps?: AppDeps): CreateAppResult {
 
   // Account routes
   app.openapi(deleteAccountRoute, deleteAccountHandler)
+
+  // Encrypted sync. These routes never read or write tenant domain rows.
+  app.openapi(putVaultRoute, putVaultHandler)
+  app.openapi(getVaultRoute, getVaultHandler)
+  app.openapi(resetVaultRoute, resetVaultHandler)
+  app.openapi(getSyncHeadRoute, getSyncHeadHandler)
+  app.openapi(pushSyncOpsRoute, pushSyncOpsHandler)
+  app.openapi(pullSyncOpsRoute, pullSyncOpsHandler)
 
   // Webhook routes
   app.openapi(googleCalendarWebhookRoute, googleCalendarWebhookHandler)
