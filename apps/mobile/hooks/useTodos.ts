@@ -1,117 +1,122 @@
-import { useCallback, useMemo } from 'react'
-import type { Key } from 'swr'
-import { useSWRConfig } from 'swr'
+import { useCallback, useMemo } from 'react';
+import type { Key } from 'swr';
+import { useSWRConfig } from 'swr';
 import {
   useGetApiV1Todos,
   postApiV1Todos,
   patchApiV1TodosId,
   deleteApiV1TodosId,
-} from '@/gen/api/endpoints/techooAPI.gen'
-import type { ErrorResponse, GetApiV1TodosParams, Todo, UpdateTodo } from '@/gen/api/schemas'
+} from '@/gen/api/endpoints/techooAPI.gen';
+import type { ErrorResponse, GetApiV1TodosParams, Todo, UpdateTodo } from '@/gen/api/schemas';
 import {
   revalidateAllTodoLists,
   applyToggleDoneToCache,
   mergeTodoInCache,
   type TodoListCache,
   TODOS_LIST_ROUTE,
-} from '@/lib/revalidateTodoLists'
-import { toRfc3339 } from '@/lib/time'
+} from '@/lib/revalidateTodoLists';
+import { toRfc3339 } from '@/lib/time';
+import { useJournalMode, getJournalService } from '@/lib/journal/runtime';
+import { useJournalSnapshot } from '@/hooks/useJournalSnapshot';
 
-const TODO_LIST_LIMIT = 500
+const TODO_LIST_LIMIT = 500;
 
-function updatesToPatch(
-  updates: {
-    title?: string
-    description?: string | null
-    starts_at?: Date | null
-    ends_at?: Date | null
-    is_all_day?: number
-    done?: number
-  }
-): UpdateTodo {
-  const patch: UpdateTodo = {}
-  if (updates.title !== undefined) patch.title = updates.title
-  if (updates.description !== undefined) patch.description = updates.description
+function updatesToPatch(updates: {
+  title?: string;
+  description?: string | null;
+  starts_at?: Date | null;
+  ends_at?: Date | null;
+  is_all_day?: number;
+  done?: number;
+}): UpdateTodo {
+  const patch: UpdateTodo = {};
+  if (updates.title !== undefined) patch.title = updates.title;
+  if (updates.description !== undefined) patch.description = updates.description;
   if (updates.starts_at !== undefined) {
-    patch.starts_at = updates.starts_at == null ? null : toRfc3339(updates.starts_at)
+    patch.starts_at = updates.starts_at == null ? null : toRfc3339(updates.starts_at);
   }
   if (updates.ends_at !== undefined) {
-    patch.ends_at = updates.ends_at == null ? null : toRfc3339(updates.ends_at)
+    patch.ends_at = updates.ends_at == null ? null : toRfc3339(updates.ends_at);
   }
-  if (updates.is_all_day !== undefined) patch.is_all_day = updates.is_all_day
-  if (updates.done !== undefined) patch.done = updates.done
-  return patch
+  if (updates.is_all_day !== undefined) patch.is_all_day = updates.is_all_day;
+  if (updates.done !== undefined) patch.done = updates.done;
+  return patch;
 }
 
 function optimisticTodoMerge(t: Todo, updates: Parameters<typeof updatesToPatch>[0]): Todo {
-  const patch = updatesToPatch(updates)
-  return { ...t, ...patch }
+  const patch = updatesToPatch(updates);
+  return { ...t, ...patch };
 }
 
-export function useTodos(options?: {
-  from?: Date
-  to?: Date
-  showAll?: boolean
-  includeCompletedInRange?: boolean
-  includeDone?: boolean
-  fetchAll?: boolean
-}): {
-  todos: Todo[]
-  isLoading: boolean
-  error: ErrorResponse | undefined
-  createTodo: (title: string, startsAt?: Date, endsAt?: Date, isAllDay?: number) => Promise<Todo>
+function useRemoteTodos(
+  options:
+    | {
+        from?: Date;
+        to?: Date;
+        showAll?: boolean;
+        includeCompletedInRange?: boolean;
+        includeDone?: boolean;
+        fetchAll?: boolean;
+      }
+    | undefined,
+  enabled: boolean
+): {
+  todos: Todo[];
+  isLoading: boolean;
+  error: ErrorResponse | undefined;
+  createTodo: (title: string, startsAt?: Date, endsAt?: Date, isAllDay?: number) => Promise<Todo>;
   updateTodo: (
     id: number,
     updates: {
-      title?: string
-      description?: string | null
-      starts_at?: Date | null
-      ends_at?: Date | null
-      is_all_day?: number
-      done?: number
+      title?: string;
+      description?: string | null;
+      starts_at?: Date | null;
+      ends_at?: Date | null;
+      is_all_day?: number;
+      done?: number;
     }
-  ) => Promise<void>
-  toggleDone: (id: number, currentDone: number, options?: { reinsert?: Todo }) => Promise<void>
-  deleteTodo: (id: number) => Promise<void>
-  mutate: ReturnType<typeof useGetApiV1Todos>['mutate']
+  ) => Promise<void>;
+  toggleDone: (id: number, currentDone: number, options?: { reinsert?: Todo }) => Promise<void>;
+  deleteTodo: (id: number) => Promise<void>;
+  mutate: ReturnType<typeof useGetApiV1Todos>['mutate'];
 } {
-  const { mutate: globalMutate, cache } = useSWRConfig()
+  const { mutate: globalMutate, cache } = useSWRConfig();
 
   const mutateAllTodoCaches = useCallback(
     (
       updater: (current: TodoListCache | undefined, key: unknown) => TodoListCache | undefined,
       revalidate = false
     ) => {
-      const updates: Promise<unknown>[] = []
+      const updates: Promise<unknown>[] = [];
       for (const key of cache.keys()) {
-        if (!Array.isArray(key) || key[0] !== TODOS_LIST_ROUTE) continue
+        if (!Array.isArray(key) || key[0] !== TODOS_LIST_ROUTE) continue;
         updates.push(
           globalMutate(key, (current: TodoListCache | undefined) => updater(current, key), {
             revalidate,
           })
-        )
+        );
       }
-      return Promise.all(updates)
+      return Promise.all(updates);
     },
     [cache, globalMutate]
-  )
+  );
 
   const params: GetApiV1TodosParams | undefined = useMemo(() => {
-    if (options?.fetchAll) return { limit: TODO_LIST_LIMIT }
-    if (options?.showAll) return { done: 'false' as const, limit: TODO_LIST_LIMIT }
+    if (options?.fetchAll) return { limit: TODO_LIST_LIMIT };
+    if (options?.showAll) return { done: 'false' as const, limit: TODO_LIST_LIMIT };
     if (options?.from != null && options?.to != null) {
-      const from = toRfc3339(options.from)
-      const to = toRfc3339(options.to)
+      const from = toRfc3339(options.from);
+      const to = toRfc3339(options.to);
       if (options.includeDone) {
-        return { from, to, limit: TODO_LIST_LIMIT }
+        return { from, to, limit: TODO_LIST_LIMIT };
       }
       if (options.includeCompletedInRange === false) {
-        return { from, to, done: 'false' as const, limit: TODO_LIST_LIMIT }
+        return { from, to, done: 'false' as const, limit: TODO_LIST_LIMIT };
       }
-      return { from, to, limit: TODO_LIST_LIMIT }
+      return { from, to, limit: TODO_LIST_LIMIT };
     }
-    if (options?.includeDone) return { limit: TODO_LIST_LIMIT }
-    return { done: 'false' as const, limit: TODO_LIST_LIMIT }
+    if (options?.includeDone) return { limit: TODO_LIST_LIMIT };
+    return { done: 'false' as const, limit: TODO_LIST_LIMIT };
   }, [
     options?.from?.getTime(),
     options?.to?.getTime(),
@@ -119,7 +124,7 @@ export function useTodos(options?: {
     options?.fetchAll,
     options?.includeCompletedInRange,
     options?.includeDone,
-  ])
+  ]);
 
   /** Primitive tuple so SWR cache always tracks range/filters (avoids stale lists when the day changes). */
   const swrKey = useMemo<Key>(
@@ -131,21 +136,21 @@ export function useTodos(options?: {
       params?.limit ?? null,
     ],
     [params?.from, params?.to, params?.done, params?.limit]
-  )
+  );
 
   const { data, isLoading, error, mutate } = useGetApiV1Todos(params, {
-    swr: { swrKey },
-  })
-  const todos = data?.data ?? []
+    swr: { swrKey, enabled },
+  });
+  const todos = data?.data ?? [];
 
   /** Lists that only fetch open items — completed rows must leave the cache without a global refetch. */
-  const listOpenOnly = params?.done === 'false'
+  const listOpenOnly = params?.done === 'false';
 
   const createTodo = useCallback(
     async (title: string, startsAt?: Date, endsAt?: Date, isAllDay?: number): Promise<Todo> => {
-      const nowIso = toRfc3339(new Date())
-      const allDay = isAllDay ?? 0
-      const tempId = -Math.abs(Date.now())
+      const nowIso = toRfc3339(new Date());
+      const allDay = isAllDay ?? 0;
+      const tempId = -Math.abs(Date.now());
       const optimisticTodo: Todo = {
         id: tempId,
         title,
@@ -156,122 +161,220 @@ export function useTodos(options?: {
         done: 0,
         done_at: null,
         created_at: nowIso,
-      }
+      };
       mutate(
         (current) => {
-          if (!current) return { data: [optimisticTodo] }
-          return { data: [...current.data, optimisticTodo] }
+          if (!current) return { data: [optimisticTodo] };
+          return { data: [...current.data, optimisticTodo] };
         },
         { revalidate: false }
-      )
+      );
       try {
         const res = await postApiV1Todos({
           title,
           starts_at: startsAt != null ? toRfc3339(startsAt) : undefined,
           ends_at: endsAt != null ? toRfc3339(endsAt) : undefined,
           is_all_day: allDay,
-        })
-        await revalidateAllTodoLists()
-        return res.data
+        });
+        await revalidateAllTodoLists();
+        return res.data;
       } catch (err) {
-        await revalidateAllTodoLists()
-        throw err
+        await revalidateAllTodoLists();
+        throw err;
       }
     },
     [mutate]
-  )
+  );
 
   const toggleDone = useCallback(
-    async (id: number, currentDone: number, options?: { reinsert?: Todo }) => {
-      const newDone = currentDone === 1 ? 0 : 1
-      const nowIso = toRfc3339(new Date())
-      const reinsert = options?.reinsert
+    async (id: number, currentDone: number, options?: { reinsert?: Todo; undoTitle?: string }) => {
+      const newDone = currentDone === 1 ? 0 : 1;
+      const nowIso = toRfc3339(new Date());
+      const reinsert = options?.reinsert;
 
-      mutate(
-        (current) =>
-          applyToggleDoneToCache(current, swrKey, id, newDone, nowIso, reinsert),
-        { revalidate: false }
-      )
+      mutate((current) => applyToggleDoneToCache(current, swrKey, id, newDone, nowIso, reinsert), {
+        revalidate: false,
+      });
       void mutateAllTodoCaches(
         (current, key) => applyToggleDoneToCache(current, key, id, newDone, nowIso, reinsert),
         false
-      )
+      );
 
       try {
-        const res = await patchApiV1TodosId(id, { done: newDone })
-        mutate(
-          (current) => mergeTodoInCache(current, swrKey, id, res.data),
-          { revalidate: false }
-        )
+        const res = await patchApiV1TodosId(id, { done: newDone });
+        mutate((current) => mergeTodoInCache(current, swrKey, id, res.data), { revalidate: false });
         void mutateAllTodoCaches(
           (current, key) => mergeTodoInCache(current, key, id, res.data),
           false
-        )
+        );
       } catch (err) {
-        await revalidateAllTodoLists()
-        throw err
+        await revalidateAllTodoLists();
+        throw err;
       }
     },
     [mutate, swrKey, mutateAllTodoCaches]
-  )
+  );
 
   const updateTodo = useCallback(
     async (
       id: number,
       updates: {
-        title?: string
-        description?: string | null
-        starts_at?: Date | null
-        ends_at?: Date | null
-        is_all_day?: number
-        done?: number
+        title?: string;
+        description?: string | null;
+        starts_at?: Date | null;
+        ends_at?: Date | null;
+        is_all_day?: number;
+        done?: number;
       }
     ) => {
-      const completing = listOpenOnly && updates.done === 1
+      const completing = listOpenOnly && updates.done === 1;
       mutate(
         (current) => {
-          if (!current) return current
+          if (!current) return current;
           if (completing) {
-            return { data: current.data.filter((t) => t.id !== id) }
+            return { data: current.data.filter((t) => t.id !== id) };
           }
           return {
-            data: current.data.map((t) =>
-              t.id === id ? optimisticTodoMerge(t, updates) : t
-            ),
-          }
+            data: current.data.map((t) => (t.id === id ? optimisticTodoMerge(t, updates) : t)),
+          };
         },
         { revalidate: false }
-      )
+      );
       try {
-        await patchApiV1TodosId(id, updatesToPatch(updates))
-        await revalidateAllTodoLists()
+        await patchApiV1TodosId(id, updatesToPatch(updates));
+        await revalidateAllTodoLists();
       } catch (err) {
-        await revalidateAllTodoLists()
-        throw err
+        await revalidateAllTodoLists();
+        throw err;
       }
     },
     [mutate, listOpenOnly]
-  )
+  );
 
   const deleteTodo = useCallback(
     async (id: number) => {
       mutate(
         (current) => {
-          if (!current) return current
-          return { data: current.data.filter((t) => t.id !== id) }
+          if (!current) return current;
+          return { data: current.data.filter((t) => t.id !== id) };
         },
         { revalidate: false }
-      )
+      );
       try {
-        await deleteApiV1TodosId(id)
-        await revalidateAllTodoLists()
+        await deleteApiV1TodosId(id);
+        await revalidateAllTodoLists();
       } catch (err) {
-        await revalidateAllTodoLists()
-        throw err
+        await revalidateAllTodoLists();
+        throw err;
       }
     },
     [mutate]
-  )
+  );
 
-  return { todos, isLoading, error, createTodo, updateTodo, toggleDone, deleteTodo, mutate }
+  return { todos, isLoading, error, createTodo, updateTodo, toggleDone, deleteTodo, mutate };
+}
+
+type TodoOptions = {
+  from?: Date;
+  to?: Date;
+  showAll?: boolean;
+  includeCompletedInRange?: boolean;
+  includeDone?: boolean;
+  fetchAll?: boolean;
+};
+
+function todoQuery(options?: TodoOptions) {
+  const limit = 500;
+  if (options?.fetchAll) return { limit };
+  if (options?.showAll) return { done: 'false' as const, limit };
+  if (options?.from != null && options?.to != null) {
+    const from = toRfc3339(options.from);
+    const to = toRfc3339(options.to);
+    if (options.includeDone) return { from, to, limit };
+    if (options.includeCompletedInRange === false)
+      return { from, to, done: 'false' as const, limit };
+    return { from, to, limit };
+  }
+  if (options?.includeDone) return { limit };
+  return { done: 'false' as const, limit };
+}
+
+function useLocalTodos(options: TodoOptions | undefined, enabled: boolean) {
+  const key = JSON.stringify(todoQuery(options));
+  const snapshot = useJournalSnapshot(
+    enabled,
+    () => getJournalService().queryTodos(todoQuery(options)),
+    key
+  );
+  const createTodo = useCallback(
+    async (title: string, startsAt?: Date, endsAt?: Date, isAllDay?: number) => {
+      return getJournalService().createTodo({
+        title,
+        startsAt: startsAt != null ? toRfc3339(startsAt) : null,
+        endsAt: endsAt != null ? toRfc3339(endsAt) : null,
+        isAllDay: isAllDay ?? 0,
+      });
+    },
+    []
+  );
+  const updateTodo = useCallback(
+    async (
+      id: number,
+      updates: {
+        title?: string;
+        description?: string | null;
+        starts_at?: Date | null;
+        ends_at?: Date | null;
+        is_all_day?: number;
+        done?: number;
+      }
+    ) => {
+      await getJournalService().updateTodo(id, {
+        title: updates.title,
+        description: updates.description,
+        startsAt:
+          updates.starts_at === undefined
+            ? undefined
+            : updates.starts_at == null
+              ? null
+              : toRfc3339(updates.starts_at),
+        endsAt:
+          updates.ends_at === undefined
+            ? undefined
+            : updates.ends_at == null
+              ? null
+              : toRfc3339(updates.ends_at),
+        isAllDay: updates.is_all_day,
+        done: updates.done,
+      });
+    },
+    []
+  );
+  const toggleDone = useCallback(
+    async (id: number, currentDone: number, _options?: { reinsert?: Todo; undoTitle?: string }) => {
+      await getJournalService().updateTodo(id, { done: currentDone === 1 ? 0 : 1 });
+    },
+    []
+  );
+  const deleteTodo = useCallback(async (id: number) => {
+    await getJournalService().deleteTodo(id);
+  }, []);
+  return {
+    todos: snapshot.data ?? [],
+    isLoading: enabled && snapshot.loading && snapshot.data === undefined,
+    error: snapshot.error,
+    createTodo,
+    updateTodo,
+    toggleDone,
+    deleteTodo,
+    mutate: snapshot.refresh,
+  };
+}
+
+export function useTodos(options?: TodoOptions) {
+  const mode = useJournalMode();
+  const local = useLocalTodos(options, mode === 'local');
+  const remote = useRemoteTodos(options, mode !== 'local');
+  if (mode === 'local') return local;
+  return { ...remote, mutate: () => remote.mutate() };
 }

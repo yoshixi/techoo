@@ -6,6 +6,7 @@ import {
 import type { PostList } from '@/gen/api/schemas';
 import { revalidateAllPostFeedCaches } from '@/lib/patchPostCaches';
 import type { TimelineTab } from '@/lib/timelineTab';
+import { getJournalMode, getJournalService } from '@/lib/journal/runtime';
 
 export type PostComposerAssociations = {
   event: { id: number; title: string } | null;
@@ -56,6 +57,14 @@ export async function applyPostComposerAssociations(
   postId: number,
   associations: PostComposerAssociations
 ): Promise<void> {
+  if (getJournalMode() === 'local') {
+    const service = getJournalService();
+    if (associations.favorite) await service.setPostFavorite(postId, true);
+    for (const list of associations.lists) {
+      await service.setPostListMembership(postId, list.id, true);
+    }
+    return;
+  }
   if (associations.favorite) {
     await postApiV1PostsIdFavorite(postId);
   }
@@ -68,6 +77,16 @@ export async function createPostWithAssociations(
   body: string,
   associations: PostComposerAssociations
 ): Promise<void> {
+  if (getJournalMode() === 'local') {
+    const service = getJournalService();
+    const post = await service.createPost({
+      body,
+      todoLocalIds: associations.todo ? [associations.todo.id] : [],
+      events: associations.event ? [associations.event] : [],
+    });
+    await applyPostComposerAssociations(post.id, associations);
+    return;
+  }
   const eventIds = associations.event ? [associations.event.id] : [];
   const todoIds = associations.todo ? [associations.todo.id] : [];
   const res = await postApiV1Posts({

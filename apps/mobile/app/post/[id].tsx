@@ -4,12 +4,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { usePostThread } from '@/hooks/usePostThread';
-import { deleteApiV1PostsId } from '@/gen/api/endpoints/techooAPI.gen';
 import { formatTime } from '@/lib/time';
 import { showApiError } from '@/lib/showApiError';
 import { ThreadReplyRow } from '@/components/posts/ThreadReplyRow';
-import { revalidateAllPostLists } from '@/lib/revalidatePostLists';
-import { revalidateAllPostFeedCaches } from '@/lib/patchPostCaches';
 
 export default function PostDetailScreen() {
   const router = useRouter();
@@ -57,8 +54,8 @@ export default function PostDetailScreen() {
         style: 'destructive',
         onPress: () => {
           setSubmitting(true);
-          void deleteApiV1PostsId(post.id)
-            .then(() => Promise.all([revalidateAllPostFeedCaches(), revalidateAllPostLists()]))
+          void thread
+            .deletePost(post.id)
             .then(() => {
               router.replace('/(tabs)/logbook');
             })
@@ -122,15 +119,16 @@ export default function PostDetailScreen() {
           <Text
             className={`text-base font-semibold ${
               submitting || !body.trim() ? 'text-muted-foreground' : 'text-primary'
-            }`}
-          >
+            }`}>
             {submitting ? 'Saving...' : 'Save'}
           </Text>
         </Pressable>
       </View>
 
       <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 40 }}>
-        {thread.isLoading && !post ? <Text className="text-sm text-muted-foreground">Loading...</Text> : null}
+        {thread.isLoading && !post ? (
+          <Text className="text-sm text-muted-foreground">Loading...</Text>
+        ) : null}
         {!thread.isLoading && !post ? (
           <Text className="text-sm text-muted-foreground">
             {thread.error ? 'Couldn’t load thread.' : 'Thread not found.'}
@@ -183,12 +181,13 @@ export default function PostDetailScreen() {
                 className="min-h-[90px] rounded-lg border border-border/30 bg-background px-3 py-2 text-sm text-foreground"
               />
               <View className="mt-2 flex-row justify-end">
-                <Pressable onPress={() => void onReply()} disabled={postingReply || !replyBody.trim()}>
+                <Pressable
+                  onPress={() => void onReply()}
+                  disabled={postingReply || !replyBody.trim()}>
                   <Text
                     className={`text-sm font-semibold ${
                       postingReply || !replyBody.trim() ? 'text-muted-foreground' : 'text-primary'
-                    }`}
-                  >
+                    }`}>
                     {postingReply ? 'Posting...' : 'Reply'}
                   </Text>
                 </Pressable>
@@ -198,8 +197,7 @@ export default function PostDetailScreen() {
             <Pressable
               onPress={onDeleteRoot}
               disabled={submitting}
-              className="mt-8 items-center rounded-xl border border-destructive/35 bg-destructive/10 py-3"
-            >
+              className="mt-8 items-center rounded-xl border border-destructive/35 bg-destructive/10 py-3">
               <Text className="text-sm font-semibold text-destructive">
                 {submitting ? 'Working...' : 'Delete post'}
               </Text>
