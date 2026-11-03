@@ -8,6 +8,8 @@ import {
 import type { ErrorResponse, Post } from '@/gen/api/schemas';
 import { revalidateAllPostFeedCaches } from '@/lib/patchPostCaches';
 import { revalidateAllPostLists } from '@/lib/revalidatePostLists';
+import { getJournalService, useJournalMode } from '@/lib/journal/runtime';
+import { useJournalSnapshot } from '@/hooks/useJournalSnapshot';
 
 export function usePostThread(postId: number | null): {
   root: Post | null;
@@ -19,9 +21,15 @@ export function usePostThread(postId: number | null): {
   updatePost: (id: number, body: string) => Promise<void>;
   deletePost: (id: number) => Promise<void>;
 } {
+  const mode = useJournalMode();
+  const local = useJournalSnapshot(
+    mode === 'local' && postId != null,
+    async () => (postId == null ? null : getJournalService().getThread(postId)),
+    String(postId ?? '')
+  );
   const query = useGetApiV1PostsIdThread(postId ?? 0, {
     swr: {
-      enabled: postId != null,
+      enabled: postId != null && mode !== 'local',
       revalidateOnFocus: false,
     },
   });
@@ -35,6 +43,10 @@ export function usePostThread(postId: number | null): {
       if (postId == null) return;
       const trimmed = body.trim();
       if (!trimmed) return;
+      if (mode === 'local') {
+        await getJournalService().createPost({ body: trimmed, parentLocalId: postId });
+        return;
+      }
 
       await postApiV1Posts({
         body: trimmed,
@@ -43,26 +55,47 @@ export function usePostThread(postId: number | null): {
 
       await Promise.all([query.mutate(), revalidateAllPostFeedCaches(), revalidateAllPostLists()]);
     },
-    [postId, query]
+    [postId, query, mode]
   );
 
   const updatePost = useCallback(
     async (id: number, body: string) => {
       const trimmed = body.trim();
       if (!trimmed) return;
+      if (mode === 'local') {
+        await getJournalService().updatePostBody(id, trimmed);
+        return;
+      }
       await patchApiV1PostsId(id, { body: trimmed });
       await Promise.all([query.mutate(), revalidateAllPostFeedCaches(), revalidateAllPostLists()]);
     },
-    [query]
+    [query, mode]
   );
 
   const deletePost = useCallback(
     async (id: number) => {
+      if (mode === 'local') {
+        await getJournalService().deletePost(id);
+        return;
+      }
       await deleteApiV1PostsId(id);
       await Promise.all([query.mutate(), revalidateAllPostFeedCaches(), revalidateAllPostLists()]);
     },
-    [query]
+    [query, mode]
   );
+
+  if (mode === 'local') {
+    return {
+      root: local.data?.root ?? null,
+      replies: local.data?.replies ?? [],
+      isLoading: local.loading && local.data === undefined,
+      error: local.error,
+      refresh: local.refresh,
+      createReply,
+      updatePost,
+      deletePost,
+    };
+  }
 
   return {
     root: query.data?.data.root ?? null,

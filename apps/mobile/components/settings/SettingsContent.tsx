@@ -1,8 +1,15 @@
 import { useState, useCallback } from 'react';
 import { View, Alert, ActivityIndicator, Pressable } from 'react-native';
 import {
-  LogOut, User, ChevronDown, ChevronRight, Link,
-  CalendarDays, RefreshCw, Moon, Sun,
+  LogOut,
+  User,
+  ChevronDown,
+  ChevronRight,
+  Link,
+  CalendarDays,
+  RefreshCw,
+  Moon,
+  Sun,
 } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import Constants from 'expo-constants';
@@ -10,15 +17,13 @@ import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/hooks/useAuth';
-import {
-  useCalendarSettings,
-  type CalendarSettingsRow,
-} from '@/hooks/useCalendarSettings';
+import { useCalendarSettings, type CalendarSettingsRow } from '@/hooks/useCalendarSettings';
 import { useCalendarColors } from '@/hooks/useCalendarColors';
 import { useDailyHourWindow } from '@/hooks/useDailyHourWindow';
 import { CalendarColorPicker } from '@/components/calendar/CalendarColorPicker';
 import { linkGoogleAccount } from '@/lib/oauth';
 import { showApiError } from '@/lib/showApiError';
+import { EncryptedSyncSection } from '@/components/settings/EncryptedSyncSection';
 
 // ---------------------------------------------------------------------------
 // Collapsible Section — matches Electron's CollapsibleSection pattern
@@ -37,11 +42,10 @@ function CollapsibleSection({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <View className="border border-border rounded-lg overflow-hidden">
+    <View className="overflow-hidden rounded-lg border border-border">
       <Pressable
         onPress={() => setOpen(!open)}
-        className="flex-row items-center justify-between px-5 py-4"
-      >
+        className="flex-row items-center justify-between px-5 py-4">
         <View className="flex-row items-center gap-2">
           {icon}
           <Text className="text-sm font-medium">{title}</Text>
@@ -147,11 +151,7 @@ export function SettingsContent() {
           if (row.synced) {
             await syncCalendar(row.synced.id);
           } else {
-            await addCalendar(
-              row.providerAccountId,
-              row.providerCalendarId,
-              row.name
-            );
+            await addCalendar(row.providerAccountId, row.providerCalendarId, row.name);
           }
         } else if (row.synced) {
           await removeCalendar(row.synced.id);
@@ -170,16 +170,14 @@ export function SettingsContent() {
       {/* Page Header */}
       <View>
         <Text className="text-2xl font-semibold">Account</Text>
-        <Text className="mt-1 text-muted-foreground">
-          Manage your account and preferences.
-        </Text>
+        <Text className="mt-1 text-muted-foreground">Manage your account and preferences.</Text>
       </View>
 
       {/* Profile */}
       {user && (
-        <View className="border border-border rounded-lg px-5 py-4">
+        <View className="rounded-lg border border-border px-5 py-4">
           <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-3 flex-1">
+            <View className="flex-1 flex-row items-center gap-3">
               <User size={20} className="text-muted-foreground" />
               <View className="flex-1">
                 <Text className="text-sm font-medium" numberOfLines={1}>
@@ -201,7 +199,7 @@ export function SettingsContent() {
       )}
 
       {/* Appearance */}
-      <View className="border border-border rounded-lg px-5 py-4">
+      <View className="rounded-lg border border-border px-5 py-4">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-3">
             {isDarkMode ? (
@@ -221,7 +219,7 @@ export function SettingsContent() {
       </View>
 
       {/* Daily schedule hours */}
-      <View className="border border-border rounded-lg px-5 py-4">
+      <View className="rounded-lg border border-border px-5 py-4">
         <View className="mb-3">
           <Text className="text-sm font-medium">Daily schedule hours</Text>
           <Text className="text-xs text-muted-foreground">
@@ -234,15 +232,13 @@ export function SettingsContent() {
           <View className="flex-row items-center gap-2">
             <Pressable
               onPress={decrementWakeHour}
-              className="h-8 w-8 items-center justify-center rounded-full border border-border"
-            >
+              className="h-8 w-8 items-center justify-center rounded-full border border-border">
               <Text className="text-base">-</Text>
             </Pressable>
             <Text className="w-16 text-center text-sm font-medium">{hourLabel(wakeHour)}</Text>
             <Pressable
               onPress={incrementWakeHour}
-              className="h-8 w-8 items-center justify-center rounded-full border border-border"
-            >
+              className="h-8 w-8 items-center justify-center rounded-full border border-border">
               <Text className="text-base">+</Text>
             </Pressable>
           </View>
@@ -253,15 +249,13 @@ export function SettingsContent() {
           <View className="flex-row items-center gap-2">
             <Pressable
               onPress={decrementBedHour}
-              className="h-8 w-8 items-center justify-center rounded-full border border-border"
-            >
+              className="h-8 w-8 items-center justify-center rounded-full border border-border">
               <Text className="text-base">-</Text>
             </Pressable>
             <Text className="w-16 text-center text-sm font-medium">{hourLabel(bedHour)}</Text>
             <Pressable
               onPress={incrementBedHour}
-              className="h-8 w-8 items-center justify-center rounded-full border border-border"
-            >
+              className="h-8 w-8 items-center justify-center rounded-full border border-border">
               <Text className="text-base">+</Text>
             </Pressable>
           </View>
@@ -272,8 +266,7 @@ export function SettingsContent() {
       <CollapsibleSection
         title="Calendars"
         icon={<CalendarDays size={20} className="text-muted-foreground" />}
-        defaultOpen
-      >
+        defaultOpen>
         <View className="gap-4">
           <Text className="text-xs text-muted-foreground">
             Turn on calendars under each account to sync events.
@@ -301,17 +294,13 @@ export function SettingsContent() {
             </Text>
           )}
           {linkStatus === 'error' && (
-            <Text className="text-xs text-destructive">
-              Link failed. Please try again.
-            </Text>
+            <Text className="text-xs text-destructive">Link failed. Please try again.</Text>
           )}
 
           {isCalendarLoading && accountGroups.length === 0 ? (
             <Text className="text-sm text-muted-foreground">Loading calendars...</Text>
           ) : accountGroups.length === 0 ? (
-            <Text className="text-sm text-muted-foreground">
-              No calendar accounts linked yet.
-            </Text>
+            <Text className="text-sm text-muted-foreground">No calendar accounts linked yet.</Text>
           ) : (
             <View className="gap-5">
               {accountGroups.map((group) => (
@@ -326,8 +315,7 @@ export function SettingsContent() {
                         size="sm"
                         variant="outline"
                         onPress={handleLinkGoogle}
-                        disabled={isLinking}
-                      >
+                        disabled={isLinking}>
                         <Text className="text-sm">Re-link Google Account</Text>
                       </Button>
                     </View>
@@ -338,7 +326,7 @@ export function SettingsContent() {
                         : 'No calendars found for this account.'}
                     </Text>
                   ) : (
-                    <View className="pl-3 border-l border-border">
+                    <View className="border-l border-border pl-3">
                       {group.calendars.map((row) => {
                         const busy = togglingCalendarKey === row.key;
                         const synced = row.synced;
@@ -352,15 +340,14 @@ export function SettingsContent() {
                         return (
                           <View
                             key={row.key}
-                            className="gap-2 py-3 border-b border-border/50 last:border-b-0"
-                          >
+                            className="gap-2 border-b border-border/50 py-3 last:border-b-0">
                             <View className="flex-row items-center justify-between gap-3">
-                              <View className="flex-row items-center gap-3 flex-1 min-w-0">
+                              <View className="min-w-0 flex-1 flex-row items-center gap-3">
                                 <View
                                   className="h-3 w-3 rounded-full border border-border"
                                   style={{ backgroundColor: swatchColor }}
                                 />
-                                <View className="flex-1 min-w-0">
+                                <View className="min-w-0 flex-1">
                                   <Text className="text-sm font-medium" numberOfLines={1}>
                                     {row.name}
                                     {row.isPrimary ? (
@@ -384,8 +371,7 @@ export function SettingsContent() {
                                     onPress={() => handleSyncCalendar(synced.id)}
                                     disabled={syncingCalendarId === synced.id || busy}
                                     className="p-1.5"
-                                    accessibilityLabel="Sync now"
-                                  >
+                                    accessibilityLabel="Sync now">
                                     {syncingCalendarId === synced.id ? (
                                       <ActivityIndicator size="small" />
                                     ) : (
@@ -422,8 +408,10 @@ export function SettingsContent() {
         </View>
       </CollapsibleSection>
 
+      <EncryptedSyncSection />
+
       {/* About — minimal footer */}
-      <View className="pt-2 items-center">
+      <View className="items-center pt-2">
         <Text className="text-sm text-muted-foreground">
           Techoo v{appVersion} — Your cozy focus companion
         </Text>

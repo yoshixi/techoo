@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getApiV1Posts } from '@/gen/api/endpoints/techooAPI.gen';
 import type { ErrorResponse, GetApiV1PostsParams, Post } from '@/gen/api/schemas';
 import { getPostsFeedSwrKey, POSTS_FEED_SWR_OPTIONS } from '@/lib/postsFeedSwrKey';
+import { getJournalService, useJournalMode } from '@/lib/journal/runtime';
+import { useJournalSnapshot } from '@/hooks/useJournalSnapshot';
 
 export function usePaginatedPostsFeed(firstPageParams: GetApiV1PostsParams): {
   posts: Post[];
@@ -18,16 +20,36 @@ export function usePaginatedPostsFeed(firstPageParams: GetApiV1PostsParams): {
 } {
   const swrKey = getPostsFeedSwrKey(firstPageParams);
   const paramsCacheKey = swrKey[1];
+  const mode = useJournalMode();
+  const pageSize = firstPageParams.limit ?? 30;
+  const [localLimit, setLocalLimit] = useState(pageSize);
+  const listIds = firstPageParams.listIds
+    ?.split(',')
+    .map((id) => Number(id))
+    .filter((id) => !Number.isNaN(id));
+  const local = useJournalSnapshot(
+    mode === 'local',
+    () =>
+      getJournalService().queryPosts({
+        from: firstPageParams.from,
+        to: firstPageParams.to,
+        favorite: firstPageParams.favorite === 'true',
+        listLocalIds: listIds,
+        limit: localLimit,
+        offset: 0,
+      }),
+    JSON.stringify({ params: firstPageParams, localLimit })
+  );
 
   const { data, error, isLoading, mutate } = useSWR(
-    swrKey,
+    mode === 'local' ? null : swrKey,
     () => getApiV1Posts(firstPageParams),
     POSTS_FEED_SWR_OPTIONS
   );
 
   const [extraPosts, setExtraPosts] = useState<Post[]>([]);
   const [nextOffset, setNextOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+  const [remoteHasMore, setRemoteHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<ErrorResponse | undefined>();
 
@@ -39,38 +61,54 @@ export function usePaginatedPostsFeed(firstPageParams: GetApiV1PostsParams): {
   useEffect(() => {
     if (!data) return;
     setNextOffset(data.data.length);
-    setHasMore(data.has_more ?? false);
+    setRemoteHasMore(data.has_more ?? false);
   }, [data]);
 
-  const posts = useMemo(
-    () => [...(data?.data ?? []), ...extraPosts],
-    [data?.data, extraPosts]
-  );
+  useEffect(() => {
+    setLocalLimit(pageSize);
+  }, [paramsCacheKey, pageSize]);
 
-  const initialLoading = isLoading && posts.length === 0;
+  const posts = useMemo(() => {
+    if (mode === 'local') return local.data?.posts ?? [];
+    return [...(data?.data ?? []), ...extraPosts];
+  }, [mode, local.data?.posts, data?.data, extraPosts]);
+
+  const visibleHasMore = mode === 'local' ? (local.data?.hasMore ?? false) : remoteHasMore;
+
+  const initialLoading =
+    mode === 'local' ? local.loading && local.data === undefined : isLoading && posts.length === 0;
 
   const refetch = useCallback(async () => {
+    if (mode === 'local') {
+      setLocalLimit(pageSize);
+      await local.refresh();
+      return;
+    }
     setExtraPosts([]);
     setLoadMoreError(undefined);
     await mutate();
-  }, [mutate]);
+  }, [mode, local.refresh, mutate, pageSize]);
 
   const loadMore = useCallback(async () => {
-    if (!hasMore || loadingMore || initialLoading) return;
+    if (!visibleHasMore || loadingMore || initialLoading) return;
+    if (mode === 'local') {
+      setLocalLimit((current) => current + pageSize);
+      return;
+    }
     setLoadingMore(true);
     setLoadMoreError(undefined);
     try {
       const res = await getApiV1Posts({ ...firstPageParams, offset: nextOffset });
       setExtraPosts((prev) => [...prev, ...res.data]);
       setNextOffset((offset) => offset + res.data.length);
-      setHasMore(res.has_more ?? false);
+      setRemoteHasMore(res.has_more ?? false);
     } catch (e) {
-      setHasMore(false);
+      setRemoteHasMore(false);
       setLoadMoreError(e as ErrorResponse);
     } finally {
       setLoadingMore(false);
     }
-  }, [firstPageParams, hasMore, loadingMore, initialLoading, nextOffset]);
+  }, [firstPageParams, visibleHasMore, loadingMore, initialLoading, nextOffset, mode, pageSize]);
 
   const prependPost = useCallback(
     (post: Post) => {
@@ -118,10 +156,10 @@ export function usePaginatedPostsFeed(firstPageParams: GetApiV1PostsParams): {
 
   return {
     posts,
-    hasMore,
+    hasMore: visibleHasMore,
     initialLoading,
     loadingMore,
-    error: (error as ErrorResponse | undefined) ?? loadMoreError,
+    error: mode === 'local' ? local.error : ((error as ErrorResponse | undefined) ?? loadMoreError),
     loadMore,
     refetch,
     prependPost,
