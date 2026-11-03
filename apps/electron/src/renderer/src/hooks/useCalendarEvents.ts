@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useGetApiEvents, useGetApiCalendars } from '../gen/api/endpoints/techooAPI.gen'
+import { useGetApiV1Events, useGetApiV1Calendars } from '../gen/api/endpoints/techooAPI.gen'
 import type { CalendarEvent as ApiCalendarEvent, Calendar } from '../gen/api/schemas'
 import { useCalendarColors } from './useCalendarColors'
 
@@ -43,7 +43,7 @@ export function useCalendarEvents(
     setStorageLoaded(true)
   }, [])
 
-  const { data: calendarsData, isLoading: isCalendarsLoading } = useGetApiCalendars({
+  const { data: calendarsData, isLoading: isCalendarsLoading } = useGetApiV1Calendars({
     swr: { enabled }
   })
 
@@ -74,7 +74,7 @@ export function useCalendarEvents(
     [startDate, endDate]
   )
 
-  const { data: eventsData, isLoading: isEventsLoading } = useGetApiEvents(params, {
+  const { data: eventsData, isLoading: isEventsLoading } = useGetApiV1Events(params, {
     swr: { enabled }
   })
 

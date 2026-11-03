@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef } from 'react'
 import { AppState, type AppStateStatus } from 'react-native'
 import { useSWRConfig } from 'swr'
 import {
-  useGetApiCalendars,
-  postApiCalendarsSync,
-  getGetApiCalendarsKey,
-  getGetApiEventsKey,
+  useGetApiV1Calendars,
+  postApiV1CalendarsSync,
+  getGetApiV1CalendarsKey,
+  getGetApiV1EventsKey,
 } from '@/gen/api/endpoints/techooAPI.gen'
 import type { Calendar } from '@/gen/api/schemas'
 
@@ -32,7 +32,7 @@ function isCalendarStale(calendar: Calendar, now: number): boolean {
  */
 export function useCalendarAutoSync(enabled = true): void {
   const { mutate } = useSWRConfig()
-  const { data: calendarsData } = useGetApiCalendars({
+  const { data: calendarsData } = useGetApiV1Calendars({
     swr: { enabled },
   })
   // Keep a ref so the AppState listener always sees the latest maybeSync
@@ -55,12 +55,12 @@ export function useCalendarAutoSync(enabled = true): void {
     globalInFlight = true
     globalLastAttempt = now
     try {
-      await postApiCalendarsSync()
+      await postApiV1CalendarsSync()
       await Promise.all([
-        mutate(getGetApiCalendarsKey()),
-        // Match parameterized event keys: ['/api/events', params]
+        mutate(getGetApiV1CalendarsKey()),
+        // Match parameterized event keys: ['/api/v1/events', params]
         mutate(
-          (key) => Array.isArray(key) && key[0] === getGetApiEventsKey()[0]
+          (key) => Array.isArray(key) && key[0] === getGetApiV1EventsKey()[0]
         ),
       ])
     } catch (error) {

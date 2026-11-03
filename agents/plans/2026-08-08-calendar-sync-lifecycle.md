@@ -18,7 +18,7 @@ Calendar events were only imported on explicit user actions (Add calendar / Sync
 - Triggers: mobile `CalendarView`; Electron `CalendarTodoWorkspace` and Today plan mode.
 - Also re-check on foreground/focus while those surfaces are mounted.
 - Debounce: 60s + in-flight guard (module-scoped across hook instances).
-- Call `POST /api/calendars/sync` for all enabled calendars; fire-and-forget; silent failure (Settings Sync remains).
+- Call `POST /api/v1/calendars/sync` for all enabled calendars; fire-and-forget; silent failure (Settings Sync remains).
 
 **Phase 2 (deferred):** Google push watch auto-start + Cloudflare Cron channel renewal; keep stale-on-open as fallback.
 

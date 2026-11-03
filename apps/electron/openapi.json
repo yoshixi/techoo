@@ -677,124 +677,6 @@
           }
         }
       },
-      "OAuthStatusResponse": {
-        "type": "object",
-        "properties": {
-          "connected": {
-            "type": "boolean",
-            "description": "Whether the user has a valid OAuth connection"
-          },
-          "providerType": {
-            "type": "string",
-            "enum": [
-              "google",
-              "outlook",
-              "apple"
-            ],
-            "description": "The connected provider type"
-          },
-          "expiresAt": {
-            "type": "string",
-            "nullable": true,
-            "description": "Token expiration timestamp"
-          },
-          "scope": {
-            "type": "string",
-            "nullable": true,
-            "description": "Granted OAuth scopes for the account (space-separated)"
-          },
-          "hasCalendarScope": {
-            "type": "boolean",
-            "description": "Whether the token includes Google Calendar read scopes"
-          }
-        },
-        "required": [
-          "connected"
-        ]
-      },
-      "OAuthDisconnectResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "description": "Whether the disconnect was successful"
-          },
-          "message": {
-            "type": "string",
-            "description": "Result message",
-            "example": "Google OAuth disconnected successfully"
-          }
-        },
-        "required": [
-          "success",
-          "message"
-        ]
-      },
-      "OAuthAccount": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Unique identifier for the account record"
-          },
-          "userId": {
-            "type": "string",
-            "description": "User ID"
-          },
-          "providerType": {
-            "type": "string",
-            "enum": [
-              "google",
-              "outlook",
-              "apple"
-            ],
-            "description": "OAuth provider type",
-            "example": "google"
-          },
-          "accountId": {
-            "type": "string",
-            "description": "Provider-specific account ID"
-          },
-          "email": {
-            "type": "string",
-            "format": "email",
-            "description": "Email associated with the provider account"
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "Timestamp when the account was linked",
-            "example": "2024-01-01T10:00:00.000Z"
-          },
-          "updatedAt": {
-            "type": "string",
-            "description": "Timestamp when the account was last updated",
-            "example": "2024-01-01T15:30:00.000Z"
-          }
-        },
-        "required": [
-          "id",
-          "userId",
-          "providerType",
-          "accountId",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "OAuthAccountsResponse": {
-        "type": "object",
-        "properties": {
-          "accounts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/OAuthAccount"
-            },
-            "description": "Linked OAuth accounts"
-          }
-        },
-        "required": [
-          "accounts"
-        ]
-      },
       "AvailableCalendar": {
         "type": "object",
         "properties": {
@@ -1255,6 +1137,124 @@
           "isWatching",
           "watchChannel",
           "expiresIn"
+        ]
+      },
+      "OAuthStatusResponse": {
+        "type": "object",
+        "properties": {
+          "connected": {
+            "type": "boolean",
+            "description": "Whether the user has a valid OAuth connection"
+          },
+          "providerType": {
+            "type": "string",
+            "enum": [
+              "google",
+              "outlook",
+              "apple"
+            ],
+            "description": "The connected provider type"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Token expiration timestamp"
+          },
+          "scope": {
+            "type": "string",
+            "nullable": true,
+            "description": "Granted OAuth scopes for the account (space-separated)"
+          },
+          "hasCalendarScope": {
+            "type": "boolean",
+            "description": "Whether the token includes Google Calendar read scopes"
+          }
+        },
+        "required": [
+          "connected"
+        ]
+      },
+      "OAuthDisconnectResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the disconnect was successful"
+          },
+          "message": {
+            "type": "string",
+            "description": "Result message",
+            "example": "Google OAuth disconnected successfully"
+          }
+        },
+        "required": [
+          "success",
+          "message"
+        ]
+      },
+      "OAuthAccount": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the account record"
+          },
+          "userId": {
+            "type": "string",
+            "description": "User ID"
+          },
+          "providerType": {
+            "type": "string",
+            "enum": [
+              "google",
+              "outlook",
+              "apple"
+            ],
+            "description": "OAuth provider type",
+            "example": "google"
+          },
+          "accountId": {
+            "type": "string",
+            "description": "Provider-specific account ID"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email associated with the provider account"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Timestamp when the account was linked",
+            "example": "2024-01-01T10:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Timestamp when the account was last updated",
+            "example": "2024-01-01T15:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "providerType",
+          "accountId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "OAuthAccountsResponse": {
+        "type": "object",
+        "properties": {
+          "accounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OAuthAccount"
+            },
+            "description": "Linked OAuth accounts"
+          }
+        },
+        "required": [
+          "accounts"
         ]
       },
       "DeleteAccountResponse": {
@@ -2616,125 +2616,7 @@
         }
       }
     },
-    "/api/oauth/google/status": {
-      "get": {
-        "summary": "Check Google OAuth status",
-        "description": "Check if the user has a valid Google OAuth connection (via better-auth)",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Provider-specific account ID"
-            },
-            "required": false,
-            "description": "Provider-specific account ID",
-            "name": "accountId",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OAuth status retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OAuthStatusResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Failed to check OAuth status",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/oauth/google": {
-      "delete": {
-        "summary": "Disconnect Google Calendar data",
-        "description": "Removes all calendar data associated with the Google account. Note: To fully unlink the Google account, use better-auth unlinkAccount.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Provider-specific account ID"
-            },
-            "required": false,
-            "description": "Provider-specific account ID",
-            "name": "accountId",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Google Calendar data disconnected successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OAuthDisconnectResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No Google OAuth connection found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Failed to disconnect Google OAuth",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/oauth/google/accounts": {
-      "get": {
-        "summary": "List linked Google accounts",
-        "description": "Retrieve linked Google accounts for the current user",
-        "responses": {
-          "200": {
-            "description": "Linked accounts retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OAuthAccountsResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Failed to retrieve linked accounts",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/calendars/available": {
+    "/api/v1/calendars/available": {
       "get": {
         "summary": "List available Google Calendars",
         "description": "Retrieve available calendars from Google Calendar API that can be synced",
@@ -2794,7 +2676,7 @@
         }
       }
     },
-    "/api/calendars": {
+    "/api/v1/calendars": {
       "get": {
         "summary": "List integrated calendars",
         "description": "Retrieve all calendars that have been added for syncing",
@@ -2887,7 +2769,7 @@
         }
       }
     },
-    "/api/calendars/{id}": {
+    "/api/v1/calendars/{id}": {
       "get": {
         "summary": "Get a calendar",
         "description": "Retrieve a specific calendar by ID",
@@ -3051,7 +2933,7 @@
         }
       }
     },
-    "/api/calendars/{id}/sync": {
+    "/api/v1/calendars/{id}/sync": {
       "post": {
         "summary": "Sync a calendar",
         "description": "Trigger a sync for a specific calendar to import latest events",
@@ -3124,7 +3006,7 @@
         }
       }
     },
-    "/api/calendars/sync": {
+    "/api/v1/calendars/sync": {
       "post": {
         "summary": "Sync all calendars",
         "description": "Trigger a sync for all enabled calendars",
@@ -3162,7 +3044,7 @@
         }
       }
     },
-    "/api/events": {
+    "/api/v1/events": {
       "get": {
         "summary": "List calendar events",
         "description": "Retrieve calendar events with optional filters (calendarId, startDate, endDate)",
@@ -3241,7 +3123,7 @@
         }
       }
     },
-    "/api/events/{id}": {
+    "/api/v1/events/{id}": {
       "get": {
         "summary": "Get an event",
         "description": "Retrieve a specific calendar event by ID",
@@ -3294,7 +3176,7 @@
         }
       }
     },
-    "/api/calendars/{id}/watch": {
+    "/api/v1/calendars/{id}/watch": {
       "post": {
         "summary": "Watch calendar for changes",
         "description": "Start watching a calendar for push notifications when events change",
@@ -3458,6 +3340,124 @@
           },
           "500": {
             "description": "Failed to retrieve watch status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth/google/status": {
+      "get": {
+        "summary": "Check Google OAuth status",
+        "description": "Check if the user has a valid Google OAuth connection (via better-auth)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Provider-specific account ID"
+            },
+            "required": false,
+            "description": "Provider-specific account ID",
+            "name": "accountId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OAuth status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthStatusResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to check OAuth status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth/google": {
+      "delete": {
+        "summary": "Disconnect Google Calendar data",
+        "description": "Removes all calendar data associated with the Google account. Note: To fully unlink the Google account, use better-auth unlinkAccount.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Provider-specific account ID"
+            },
+            "required": false,
+            "description": "Provider-specific account ID",
+            "name": "accountId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Google Calendar data disconnected successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthDisconnectResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Google OAuth connection found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to disconnect Google OAuth",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth/google/accounts": {
+      "get": {
+        "summary": "List linked Google accounts",
+        "description": "Retrieve linked Google accounts for the current user",
+        "responses": {
+          "200": {
+            "description": "Linked accounts retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthAccountsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to retrieve linked accounts",
             "content": {
               "application/json": {
                 "schema": {

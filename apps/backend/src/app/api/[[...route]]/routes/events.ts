@@ -7,10 +7,10 @@ import {
 } from '../../../core/events.core'
 import { ErrorResponseModel } from '../../../core/common.core'
 
-// GET /events - List events with filters
+// GET /v1/events - List events with filters
 export const listEventsRoute = createRoute({
   method: 'get',
-  path: '/events',
+  path: '/v1/events',
   summary: 'List calendar events',
   description: 'Retrieve calendar events with optional filters (calendarId, startDate, endDate)',
   request: {
@@ -36,10 +36,10 @@ export const listEventsRoute = createRoute({
   }
 })
 
-// GET /events/{id} - Get a specific event
+// GET /v1/events/{id} - Get a specific event
 export const getEventRoute = createRoute({
   method: 'get',
-  path: '/events/{id}',
+  path: '/v1/events/{id}',
   summary: 'Get an event',
   description: 'Retrieve a specific calendar event by ID',
   request: {

@@ -102,7 +102,7 @@ describe('customInstance auth retry', () => {
       .mockResolvedValueOnce(jsonResponse(401, googleBody))
 
     await expect(
-      customInstance({ url: '/api/calendars/available', method: 'GET' })
+      customInstance({ url: '/api/v1/calendars/available', method: 'GET' })
     ).rejects.toThrow(/HTTP 401/)
 
     expect(invalidationReasons).toEqual([])

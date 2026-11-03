@@ -285,13 +285,6 @@ export function createApp(deps?: AppDeps): CreateAppResult {
   app.openapi(updateNoteRoute, updateNoteHandler)
   app.openapi(deleteNoteRoute, deleteNoteHandler)
 
-  // --- Existing infrastructure routes ---
-
-  // Google OAuth routes (status/disconnect only - auth handled by better-auth)
-  app.openapi(getGoogleAuthStatusRoute, getGoogleAuthStatusHandler)
-  app.openapi(deleteGoogleAuthRoute, deleteGoogleAuthHandler)
-  app.openapi(listGoogleAccountsRoute, listGoogleAccountsHandler)
-
   // Calendar routes
   app.openapi(listAvailableCalendarsRoute, listAvailableCalendarsHandler)
   app.openapi(listCalendarsRoute, listCalendarsHandler)
@@ -310,6 +303,13 @@ export function createApp(deps?: AppDeps): CreateAppResult {
   app.openapi(watchCalendarRoute, watchCalendarHandler)
   app.openapi(stopWatchingCalendarRoute, stopWatchingCalendarHandler)
   app.openapi(getWatchStatusRoute, getWatchStatusHandler)
+
+  // --- Unversioned infrastructure routes ---
+
+  // Google OAuth routes (status/disconnect only - auth handled by better-auth)
+  app.openapi(getGoogleAuthStatusRoute, getGoogleAuthStatusHandler)
+  app.openapi(deleteGoogleAuthRoute, deleteGoogleAuthHandler)
+  app.openapi(listGoogleAccountsRoute, listGoogleAccountsHandler)
 
   // Account routes
   app.openapi(deleteAccountRoute, deleteAccountHandler)

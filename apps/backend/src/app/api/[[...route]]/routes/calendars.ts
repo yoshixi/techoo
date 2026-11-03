@@ -16,10 +16,10 @@ import {
   StopWatchResponseModel
 } from '../../../core/watch-channels.core'
 
-// GET /calendars/available - List available calendars from Google
+// GET /v1/calendars/available - List available calendars from Google
 export const listAvailableCalendarsRoute = createRoute({
   method: 'get',
-  path: '/calendars/available',
+  path: '/v1/calendars/available',
   summary: 'List available Google Calendars',
   description: 'Retrieve available calendars from Google Calendar API that can be synced',
   request: {
@@ -61,10 +61,10 @@ export const listAvailableCalendarsRoute = createRoute({
   }
 })
 
-// GET /calendars - List integrated calendars
+// GET /v1/calendars - List integrated calendars
 export const listCalendarsRoute = createRoute({
   method: 'get',
-  path: '/calendars',
+  path: '/v1/calendars',
   summary: 'List integrated calendars',
   description: 'Retrieve all calendars that have been added for syncing',
   responses: {
@@ -87,10 +87,10 @@ export const listCalendarsRoute = createRoute({
   }
 })
 
-// POST /calendars - Add a calendar to sync
+// POST /v1/calendars - Add a calendar to sync
 export const createCalendarRoute = createRoute({
   method: 'post',
-  path: '/calendars',
+  path: '/v1/calendars',
   summary: 'Add a calendar to sync',
   description: 'Add a Google Calendar to be synced',
   request: {
@@ -146,10 +146,10 @@ export const createCalendarRoute = createRoute({
   }
 })
 
-// GET /calendars/{id} - Get a specific calendar
+// GET /v1/calendars/{id} - Get a specific calendar
 export const getCalendarRoute = createRoute({
   method: 'get',
-  path: '/calendars/{id}',
+  path: '/v1/calendars/{id}',
   summary: 'Get a calendar',
   description: 'Retrieve a specific calendar by ID',
   request: {
@@ -183,10 +183,10 @@ export const getCalendarRoute = createRoute({
   }
 })
 
-// PATCH /calendars/{id} - Update a calendar
+// PATCH /v1/calendars/{id} - Update a calendar
 export const updateCalendarRoute = createRoute({
   method: 'patch',
-  path: '/calendars/{id}',
+  path: '/v1/calendars/{id}',
   summary: 'Update a calendar',
   description: 'Update calendar settings (e.g., enable/disable sync)',
   request: {
@@ -227,10 +227,10 @@ export const updateCalendarRoute = createRoute({
   }
 })
 
-// DELETE /calendars/{id} - Remove a calendar
+// DELETE /v1/calendars/{id} - Remove a calendar
 export const deleteCalendarRoute = createRoute({
   method: 'delete',
-  path: '/calendars/{id}',
+  path: '/v1/calendars/{id}',
   summary: 'Remove a calendar',
   description: 'Remove a calendar and delete all its synced events',
   request: {
@@ -264,10 +264,10 @@ export const deleteCalendarRoute = createRoute({
   }
 })
 
-// POST /calendars/{id}/sync - Sync a specific calendar
+// POST /v1/calendars/{id}/sync - Sync a specific calendar
 export const syncCalendarRoute = createRoute({
   method: 'post',
-  path: '/calendars/{id}/sync',
+  path: '/v1/calendars/{id}/sync',
   summary: 'Sync a calendar',
   description: 'Trigger a sync for a specific calendar to import latest events',
   request: {
@@ -317,10 +317,10 @@ export const syncCalendarRoute = createRoute({
   }
 })
 
-// POST /calendars/sync - Sync all enabled calendars
+// POST /v1/calendars/sync - Sync all enabled calendars
 export const syncAllCalendarsRoute = createRoute({
   method: 'post',
-  path: '/calendars/sync',
+  path: '/v1/calendars/sync',
   summary: 'Sync all calendars',
   description: 'Trigger a sync for all enabled calendars',
   responses: {
@@ -351,10 +351,10 @@ export const syncAllCalendarsRoute = createRoute({
   }
 })
 
-// POST /calendars/{id}/watch - Start watching a calendar for changes
+// POST /v1/calendars/{id}/watch - Start watching a calendar for changes
 export const watchCalendarRoute = createRoute({
   method: 'post',
-  path: '/calendars/{id}/watch',
+  path: '/v1/calendars/{id}/watch',
   summary: 'Watch calendar for changes',
   description:
     'Start watching a calendar for push notifications when events change',
@@ -397,10 +397,10 @@ export const watchCalendarRoute = createRoute({
   }
 })
 
-// DELETE /calendars/{id}/watch - Stop watching a calendar
+// DELETE /v1/calendars/{id}/watch - Stop watching a calendar
 export const stopWatchingCalendarRoute = createRoute({
   method: 'delete',
-  path: '/calendars/{id}/watch',
+  path: '/v1/calendars/{id}/watch',
   summary: 'Stop watching calendar',
   description: 'Stop receiving push notifications for a calendar',
   request: {
@@ -442,10 +442,10 @@ export const stopWatchingCalendarRoute = createRoute({
   }
 })
 
-// GET /calendars/{id}/watch - Get watch channel status
+// GET /v1/calendars/{id}/watch - Get watch channel status
 export const getWatchStatusRoute = createRoute({
   method: 'get',
-  path: '/calendars/{id}/watch',
+  path: '/v1/calendars/{id}/watch',
   summary: 'Get watch status',
   description: 'Get the current watch channel status for a calendar',
   request: {

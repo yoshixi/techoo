@@ -6,7 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type GetApiEventsParams = {
+export type GetApiV1EventsParams = {
   /**
    * Filter events by calendar ID
    * @minimum 0
