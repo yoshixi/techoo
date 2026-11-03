@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/*
   - scripts/*
+  - tests/*
 
 catalog:
   '@hono/zod-openapi': ^1.1.5

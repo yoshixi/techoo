@@ -10,6 +10,7 @@
     "check-types": "turbo run check-types",
     "check:dup-deps": "node scripts/check-duplicate-dependency-versions.mjs",
     "test": "pnpm run check:dup-deps && turbo run test",
+    "test:e2ee-integration": "pnpm --filter @tests/e2ee-integration run test:e2ee-integration",
     "release:electron": "./scripts/release-electron.sh",
     "release:android-apk": "./scripts/release-android-apk.sh",
     "aab-to-apk": "./scripts/aab-to-apk.sh",
