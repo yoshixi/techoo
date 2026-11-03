@@ -15,6 +15,8 @@ permissions:
 jobs:
   release:
     strategy:
+      # A macOS signing failure must not cancel Windows and Linux after they have built.
+      fail-fast: false
       matrix:
         include:
           - os: macos-latest
@@ -72,13 +74,13 @@ jobs:
       - name: Decode macOS signing assets
         if: matrix.os == 'macos-latest'
         env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          APPLE_API_KEY: ${{ secrets.APPLE_CONNECT_API_KEY }}
+          CSC_LINK_B64: ${{ secrets.CSC_LINK }}
+          APPLE_API_KEY_B64: ${{ secrets.APPLE_CONNECT_API_KEY }}
         run: |
           WORKSPACE_DIR=$(pwd)
-          echo "$CSC_LINK" | base64 --decode > "$WORKSPACE_DIR/certificate.p12"
-          echo "CSC_LINK=$WORKSPACE_DIR/certificate.p12" >> "$GITHUB_ENV"
-          echo "$APPLE_API_KEY" | base64 --decode > "$WORKSPACE_DIR/AuthKey.p8"
+          echo "$CSC_LINK_B64" | base64 --decode > "$WORKSPACE_DIR/certificate.p12"
+          echo "$APPLE_API_KEY_B64" | base64 --decode > "$WORKSPACE_DIR/AuthKey.p8"
+          echo "CSC_P12=$WORKSPACE_DIR/certificate.p12" >> "$GITHUB_ENV"
           echo "APPLE_API_KEY=$WORKSPACE_DIR/AuthKey.p8" >> "$GITHUB_ENV"
 
       - name: Setup macOS keychain
@@ -86,22 +88,30 @@ jobs:
         env:
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
         run: |
-          KEYCHAIN=build.keychain
+          # electron-builder 25 creates its own keychain, then runs
+          # set-key-partition-list with the .p12 password. macOS 26 rejects that
+          # (SecKeychainUnlock). Import here and pass CSC_KEYCHAIN only.
+          # Do not set CSC_LINK, or electron-builder takes the broken path.
+          KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
           KEYCHAIN_PASSWORD=temp123
 
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security default-keychain -s "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security set-keychain-settings -t 3600 -u "$KEYCHAIN"
+          security default-keychain -s "$KEYCHAIN"
 
-          security import certificate.p12 \
+          security import "$CSC_P12" \
             -k "$KEYCHAIN" \
             -P "$CSC_KEY_PASSWORD" \
             -T /usr/bin/codesign \
-            -T /usr/bin/security
+            -T /usr/bin/security \
+            -T /usr/bin/productbuild
 
           security set-key-partition-list -S apple-tool:,apple:,codesign: \
             -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          echo "CSC_KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
 
       - name: Build Electron app
         run: pnpm --filter electron run build:${{ matrix.platform }}
