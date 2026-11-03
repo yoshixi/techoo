@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState, useEffect } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
-  useGetApiEvents,
-  useGetApiCalendars,
+  useGetApiV1Events,
+  useGetApiV1Calendars,
 } from '@/gen/api/endpoints/techooAPI.gen'
 import type { CalendarEvent, Calendar } from '@/gen/api/schemas'
 import { useCalendarColors } from '@/hooks/useCalendarColors'
@@ -51,7 +51,7 @@ export function useCalendarEvents(
     })
   }, [])
 
-  const { data: calendarsData, isLoading: isCalendarsLoading } = useGetApiCalendars({
+  const { data: calendarsData, isLoading: isCalendarsLoading } = useGetApiV1Calendars({
     swr: { enabled },
   })
 
@@ -83,7 +83,7 @@ export function useCalendarEvents(
     [startDate, endDate]
   )
 
-  const { data: eventsData, isLoading: isEventsLoading } = useGetApiEvents(params, {
+  const { data: eventsData, isLoading: isEventsLoading } = useGetApiV1Events(params, {
     swr: { enabled },
   })
 

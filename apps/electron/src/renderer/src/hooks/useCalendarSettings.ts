@@ -4,15 +4,15 @@ import {
   useGetApiOauthGoogleAccounts,
   getGetApiOauthGoogleAccountsKey,
   getGetApiOauthGoogleStatusKey,
-  getApiCalendarsAvailable,
-  getGetApiCalendarsAvailableKey,
-  useGetApiCalendars,
-  postApiCalendars,
-  patchApiCalendarsId,
-  deleteApiCalendarsId,
-  postApiCalendarsIdSync,
-  getGetApiCalendarsKey,
-  getGetApiEventsKey
+  getApiV1CalendarsAvailable,
+  getGetApiV1CalendarsAvailableKey,
+  useGetApiV1Calendars,
+  postApiV1Calendars,
+  patchApiV1CalendarsId,
+  deleteApiV1CalendarsId,
+  postApiV1CalendarsIdSync,
+  getGetApiV1CalendarsKey,
+  getGetApiV1EventsKey
 } from '../gen/api/endpoints/techooAPI.gen'
 import type { Calendar, AvailableCalendar, OAuthAccount } from '../gen/api/schemas'
 
@@ -129,7 +129,7 @@ export function useCalendarSettings(): UseCalendarSettingsReturn {
       const entries = await Promise.all(
         googleAccounts.map(async (account) => {
           try {
-            const response = await getApiCalendarsAvailable({
+            const response = await getApiV1CalendarsAvailable({
               accountId: account.accountId
             })
             return [
@@ -152,7 +152,7 @@ export function useCalendarSettings(): UseCalendarSettingsReturn {
     { shouldRetryOnError: false, revalidateOnFocus: false }
   )
 
-  const { data: syncedData, isLoading: isSyncedLoading } = useGetApiCalendars()
+  const { data: syncedData, isLoading: isSyncedLoading } = useGetApiV1Calendars()
 
   const syncedCalendars = useMemo(
     () => syncedData?.calendars ?? [],
@@ -181,17 +181,17 @@ export function useCalendarSettings(): UseCalendarSettingsReturn {
       mutate(getGetApiOauthGoogleAccountsKey()),
       ...googleAccounts.flatMap((account) => [
         mutate(getGetApiOauthGoogleStatusKey({ accountId: account.accountId })),
-        mutate(getGetApiCalendarsAvailableKey({ accountId: account.accountId }))
+        mutate(getGetApiV1CalendarsAvailableKey({ accountId: account.accountId }))
       ]),
       mutate(['available-calendars-by-account', accountIdsKey]),
-      mutate(getGetApiCalendarsKey()),
-      mutate(getGetApiEventsKey())
+      mutate(getGetApiV1CalendarsKey()),
+      mutate(getGetApiV1EventsKey())
     ])
   }, [mutate, googleAccounts, accountIdsKey])
 
   const addCalendar = useCallback(
     async (providerAccountId: string, providerCalendarId: string, name: string) => {
-      await postApiCalendars({
+      await postApiV1Calendars({
         providerAccountId,
         providerCalendarId,
         name
@@ -203,7 +203,7 @@ export function useCalendarSettings(): UseCalendarSettingsReturn {
 
   const removeCalendar = useCallback(
     async (calendarId: string) => {
-      await deleteApiCalendarsId(Number(calendarId))
+      await deleteApiV1CalendarsId(Number(calendarId))
       await refresh()
     },
     [refresh]
@@ -211,16 +211,16 @@ export function useCalendarSettings(): UseCalendarSettingsReturn {
 
   const toggleCalendarEnabled = useCallback(
     async (calendarId: string, enabled: boolean) => {
-      await patchApiCalendarsId(Number(calendarId), { isEnabled: enabled })
-      await mutate(getGetApiCalendarsKey())
+      await patchApiV1CalendarsId(Number(calendarId), { isEnabled: enabled })
+      await mutate(getGetApiV1CalendarsKey())
     },
     [mutate]
   )
 
   const syncCalendar = useCallback(
     async (calendarId: string) => {
-      await postApiCalendarsIdSync(Number(calendarId))
-      await Promise.all([mutate(getGetApiCalendarsKey()), mutate(getGetApiEventsKey())])
+      await postApiV1CalendarsIdSync(Number(calendarId))
+      await Promise.all([mutate(getGetApiV1CalendarsKey()), mutate(getGetApiV1EventsKey())])
     },
     [mutate]
   )

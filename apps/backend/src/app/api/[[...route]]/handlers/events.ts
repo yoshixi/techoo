@@ -4,7 +4,7 @@ import { listEventsRoute, getEventRoute } from '../routes/events'
 import { getAllEvents, getEventById } from '../../../core/events.db'
 import { clampGenericListLimit } from '../../../core/list-limits'
 
-// GET /events - List calendar events with optional filters
+// GET /v1/events - List calendar events with optional filters
 export const listEventsHandler: RouteHandler<typeof listEventsRoute, AppBindings> = async (c) => {
   try {
     const db = c.get('db')
@@ -30,7 +30,7 @@ export const listEventsHandler: RouteHandler<typeof listEventsRoute, AppBindings
   }
 }
 
-// GET /events/{id} - Get a specific event
+// GET /v1/events/{id} - Get a specific event
 export const getEventHandler: RouteHandler<typeof getEventRoute, AppBindings> = async (c) => {
   try {
     const db = c.get('db')

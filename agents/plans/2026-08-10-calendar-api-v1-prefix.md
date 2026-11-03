@@ -1,10 +1,18 @@
 ---
 date: 2026-08-10
-status: proposed
-branch: calender-feature
+status: implemented
+branch: cursor/calendar-api-v1-prefix-89de
 ---
 
 # Calendar / events API → `/api/v1` (+ optional naming alignment)
+
+## Implementation
+
+Phase A shipped without path aliases. Calendar and event OpenAPI routes use `/v1/calendars…` and `/v1/events…`, served as `/api/v1/…`. Auth, OAuth, session, account, health, and webhooks stay unversioned.
+
+Google Calendar push notifications still POST to `/api/webhooks/google-calendar`. The watch handler builds that URL from `WEBHOOK_BASE_URL` and does not follow the versioned calendar routes. Sync-if-stale callers use the generated client (`postApiV1CalendarsSync` and the `/api/v1/events` SWR key), so they follow the new paths.
+
+Phase B (snake_case JSON fields) is still open. See `TODO.md`. The sections below record the original decision.
 
 ## Context
 

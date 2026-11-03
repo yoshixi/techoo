@@ -6,9 +6,9 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type GetApiCalendarsAvailableParams = {
+export type GetApiV1CalendarsAvailableParams = {
   /**
    * Provider-specific account ID
    */
-  accountId: string;
-};
+  accountId: string
+}

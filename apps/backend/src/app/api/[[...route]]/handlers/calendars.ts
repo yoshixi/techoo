@@ -146,7 +146,7 @@ async function getValidTokensOrThrow(
   }
 }
 
-// GET /calendars/available - List available calendars from Google
+// GET /v1/calendars/available - List available calendars from Google
 export const listAvailableCalendarsHandler: RouteHandler<typeof listAvailableCalendarsRoute, AppBindings> = async (c) => {
   try {
     const oauth = c.get('oauth')
@@ -194,7 +194,7 @@ export const listAvailableCalendarsHandler: RouteHandler<typeof listAvailableCal
   }
 }
 
-// GET /calendars - List integrated calendars
+// GET /v1/calendars - List integrated calendars
 export const listCalendarsHandler: RouteHandler<typeof listCalendarsRoute, AppBindings> = async (c) => {
   try {
     const db = c.get('db')
@@ -209,7 +209,7 @@ export const listCalendarsHandler: RouteHandler<typeof listCalendarsRoute, AppBi
   }
 }
 
-// POST /calendars - Add a calendar to sync
+// POST /v1/calendars - Add a calendar to sync
 export const createCalendarHandler: RouteHandler<typeof createCalendarRoute, AppBindings> = async (c) => {
   try {
     const oauth = c.get('oauth')
@@ -285,7 +285,7 @@ export const createCalendarHandler: RouteHandler<typeof createCalendarRoute, App
   }
 }
 
-// GET /calendars/{id} - Get a specific calendar
+// GET /v1/calendars/{id} - Get a specific calendar
 export const getCalendarHandler: RouteHandler<typeof getCalendarRoute, AppBindings> = async (c) => {
   try {
     const db = c.get('db')
@@ -305,7 +305,7 @@ export const getCalendarHandler: RouteHandler<typeof getCalendarRoute, AppBindin
   }
 }
 
-// PATCH /calendars/{id} - Update a calendar
+// PATCH /v1/calendars/{id} - Update a calendar
 export const updateCalendarHandler: RouteHandler<typeof updateCalendarRoute, AppBindings> = async (c) => {
   try {
     const db = c.get('db')
@@ -326,7 +326,7 @@ export const updateCalendarHandler: RouteHandler<typeof updateCalendarRoute, App
   }
 }
 
-// DELETE /calendars/{id} - Remove a calendar
+// DELETE /v1/calendars/{id} - Remove a calendar
 export const deleteCalendarHandler: RouteHandler<typeof deleteCalendarRoute, AppBindings> = async (c) => {
   try {
     const db = c.get('db')
@@ -346,7 +346,7 @@ export const deleteCalendarHandler: RouteHandler<typeof deleteCalendarRoute, App
   }
 }
 
-// POST /calendars/{id}/sync - Sync a specific calendar
+// POST /v1/calendars/{id}/sync - Sync a specific calendar
 export const syncCalendarHandler: RouteHandler<typeof syncCalendarRoute, AppBindings> = async (c) => {
   try {
     const oauth = c.get('oauth')
@@ -395,7 +395,7 @@ export const syncCalendarHandler: RouteHandler<typeof syncCalendarRoute, AppBind
   }
 }
 
-// POST /calendars/sync - Sync all enabled calendars
+// POST /v1/calendars/sync - Sync all enabled calendars
 export const syncAllCalendarsHandler: RouteHandler<typeof syncAllCalendarsRoute, AppBindings> = async (c) => {
   try {
     const oauth = c.get('oauth')
@@ -470,7 +470,7 @@ export const syncAllCalendarsHandler: RouteHandler<typeof syncAllCalendarsRoute,
   }
 }
 
-// POST /calendars/{id}/watch - Start watching a calendar for changes
+// POST /v1/calendars/{id}/watch - Start watching a calendar for changes
 export const watchCalendarHandler: RouteHandler<typeof watchCalendarRoute, AppBindings> = async (c) => {
   try {
     const oauth = c.get('oauth')
@@ -540,7 +540,7 @@ export const watchCalendarHandler: RouteHandler<typeof watchCalendarRoute, AppBi
   }
 }
 
-// DELETE /calendars/{id}/watch - Stop watching a calendar
+// DELETE /v1/calendars/{id}/watch - Stop watching a calendar
 export const stopWatchingCalendarHandler: RouteHandler<typeof stopWatchingCalendarRoute, AppBindings> = async (c) => {
   try {
     const oauth = c.get('oauth')
@@ -590,7 +590,7 @@ export const stopWatchingCalendarHandler: RouteHandler<typeof stopWatchingCalend
   }
 }
 
-// GET /calendars/{id}/watch - Get watch channel status
+// GET /v1/calendars/{id}/watch - Get watch channel status
 export const getWatchStatusHandler: RouteHandler<typeof getWatchStatusRoute, AppBindings> = async (c) => {
   try {
     const db = c.get('db')

@@ -2,7 +2,7 @@
 title: "Google Calendar Integration"
 brief_description: "This document describes the Google Calendar integration feature for the Techoo application."
 created_at: "2026-01-31"
-update_at: "2026-02-14"
+update_at: "2026-11-03"
 ---
 
 # Google Calendar Integration
@@ -27,6 +27,8 @@ The Google Calendar integration allows users to connect their Google Calendar ac
 
 Base URL: `/api`
 
+Calendar and event routes are versioned under `/api/v1`. Auth, OAuth, session, account, and webhook routes stay on `/api`.
+
 ## Authentication
 
 Google Calendar access is granted when users sign in with Google through better-auth. The OAuth configuration requests calendar scopes (`calendar.readonly` and `calendar.events.readonly`) during the sign-in flow.
@@ -36,9 +38,9 @@ Google Calendar access is granted when users sign in with Google through better-
 **How it works:**
 1. User signs in / links Google via better-auth (`/api/auth/callback/google`)
 2. better-auth stores OAuth tokens (including calendar access) in the `accounts` table
-3. Client lists available calendars via `GET /api/calendars/available?accountId=…`
-4. Client adds calendars via `POST /api/calendars` (server syncs events immediately)
-5. Calendar UI reads events via `GET /api/events`
+3. Client lists available calendars via `GET /api/v1/calendars/available?accountId=…`
+4. Client adds calendars via `POST /api/v1/calendars` (server syncs events immediately)
+5. Calendar UI reads events via `GET /api/v1/events`
 6. Tokens are refreshed on use; re-link if refresh fails or scopes are missing
 
 Related OAuth management routes (not `/auth/google/*`):
@@ -223,7 +225,7 @@ Disconnect Google Calendar data (removes calendars and events).
 
 ### Calendar Management
 
-#### GET /calendars/available
+#### GET /v1/calendars/available
 
 List available calendars from Google that can be added.
 
@@ -242,7 +244,7 @@ List available calendars from Google that can be added.
 }
 ```
 
-#### GET /calendars
+#### GET /v1/calendars
 
 List all integrated calendars.
 
@@ -254,9 +256,9 @@ List all integrated calendars.
 }
 ```
 
-#### POST /calendars
+#### POST /v1/calendars
 
-Add a calendar to sync. After insert, the server immediately imports events for the next 30 days (same as a manual sync). Manual `POST /calendars/{id}/sync` remains available for refresh.
+Add a calendar to sync. After insert, the server immediately imports events for the next 30 days (same as a manual sync). Manual `POST /v1/calendars/{id}/sync` remains available for refresh.
 
 **Request Body:**
 ```json
@@ -270,11 +272,11 @@ Add a calendar to sync. After insert, the server immediately imports events for 
 
 **Response:** Returns the created calendar object.
 
-#### GET /calendars/{id}
+#### GET /v1/calendars/{id}
 
 Get a specific calendar by ID.
 
-#### PATCH /calendars/{id}
+#### PATCH /v1/calendars/{id}
 
 Update a calendar.
 
@@ -286,11 +288,11 @@ Update a calendar.
 }
 ```
 
-#### DELETE /calendars/{id}
+#### DELETE /v1/calendars/{id}
 
 Remove a calendar and all its synced events.
 
-#### POST /calendars/{id}/sync
+#### POST /v1/calendars/{id}/sync
 
 Sync a specific calendar (imports events for next 30 days).
 
@@ -303,7 +305,7 @@ Sync a specific calendar (imports events for next 30 days).
 }
 ```
 
-#### POST /calendars/sync
+#### POST /v1/calendars/sync
 
 Sync all enabled calendars.
 
@@ -320,7 +322,7 @@ Sync all enabled calendars.
 
 Push notifications allow real-time updates when calendar events change, instead of requiring periodic polling.
 
-#### POST /calendars/{id}/watch
+#### POST /v1/calendars/{id}/watch
 
 Start watching a calendar for changes. Google will send push notifications to our webhook when events change.
 
@@ -343,7 +345,7 @@ Start watching a calendar for changes. Google will send push notifications to ou
 
 > **Note:** Watch channels expire after 7 days (maximum allowed by Google). You should renew them before expiration.
 
-#### GET /calendars/{id}/watch
+#### GET /v1/calendars/{id}/watch
 
 Get the current watch status for a calendar.
 
@@ -365,7 +367,7 @@ Get the current watch status for a calendar.
 }
 ```
 
-#### DELETE /calendars/{id}/watch
+#### DELETE /v1/calendars/{id}/watch
 
 Stop watching a calendar for changes.
 
@@ -400,7 +402,7 @@ When a notification is received, the system automatically:
 
 ### Event Queries
 
-#### GET /events
+#### GET /v1/events
 
 List events with optional filters.
 
@@ -412,9 +414,9 @@ List events with optional filters.
 | endDate | string | No | Filter events until this date (ISO 8601) |
 
 **Examples:**
-- `/events` - Get all events
-- `/events?calendarId=1` - Get events for specific calendar
-- `/events?startDate=2024-01-01T00:00:00Z&endDate=2024-01-31T23:59:59Z` - Date range
+- `/v1/events` - Get all events
+- `/v1/events?calendarId=1` - Get events for specific calendar
+- `/v1/events?startDate=2024-01-01T00:00:00Z&endDate=2024-01-31T23:59:59Z` - Date range
 
 **Response:**
 ```json
@@ -424,7 +426,7 @@ List events with optional filters.
 }
 ```
 
-#### GET /events/{id}
+#### GET /v1/events/{id}
 
 Get a specific event by ID.
 
@@ -568,21 +570,21 @@ User is now authenticated AND has calendar access
 ### Step 2: Add Calendars to Sync (includes initial import)
 
 ```
-GET /calendars/available?accountId=…
+GET /v1/calendars/available?accountId=…
          ↓
 Fetches list of calendars from Google Calendar API
 (using tokens from accounts table)
          ↓
 User selects which calendars to sync
          ↓
-POST /calendars { providerAccountId, providerCalendarId }
+POST /v1/calendars { providerAccountId, providerCalendarId }
          ↓
 Calendar record created in `calendars` table
          ↓
 Server syncs next 30 days of events into `calendar_events`
 ```
 
-Manual re-sync: `POST /calendars/{id}/sync` (full replace for the next 30 days).
+Manual re-sync: `POST /v1/calendars/{id}/sync` (full replace for the next 30 days).
 
 ### Step 2b: Sync-if-stale on calendar use (automatic)
 
@@ -591,7 +593,7 @@ Clients keep events fresh **only while the user is looking at a calendar surface
 Policy:
 
 - When mobile Calendar, Electron Todo calendar, or Today plan calendar mounts (and again on app foreground / window focus), the client checks enabled calendars.
-- If any has `lastSyncedAt` null or older than **15 minutes**, call `POST /calendars/sync`.
+- If any has `lastSyncedAt` null or older than **15 minutes**, call `POST /v1/calendars/sync`.
 - Debounced to at most one attempt per **60 seconds**; fire-and-forget (does not block the timeline). Failures are silent; Settings still has manual Sync.
 - Hooks: `useCalendarAutoSync` on mobile and Electron.
 
@@ -602,7 +604,7 @@ See [agents/plans/2026-08-08-calendar-sync-lifecycle.md](../agents/plans/2026-08
 > Push watch is implemented in the API but **not** started automatically. Phase 2: auto-watch on add + Cron renewal. Until then, sync-if-stale is the refresh path.
 
 ```
-POST /calendars/{id}/watch
+POST /v1/calendars/{id}/watch
          ↓
 Create watch channel with Google Calendar API
 (sends our webhook URL to Google)
@@ -638,10 +640,10 @@ Returns 200 OK to Google
 │                         SETUP PHASE                              │
 ├─────────────────────────────────────────────────────────────────┤
 │  1. Sign in with Google → tokens stored in accounts table       │
-│  2. GET /calendars/available → see available calendars          │
-│  3. POST /calendars → add calendar + initial event import       │
-│  4. POST /calendars/{id}/watch → enable push notifications      │
-│  5. POST /calendars/{id}/sync → manual refresh (optional)       │
+│  2. GET /v1/calendars/available → see available calendars       │
+│  3. POST /v1/calendars → add calendar + initial event import    │
+│  4. POST /v1/calendars/{id}/watch → enable push notifications   │
+│  5. POST /v1/calendars/{id}/sync → manual refresh (optional)    │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐

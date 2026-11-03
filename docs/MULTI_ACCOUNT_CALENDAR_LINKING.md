@@ -62,11 +62,11 @@ This keeps calendars/events tied to the account that owns them.
   - Checks token validity for a specific linked account.
 
 ### Available Calendars (per account)
-- `GET /api/calendars/available?accountId=<providerAccountId>`
+- `GET /api/v1/calendars/available?accountId=<providerAccountId>`
   - Lists calendars for the selected Google account.
 
 ### Add Calendar (per account)
-- `POST /api/calendars`
+- `POST /api/v1/calendars`
   - Payload requires:
     - `providerAccountId`
     - `providerCalendarId`

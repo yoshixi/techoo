@@ -16,8 +16,8 @@ import {
   DEFAULT_LIST_FILTERS,
 } from '@/lib/todosScreenIntent';
 import {
-  getGetApiCalendarsKey,
-  getGetApiEventsKey,
+  getGetApiV1CalendarsKey,
+  getGetApiV1EventsKey,
 } from '@/gen/api/endpoints/techooAPI.gen';
 import { FloatingCreateButton } from '@/components/navigation/FloatingCreateButton';
 import { TodosScreenHeader } from '@/components/todos/TodosScreenHeader';
@@ -94,9 +94,9 @@ export default function TodayScreen() {
       if (viewMode === 'timeline') {
         await Promise.all([
           mutateTimeline(),
-          globalMutate(getGetApiCalendarsKey()),
+          globalMutate(getGetApiV1CalendarsKey()),
           globalMutate(
-            (key) => Array.isArray(key) && key[0] === getGetApiEventsKey()[0]
+            (key) => Array.isArray(key) && key[0] === getGetApiV1EventsKey()[0]
           ),
         ]);
       } else {
