@@ -1,0 +1,619 @@
+{
+  "protocol": "techoo-e2ee-sync-v1",
+  "passphrase": "correct horse battery staple",
+  "wrongPassphrase": "wrong passphrase",
+  "kdf": {
+    "N": 16384,
+    "r": 8,
+    "p": 1,
+    "keyLen": 32
+  },
+  "saltHex": "00112233445566778899aabbccddeeff",
+  "saltBase64": "ABEiM0RVZneImaq7zN3u/w==",
+  "wrappingKeyBase64": "/NWljVMBu8ROkPyaU/FWE0uu55XrdzXtZHPahuNLqTA=",
+  "wrongPassphraseWrappingKeyBase64": "5UU+UtM8magmmBMQ0QFlrD2OBVwMknkjrg78Zl1eHNY=",
+  "dataKeyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "dataKeyBase64": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+  "wrap": {
+    "aad": "techoo.vault.wrap.v1",
+    "nonceHex": "c0c1c2c3c4c5c6c7c8c9cacb",
+    "nonceBase64": "wMHCw8TFxsfIycrL",
+    "wrappedKeyBase64": "FSJg9Bv0i+f+HMiZ5PdZQzjRHN+dSckDDzkQ9INVAhhVrFOOZeQef8T15f39vSwo"
+  },
+  "normalization": {
+    "composed": "café",
+    "decomposedCodePoints": [99, 97, 102, 101, 769],
+    "wrappingKeyBase64": "GJcguUcVs8cmvxrV4KLqjnMl6zHUCC9BFIsiCLPMxnA="
+  },
+  "records": [
+    {
+      "name": "note",
+      "kind": "note",
+      "recordId": "11111111-1111-4111-8111-111111111111",
+      "deviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "clientOpId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "deleted": false,
+      "updatedAt": "2026-11-03T03:00:00.000Z",
+      "fields": {
+        "body": "Buy milk",
+        "createdAt": "2026-11-03T03:00:00.000Z",
+        "pinned": false,
+        "title": "Milk"
+      },
+      "plaintext": "{\"deleted\":false,\"fields\":{\"body\":\"Buy milk\",\"createdAt\":\"2026-11-03T03:00:00.000Z\",\"pinned\":false,\"title\":\"Milk\"},\"kind\":\"note\",\"recordId\":\"11111111-1111-4111-8111-111111111111\",\"updatedAt\":\"2026-11-03T03:00:00.000Z\",\"v\":1}",
+      "aad": "techoo.sync.v1|11111111-1111-4111-8111-111111111111",
+      "nonceHex": "d0d1d2d3d4d5d6d7d8d9dadb",
+      "nonceBase64": "0NHS09TV1tfY2drb",
+      "ciphertextBase64": "V4WCCwTChcQ8fRLZl7r0hOMoO7wl8dw1EbA1tG1cSr7+LUNO12cfBEjIR9lVJOd7an0GZfC+zXwWj7B/zOn06bspKxwlg+87g/PSYky79jNy2fp5gHIWKswzfTQ4t8ZG17nxHF93vJ7AuC002+Ypy5AM2TtK77LG7i/AdCWr4W3ZEqTBjK6+Ll8LkuPNidX5/g55JDHBP7FWz+3T5nGRJjt5l60zeVn9UVSg1ibSnwJE+945CZ7RS0C4IDhPdhQw64bnhNRYLmwISeDUKH1pIgyaFjnh4Uss3lCtwgHKYrvGDGaWs1tfAL9twOG5hRrd"
+    },
+    {
+      "name": "todo",
+      "kind": "todo",
+      "recordId": "22222222-2222-4222-8222-222222222222",
+      "deviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "clientOpId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "deleted": false,
+      "updatedAt": "2026-11-03T03:05:00.000Z",
+      "fields": {
+        "createdAt": "2026-11-03T03:05:00.000Z",
+        "done": false,
+        "isAllDay": false,
+        "title": "Walk"
+      },
+      "plaintext": "{\"deleted\":false,\"fields\":{\"createdAt\":\"2026-11-03T03:05:00.000Z\",\"done\":false,\"isAllDay\":false,\"title\":\"Walk\"},\"kind\":\"todo\",\"recordId\":\"22222222-2222-4222-8222-222222222222\",\"updatedAt\":\"2026-11-03T03:05:00.000Z\",\"v\":1}",
+      "aad": "techoo.sync.v1|22222222-2222-4222-8222-222222222222",
+      "nonceHex": "e0e1e2e3e4e5e6e7e8e9eaeb",
+      "nonceBase64": "4OHi4+Tl5ufo6err",
+      "ciphertextBase64": "T+Ct5pml/k6kIUQoP3CL5umHXY6b6KlrvrsRX29DTesnh4WzDYfCQgP+l4YWazKsVGGEdy7ZK6X5iYmJwoe6d9Yey7OlmlRU1OTatzmYbCVx16ZWkHOJy0Ts+XN5fGdq8xGKYzrrT0XDUnr4QxWTAsFSo7sAYawgboTxv/MeRriU6lXMnf/d6KcaXX12LdZvhEo8eUY3LeC70hbxz8ttWAGa0bPDMI2Nqp0gL8epUS+ir6QA8r9HLlKTbCEPLzjBhoutztZ+5HQN7neOkcYXLRw327oZ8dtsK1nSMeLEGrrZJYTiABaVP3fX2hEv"
+    },
+    {
+      "name": "note-tombstone",
+      "kind": "note",
+      "recordId": "11111111-1111-4111-8111-111111111111",
+      "deviceId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "clientOpId": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      "deleted": true,
+      "updatedAt": "2026-11-03T04:00:00.000Z",
+      "fields": {},
+      "plaintext": "{\"deleted\":true,\"fields\":{},\"kind\":\"note\",\"recordId\":\"11111111-1111-4111-8111-111111111111\",\"updatedAt\":\"2026-11-03T04:00:00.000Z\",\"v\":1}",
+      "aad": "techoo.sync.v1|11111111-1111-4111-8111-111111111111",
+      "nonceHex": "f0f1f2f3f4f5f6f7f8f9fafb",
+      "nonceBase64": "8PHy8/T19vf4+fr7",
+      "ciphertextBase64": "EiQnZRBfphH71c3u/D8HmjKHMKdUYzy6bC1OjHtYu2l4MiymLuzF/Lp07AFyWpz9rxVjVkxWIbF751/vbFrBlj4KQ+kPWDVGHEgcXVjM6GBssAdzPxSz1cgVJpxY+FUzp4A65Yub4IShimHffNB5EzIIvTRttSbUqjPCNulDLnkjN5W8ltiDNEwpESFnqNNaiYY9Uc5qvp9Q"
+    }
+  ],
+  "chain": {
+    "genesis": "0000000000000000000000000000000000000000000000000000000000000000",
+    "ops": [
+      {
+        "seq": 1,
+        "recordId": "11111111-1111-4111-8111-111111111111",
+        "deviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "clientOpId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "prevHash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "hash": "e567bf54027b9db2c46dd0c6ae0b02575ef2cdadf1ba5f63dea8dc3996f155ef",
+        "preimage": "0000000000000000000000000000000000000000000000000000000000000000|1|11111111-1111-4111-8111-111111111111|V4WCCwTChcQ8fRLZl7r0hOMoO7wl8dw1EbA1tG1cSr7+LUNO12cfBEjIR9lVJOd7an0GZfC+zXwWj7B/zOn06bspKxwlg+87g/PSYky79jNy2fp5gHIWKswzfTQ4t8ZG17nxHF93vJ7AuC002+Ypy5AM2TtK77LG7i/AdCWr4W3ZEqTBjK6+Ll8LkuPNidX5/g55JDHBP7FWz+3T5nGRJjt5l60zeVn9UVSg1ibSnwJE+945CZ7RS0C4IDhPdhQw64bnhNRYLmwISeDUKH1pIgyaFjnh4Uss3lCtwgHKYrvGDGaWs1tfAL9twOG5hRrd",
+        "ciphertextBase64": "V4WCCwTChcQ8fRLZl7r0hOMoO7wl8dw1EbA1tG1cSr7+LUNO12cfBEjIR9lVJOd7an0GZfC+zXwWj7B/zOn06bspKxwlg+87g/PSYky79jNy2fp5gHIWKswzfTQ4t8ZG17nxHF93vJ7AuC002+Ypy5AM2TtK77LG7i/AdCWr4W3ZEqTBjK6+Ll8LkuPNidX5/g55JDHBP7FWz+3T5nGRJjt5l60zeVn9UVSg1ibSnwJE+945CZ7RS0C4IDhPdhQw64bnhNRYLmwISeDUKH1pIgyaFjnh4Uss3lCtwgHKYrvGDGaWs1tfAL9twOG5hRrd"
+      },
+      {
+        "seq": 2,
+        "recordId": "22222222-2222-4222-8222-222222222222",
+        "deviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "clientOpId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "prevHash": "e567bf54027b9db2c46dd0c6ae0b02575ef2cdadf1ba5f63dea8dc3996f155ef",
+        "hash": "620ba8dba757afb3ad31c96e31235d6f5b974daf9fe195f69c6dd2cdc9e1bd8d",
+        "preimage": "e567bf54027b9db2c46dd0c6ae0b02575ef2cdadf1ba5f63dea8dc3996f155ef|2|22222222-2222-4222-8222-222222222222|T+Ct5pml/k6kIUQoP3CL5umHXY6b6KlrvrsRX29DTesnh4WzDYfCQgP+l4YWazKsVGGEdy7ZK6X5iYmJwoe6d9Yey7OlmlRU1OTatzmYbCVx16ZWkHOJy0Ts+XN5fGdq8xGKYzrrT0XDUnr4QxWTAsFSo7sAYawgboTxv/MeRriU6lXMnf/d6KcaXX12LdZvhEo8eUY3LeC70hbxz8ttWAGa0bPDMI2Nqp0gL8epUS+ir6QA8r9HLlKTbCEPLzjBhoutztZ+5HQN7neOkcYXLRw327oZ8dtsK1nSMeLEGrrZJYTiABaVP3fX2hEv",
+        "ciphertextBase64": "T+Ct5pml/k6kIUQoP3CL5umHXY6b6KlrvrsRX29DTesnh4WzDYfCQgP+l4YWazKsVGGEdy7ZK6X5iYmJwoe6d9Yey7OlmlRU1OTatzmYbCVx16ZWkHOJy0Ts+XN5fGdq8xGKYzrrT0XDUnr4QxWTAsFSo7sAYawgboTxv/MeRriU6lXMnf/d6KcaXX12LdZvhEo8eUY3LeC70hbxz8ttWAGa0bPDMI2Nqp0gL8epUS+ir6QA8r9HLlKTbCEPLzjBhoutztZ+5HQN7neOkcYXLRw327oZ8dtsK1nSMeLEGrrZJYTiABaVP3fX2hEv"
+      },
+      {
+        "seq": 3,
+        "recordId": "11111111-1111-4111-8111-111111111111",
+        "deviceId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "clientOpId": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+        "prevHash": "620ba8dba757afb3ad31c96e31235d6f5b974daf9fe195f69c6dd2cdc9e1bd8d",
+        "hash": "f1c829be1308c65bd16051c1aa28c1d334441fb5dd8a61075b053532e73b392b",
+        "preimage": "620ba8dba757afb3ad31c96e31235d6f5b974daf9fe195f69c6dd2cdc9e1bd8d|3|11111111-1111-4111-8111-111111111111|EiQnZRBfphH71c3u/D8HmjKHMKdUYzy6bC1OjHtYu2l4MiymLuzF/Lp07AFyWpz9rxVjVkxWIbF751/vbFrBlj4KQ+kPWDVGHEgcXVjM6GBssAdzPxSz1cgVJpxY+FUzp4A65Yub4IShimHffNB5EzIIvTRttSbUqjPCNulDLnkjN5W8ltiDNEwpESFnqNNaiYY9Uc5qvp9Q",
+        "ciphertextBase64": "EiQnZRBfphH71c3u/D8HmjKHMKdUYzy6bC1OjHtYu2l4MiymLuzF/Lp07AFyWpz9rxVjVkxWIbF751/vbFrBlj4KQ+kPWDVGHEgcXVjM6GBssAdzPxSz1cgVJpxY+FUzp4A65Yub4IShimHffNB5EzIIvTRttSbUqjPCNulDLnkjN5W8ltiDNEwpESFnqNNaiYY9Uc5qvp9Q"
+      }
+    ]
+  },
+  "tampered": {
+    "recordId": "11111111-1111-4111-8111-111111111111",
+    "nonceBase64": "0NHS09TV1tfY2drb",
+    "ciphertextBase64": "V4WCCwTChcQ8fRLZl7r0hOMoO7wl8dw1EbA1tG1cSr7+LUNO12cfBEjIR9lVJOd7an0GZfC+zXwWj7B/zOn06bspKxwlg+87g/PSYky79jNy2fp5gHIWKswzfTQ4t8ZG17nxHF93vJ7AuC002+Ypy5AM2TtK77LG7i/AdCWr4W3ZEqTBjK6+Ll8LkuPNidX5/g55JDHBP7FWz+3T5nGRJjt5l60zeVn9UVSg1ibSnwJE+945CZ7RS0C4IDhPdhQw64bnhNRYLmwISeDUKH1pIgyaFjnh4Uss3lCtwgHKYrvGDGaWs1tfAL9twOG5hRrc",
+    "hash": "83ec7e2408ae137cb3d1b634ead9b35605e3d3b2c46c45ddeb1420b21dfa52b0",
+    "breaksPrevHashOfSeq": 2
+  },
+  "wrongAad": {
+    "recordId": "ffffffff-ffff-4fff-8fff-ffffffffffff"
+  },
+  "mergeCases": [
+    {
+      "name": "newer-updatedAt-wins",
+      "localDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "orderIndependent": false,
+      "start": {
+        "recordId": "33333333-3333-4333-8333-333333333333",
+        "kind": "note",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:00:00.000Z",
+        "originSeq": 1,
+        "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "dirty": false,
+        "fields": {
+          "body": "A",
+          "createdAt": "2026-11-03T03:00:00.000Z",
+          "pinned": false,
+          "title": "A"
+        }
+      },
+      "incoming": [
+        {
+          "recordId": "33333333-3333-4333-8333-333333333333",
+          "kind": "note",
+          "deleted": false,
+          "updatedAt": "2026-11-03T03:05:00.000Z",
+          "originSeq": 2,
+          "originDeviceId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "dirty": false,
+          "fields": {
+            "body": "B",
+            "createdAt": "2026-11-03T03:00:00.000Z",
+            "pinned": false,
+            "title": "B"
+          }
+        }
+      ],
+      "expect": {
+        "title": "B",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:05:00.000Z",
+        "originSeq": 2,
+        "originDeviceId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "dirty": false
+      }
+    },
+    {
+      "name": "older-updatedAt-loses",
+      "localDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "orderIndependent": false,
+      "start": {
+        "recordId": "33333333-3333-4333-8333-333333333333",
+        "kind": "note",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:05:00.000Z",
+        "originSeq": 2,
+        "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "dirty": false,
+        "fields": {
+          "body": "B",
+          "createdAt": "2026-11-03T03:00:00.000Z",
+          "pinned": false,
+          "title": "B"
+        }
+      },
+      "incoming": [
+        {
+          "recordId": "33333333-3333-4333-8333-333333333333",
+          "kind": "note",
+          "deleted": false,
+          "updatedAt": "2026-11-03T03:00:00.000Z",
+          "originSeq": 4,
+          "originDeviceId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "dirty": false,
+          "fields": {
+            "body": "A",
+            "createdAt": "2026-11-03T03:00:00.000Z",
+            "pinned": false,
+            "title": "A"
+          }
+        }
+      ],
+      "expect": {
+        "title": "B",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:05:00.000Z",
+        "originSeq": 2,
+        "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "dirty": false
+      }
+    },
+    {
+      "name": "deviceId-tiebreak",
+      "localDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "orderIndependent": false,
+      "start": {
+        "recordId": "33333333-3333-4333-8333-333333333333",
+        "kind": "note",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:00:00.000Z",
+        "originSeq": 9,
+        "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "dirty": false,
+        "fields": {
+          "body": "A",
+          "createdAt": "2026-11-03T03:00:00.000Z",
+          "pinned": false,
+          "title": "A"
+        }
+      },
+      "incoming": [
+        {
+          "recordId": "33333333-3333-4333-8333-333333333333",
+          "kind": "note",
+          "deleted": false,
+          "updatedAt": "2026-11-03T03:00:00.000Z",
+          "originSeq": 1,
+          "originDeviceId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "dirty": false,
+          "fields": {
+            "body": "B",
+            "createdAt": "2026-11-03T03:00:00.000Z",
+            "pinned": false,
+            "title": "B"
+          }
+        }
+      ],
+      "expect": {
+        "title": "B",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:00:00.000Z",
+        "originSeq": 1,
+        "originDeviceId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "dirty": false
+      }
+    },
+    {
+      "name": "seq-tiebreak",
+      "localDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "orderIndependent": false,
+      "start": {
+        "recordId": "33333333-3333-4333-8333-333333333333",
+        "kind": "note",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:00:00.000Z",
+        "originSeq": 1,
+        "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "dirty": false,
+        "fields": {
+          "body": "A",
+          "createdAt": "2026-11-03T03:00:00.000Z",
+          "pinned": false,
+          "title": "A"
+        }
+      },
+      "incoming": [
+        {
+          "recordId": "33333333-3333-4333-8333-333333333333",
+          "kind": "note",
+          "deleted": false,
+          "updatedAt": "2026-11-03T03:00:00.000Z",
+          "originSeq": 2,
+          "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "dirty": false,
+          "fields": {
+            "body": "B",
+            "createdAt": "2026-11-03T03:00:00.000Z",
+            "pinned": false,
+            "title": "B"
+          }
+        }
+      ],
+      "expect": {
+        "title": "B",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:00:00.000Z",
+        "originSeq": 2,
+        "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "dirty": false
+      }
+    },
+    {
+      "name": "total-tie-keeps-stored",
+      "localDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "orderIndependent": false,
+      "start": {
+        "recordId": "33333333-3333-4333-8333-333333333333",
+        "kind": "note",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:00:00.000Z",
+        "originSeq": 2,
+        "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "dirty": false,
+        "fields": {
+          "body": "stored",
+          "createdAt": "2026-11-03T03:00:00.000Z",
+          "pinned": false,
+          "title": "stored"
+        }
+      },
+      "incoming": [
+        {
+          "recordId": "33333333-3333-4333-8333-333333333333",
+          "kind": "note",
+          "deleted": false,
+          "updatedAt": "2026-11-03T03:00:00.000Z",
+          "originSeq": 2,
+          "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "dirty": false,
+          "fields": {
+            "body": "replay",
+            "createdAt": "2026-11-03T03:00:00.000Z",
+            "pinned": false,
+            "title": "replay"
+          }
+        }
+      ],
+      "expect": {
+        "title": "stored",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:00:00.000Z",
+        "originSeq": 2,
+        "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "dirty": false
+      }
+    },
+    {
+      "name": "newer-tombstone-deletes",
+      "localDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "orderIndependent": false,
+      "start": {
+        "recordId": "33333333-3333-4333-8333-333333333333",
+        "kind": "note",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:00:00.000Z",
+        "originSeq": 1,
+        "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "dirty": false,
+        "fields": {
+          "body": "A",
+          "createdAt": "2026-11-03T03:00:00.000Z",
+          "pinned": false,
+          "title": "A"
+        }
+      },
+      "incoming": [
+        {
+          "recordId": "33333333-3333-4333-8333-333333333333",
+          "kind": "note",
+          "deleted": true,
+          "updatedAt": "2026-11-03T03:05:00.000Z",
+          "originSeq": 2,
+          "originDeviceId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "dirty": false,
+          "fields": {}
+        }
+      ],
+      "expect": {
+        "title": null,
+        "deleted": true,
+        "updatedAt": "2026-11-03T03:05:00.000Z",
+        "originSeq": 2,
+        "originDeviceId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "dirty": false
+      }
+    },
+    {
+      "name": "older-tombstone-does-not-delete",
+      "localDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "orderIndependent": false,
+      "start": {
+        "recordId": "33333333-3333-4333-8333-333333333333",
+        "kind": "note",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:05:00.000Z",
+        "originSeq": 3,
+        "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "dirty": false,
+        "fields": {
+          "body": "kept",
+          "createdAt": "2026-11-03T03:00:00.000Z",
+          "pinned": false,
+          "title": "kept"
+        }
+      },
+      "incoming": [
+        {
+          "recordId": "33333333-3333-4333-8333-333333333333",
+          "kind": "note",
+          "deleted": true,
+          "updatedAt": "2026-11-03T03:00:00.000Z",
+          "originSeq": 4,
+          "originDeviceId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "dirty": false,
+          "fields": {}
+        }
+      ],
+      "expect": {
+        "title": "kept",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:05:00.000Z",
+        "originSeq": 3,
+        "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "dirty": false
+      }
+    },
+    {
+      "name": "out-of-order-pulls-converge",
+      "localDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "orderIndependent": true,
+      "start": null,
+      "incoming": [
+        {
+          "recordId": "33333333-3333-4333-8333-333333333333",
+          "kind": "note",
+          "deleted": false,
+          "updatedAt": "2026-11-03T03:00:00.000Z",
+          "originSeq": 1,
+          "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "dirty": false,
+          "fields": {
+            "body": "older",
+            "createdAt": "2026-11-03T03:00:00.000Z",
+            "pinned": false,
+            "title": "older"
+          }
+        },
+        {
+          "recordId": "33333333-3333-4333-8333-333333333333",
+          "kind": "note",
+          "deleted": false,
+          "updatedAt": "2026-11-03T03:05:00.000Z",
+          "originSeq": 2,
+          "originDeviceId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "dirty": false,
+          "fields": {
+            "body": "newer",
+            "createdAt": "2026-11-03T03:00:00.000Z",
+            "pinned": false,
+            "title": "newer"
+          }
+        }
+      ],
+      "expect": {
+        "title": "newer",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:05:00.000Z",
+        "originSeq": 2,
+        "originDeviceId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "dirty": false
+      }
+    },
+    {
+      "name": "idempotent-replay",
+      "localDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "orderIndependent": false,
+      "start": null,
+      "incoming": [
+        {
+          "recordId": "33333333-3333-4333-8333-333333333333",
+          "kind": "note",
+          "deleted": false,
+          "updatedAt": "2026-11-03T03:00:00.000Z",
+          "originSeq": 1,
+          "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "dirty": false,
+          "fields": {
+            "body": "once",
+            "createdAt": "2026-11-03T03:00:00.000Z",
+            "pinned": false,
+            "title": "once"
+          }
+        },
+        {
+          "recordId": "33333333-3333-4333-8333-333333333333",
+          "kind": "note",
+          "deleted": false,
+          "updatedAt": "2026-11-03T03:00:00.000Z",
+          "originSeq": 1,
+          "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "dirty": false,
+          "fields": {
+            "body": "once",
+            "createdAt": "2026-11-03T03:00:00.000Z",
+            "pinned": false,
+            "title": "once"
+          }
+        }
+      ],
+      "expect": {
+        "title": "once",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:00:00.000Z",
+        "originSeq": 1,
+        "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "dirty": false
+      }
+    },
+    {
+      "name": "synced-replay-beats-unpushed-same-timestamp",
+      "localDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "orderIndependent": false,
+      "start": {
+        "recordId": "33333333-3333-4333-8333-333333333333",
+        "kind": "note",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:00:00.000Z",
+        "originSeq": 0,
+        "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "dirty": true,
+        "fields": {
+          "body": "local",
+          "createdAt": "2026-11-03T03:00:00.000Z",
+          "pinned": false,
+          "title": "local"
+        }
+      },
+      "incoming": [
+        {
+          "recordId": "33333333-3333-4333-8333-333333333333",
+          "kind": "note",
+          "deleted": false,
+          "updatedAt": "2026-11-03T03:00:00.000Z",
+          "originSeq": 4,
+          "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "dirty": false,
+          "fields": {
+            "body": "synced",
+            "createdAt": "2026-11-03T03:00:00.000Z",
+            "pinned": false,
+            "title": "synced"
+          }
+        }
+      ],
+      "expect": {
+        "title": "synced",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:00:00.000Z",
+        "originSeq": 4,
+        "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "dirty": false
+      }
+    },
+    {
+      "name": "newer-unpushed-local-wins",
+      "localDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "orderIndependent": false,
+      "start": {
+        "recordId": "33333333-3333-4333-8333-333333333333",
+        "kind": "note",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:05:00.000Z",
+        "originSeq": 0,
+        "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "dirty": true,
+        "fields": {
+          "body": "local",
+          "createdAt": "2026-11-03T03:00:00.000Z",
+          "pinned": false,
+          "title": "local"
+        }
+      },
+      "incoming": [
+        {
+          "recordId": "33333333-3333-4333-8333-333333333333",
+          "kind": "note",
+          "deleted": false,
+          "updatedAt": "2026-11-03T03:00:00.000Z",
+          "originSeq": 5,
+          "originDeviceId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "dirty": false,
+          "fields": {
+            "body": "remote",
+            "createdAt": "2026-11-03T03:00:00.000Z",
+            "pinned": false,
+            "title": "remote"
+          }
+        }
+      ],
+      "expect": {
+        "title": "local",
+        "deleted": false,
+        "updatedAt": "2026-11-03T03:05:00.000Z",
+        "originSeq": 0,
+        "originDeviceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "dirty": true
+      }
+    }
+  ]
+}
