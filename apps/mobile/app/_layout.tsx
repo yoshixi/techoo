@@ -10,6 +10,7 @@ import { SWRConfig } from 'swr';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthContext, useAuthProvider } from '@/hooks/useAuth';
+import { JournalProvider } from '@/lib/journal/runtime';
 import { isApiRequestError } from '@/lib/api/ApiRequestError';
 
 /**
@@ -20,8 +21,14 @@ import { isApiRequestError } from '@/lib/api/ApiRequestError';
 function SwallowTrackedApiRejections() {
   useEffect(() => {
     const g = globalThis as typeof globalThis & {
-      addEventListener?: (type: string, listener: (ev: { preventDefault?: () => void; reason?: unknown }) => void) => void
-      removeEventListener?: (type: string, listener: (ev: { preventDefault?: () => void; reason?: unknown }) => void) => void
+      addEventListener?: (
+        type: string,
+        listener: (ev: { preventDefault?: () => void; reason?: unknown }) => void
+      ) => void;
+      removeEventListener?: (
+        type: string,
+        listener: (ev: { preventDefault?: () => void; reason?: unknown }) => void
+      ) => void;
     };
     const handler = (event: { preventDefault?: () => void; reason?: unknown }) => {
       const r = event.reason;
@@ -47,78 +54,79 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthContext.Provider value={auth}>
-        <SwallowTrackedApiRejections />
-        <SWRConfig
-          value={{
-            revalidateOnFocus: false,
-            revalidateOnReconnect: true,
-            dedupingInterval: 10_000,
-            shouldRetryOnError: false,
-            errorRetryCount: 0,
-          }}
-        >
-          <ThemeProvider value={NAV_THEME[colorScheme ?? 'light']}>
-            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="auth" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="todo/[id]"
-                options={{
-                  presentation: 'modal',
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="todo/new"
-                options={{
-                  presentation: 'modal',
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="post/new"
-                options={{
-                  presentation: 'modal',
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="post/[id]"
-                options={{
-                  presentation: 'modal',
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="note/[id]"
-                options={{
-                  presentation: 'modal',
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="posts/favorites"
-                options={{
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="posts/lists/index"
-                options={{
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="posts/lists/[id]"
-                options={{
-                  headerShown: false,
-                }}
-              />
-            </Stack>
-            <PortalHost />
-          </ThemeProvider>
-        </SWRConfig>
+        <JournalProvider>
+          <SwallowTrackedApiRejections />
+          <SWRConfig
+            value={{
+              revalidateOnFocus: false,
+              revalidateOnReconnect: true,
+              dedupingInterval: 10_000,
+              shouldRetryOnError: false,
+              errorRetryCount: 0,
+            }}>
+            <ThemeProvider value={NAV_THEME[colorScheme ?? 'light']}>
+              <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="auth" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="todo/[id]"
+                  options={{
+                    presentation: 'modal',
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="todo/new"
+                  options={{
+                    presentation: 'modal',
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="post/new"
+                  options={{
+                    presentation: 'modal',
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="post/[id]"
+                  options={{
+                    presentation: 'modal',
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="note/[id]"
+                  options={{
+                    presentation: 'modal',
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="posts/favorites"
+                  options={{
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="posts/lists/index"
+                  options={{
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="posts/lists/[id]"
+                  options={{
+                    headerShown: false,
+                  }}
+                />
+              </Stack>
+              <PortalHost />
+            </ThemeProvider>
+          </SWRConfig>
+        </JournalProvider>
       </AuthContext.Provider>
     </GestureHandlerRootView>
   );

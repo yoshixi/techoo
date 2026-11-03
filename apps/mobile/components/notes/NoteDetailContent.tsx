@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { useNotesData, mergeNoteText } from '@/hooks/useNotesData';
+import { useJournalSnapshot } from '@/hooks/useJournalSnapshot';
+import { getJournalService, useJournalMode } from '@/lib/journal/runtime';
 import { formatDateTime } from '@/lib/time';
 
 export interface NoteDetailContentProps {
@@ -17,10 +19,18 @@ export interface NoteDetailContentProps {
 export function NoteDetailContent({ noteId }: NoteDetailContentProps) {
   const router = useRouter();
   const { height: windowHeight } = useWindowDimensions();
-  const { data: noteData, isLoading, error } = useGetApiV1NotesId(noteId);
+  const mode = useJournalMode();
+  const remote = useGetApiV1NotesId(noteId, { swr: { enabled: mode !== 'local' } });
+  const local = useJournalSnapshot(
+    mode === 'local',
+    () => getJournalService().getNote(noteId),
+    String(noteId)
+  );
   const { handleUpdateNote, handleDeleteNote } = useNotesData();
 
-  const note = noteData?.data;
+  const note = mode === 'local' ? (local.data ?? undefined) : remote.data?.data;
+  const isLoading = mode === 'local' ? local.loading && local.data === undefined : remote.isLoading;
+  const error = mode === 'local' ? local.error : remote.error;
 
   const [text, setText] = useState('');
 
